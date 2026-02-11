@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>PreetyTaxi - Inicio</title>
     <style>
-        :root { --gold: #ffc107; --dark: #0f0f0f; --card: #1a1a1a; }
+        :root { --gold: #ffc107; --dark: #0f0f0f; --card: #1a1a1a; --green: #28a745; }
         body { 
             font-family: 'Segoe UI', sans-serif; 
             background: var(--dark); 
@@ -14,17 +14,30 @@
             justify-content: center; 
             align-items: center; 
             min-height: 100vh; 
-            color: white;
-            /* Evita que se pueda arrastrar la pantalla en el menú principal */
-            overflow: hidden; 
+            color: white; 
             touch-action: manipulation;
         }
-        .container { text-align: center; width: 90%; max-width: 400px; }
+        .container { text-align: center; width: 90%; max-width: 400px; padding: 20px 0; }
         .role-card { background: var(--card); border-radius: 25px; padding: 25px; margin-bottom: 20px; border: 1px solid #333; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        h1 { color: var(--gold); font-size: 38px; margin-bottom: 30px; }
+        h1 { color: var(--gold); font-size: 38px; margin-bottom: 10px; }
+        p.tagline { color: #888; margin-bottom: 30px; font-size: 14px; }
         h2 { font-size: 20px; margin-bottom: 20px; color: #eee; }
+        
         .btn-group { display: flex; gap: 12px; }
         .btn { flex: 1; padding: 18px 10px; border-radius: 15px; text-decoration: none; font-weight: bold; font-size: 14px; transition: 0.3s; display: block; text-align: center; }
+        
+        /* Botón de Instalación Directa */
+        .btn-install { 
+            background: var(--green); 
+            color: white; 
+            margin-bottom: 25px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        }
+        
         .btn-gold { background: var(--gold); color: black; }
         .btn-outline { background: transparent; border: 1px solid #444; color: white; }
         .btn:active { transform: scale(0.95); }
@@ -34,7 +47,12 @@
 
 <div class="container">
     <h1>PreetyTaxi 🚕</h1>
+    <p class="tagline">El transporte más cool de Panamá</p>
     
+    <a href="PreetyTaxi.apk" download="PreetyTaxi.apk" class="btn btn-install">
+        <span>📲</span> INSTALAR APP DIRECTO
+    </a>
+
     <div class="role-card">
         <h2>Soy Pasajero 👤</h2>
         <div class="btn-group">
@@ -50,6 +68,8 @@
             <a href="registro_conductor.html" class="btn btn-outline">POSTULARME</a>
         </div>
     </div>
+
+    <p style="font-size: 12px; color: #555; margin-top: 20px;">Versión 1.0.2 - 2026</p>
 </div>
 
 </body>

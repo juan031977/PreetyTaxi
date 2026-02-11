@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Admin - PreetyTaxi Panamá</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        :root { --gold: #ffc107; --dark: #1a1a1a; --green: #28a745; --red: #dc3545; --blue: #007bff; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; margin: 0; padding: 20px; }
+        
+        /* Dashboard de Totales */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .stat-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); text-align: center; border-top: 5px solid var(--gold); }
+        .stat-card p { margin: 10px 0 0; font-size: 26px; font-weight: bold; color: var(--dark); }
+
+        .section { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); margin-bottom: 25px; }
+        .search-bar { width: 100%; padding: 15px; border: 2px solid var(--gold); border-radius: 12px; margin-bottom: 20px; outline: none; font-size: 16px; }
+
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f8f9fa; padding: 12px; text-align: left; font-size: 13px; color: #555; border-bottom: 2px solid #eee; }
+        td { padding: 12px; border-bottom: 1px solid #eee; font-size: 14px; }
+        
+        .badge { padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+        .status-activo { background: #d4edda; color: #155724; }
+        .status-pendiente { background: #fff3cd; color: #856404; }
+        .status-rechazado { background: #f8d7da; color: #721c24; }
+
+        .btn { border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; color: white; font-weight: bold; font-size: 11px; margin: 2px; }
+        .btn-ok { background: var(--green); }
+        .btn-no { background: var(--red); }
+        .btn-del { background: #6c757d; }
+        .btn-fin { background: var(--blue); }
+
+        tr:hover { background: #fcfcfc; }
+    </style>
+</head>
+<body>
+
+    <div class="stats-grid">
+        <div class="stat-card"><h3>Facturación Bruta</h3><p id="totalGlobal">$0.00</p></div>
+        <div class="stat-card" style="border-top-color: var(--green);"><h3>Tu Comisión (10%)</h3><p id="totalAdmin" style="color: var(--green);">$0.00</p></div>
+        <div class="stat-card" style="border-top-color: var(--blue);"><h3>Viajes Finalizados</h3><p id="countViajes">0</p></div>
+    </div>
+
+    <input type="text" id="masterSearch" class="search-bar" placeholder="🔍 Buscar por Nombre, Placa, Celular o Estado..." onkeyup="filtrarTodo()">
+
+    <div class="section">
+        <h3>🗂️ Gestión de Conductores Existentes</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Placa</th>
+                    <th>Celular</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="tablaConductores"></tbody>
+        </table>
+    </div>
+
+    <div class="section" style="border-left: 5px solid var(--green);">
+        <h3>💰 Liquidación Individual (90% Chofer / 10% Admin)</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Conductor</th>
+                    <th>Viajes</th>
+                    <th>Bruto</th>
+                    <th>Tu 10%</th>
+                    <th>Neto Chofer</th>
+                </tr>
+            </thead>
+            <tbody id="tablaContabilidad"></tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <h3>🚕 Monitor de Viajes y Pasajeros (En Vivo)</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Pasajero</th>
+                    <th>Monto</th>
+                    <th>Chofer</th>
+                    <th>Estado</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
+            <tbody id="tablaViajes"></tbody>
+        </table>
+    </div>
+
+<script>
+    // CONFIGURACIÓN FIREBASE
+    const firebaseConfig = { databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function renderizarTablas() {
+        db.ref().on('value', snap => {
+            const data = snap.val() || {};
+            const conductores = data.conductores || {};
+            const viajes = data.viajes || {};
+
+            // Limpiar
+            document.getElementById('tablaConductores').innerHTML = "";
+            document.getElementById('tablaContabilidad').innerHTML = "";
+            document.getElementById('tablaViajes').innerHTML = "";
+
+            let globalBruto = 0, countV = 0;
+            let liquidacion = {}; 
+
+            // --- 1. CONDUCTORES ---
+            Object.keys(conductores).forEach(id => {
+                const c = conductores[id];
+                const est = (c.estado || 'pendiente').toLowerCase();
+                document.getElementById('tablaConductores').innerHTML += `
+                    <tr class="item">
+                        <td><b>${c.cNom || c.nombre || 'S/N'}</b></td>
+                        <td>${c.cPla || c.placa || '---'}</td>
+                        <td>${c.cCel || c.celular || '---'}</td>
+                        <td><span class="badge status-${est}">${est}</span></td>
+                        <td>
+                            <button class="btn btn-ok" onclick="cambiarEstadoChofer('${id}', 'activo')">Aprobar</button>
+                            <button class="btn btn-no" onclick="cambiarEstadoChofer('${id}', 'rechazado')">Rechazar</button>
+                            <button class="btn btn-del" onclick="eliminar('${id}', 'conductores')">🗑</button>
+                        </td>
+                    </tr>`;
+            });
+
+            // --- 2. VIAJES Y CÁLCULOS ---
+            Object.keys(viajes).forEach(id => {
+                const v = viajes[id];
+                const precio = parseFloat(v.precio) || 0;
+                
+                if(v.estado === "completado") {
+                    globalBruto += precio;
+                    countV++;
+                    if(v.choferNombre) {
+                        if(!liquidacion[v.choferNombre]) liquidacion[v.choferNombre] = { bruto: 0, v: 0 };
+                        liquidacion[v.choferNombre].bruto += precio;
+                        liquidacion[v.choferNombre].v++;
+                    }
+                }
+
+                document.getElementById('tablaViajes').innerHTML += `
+                    <tr class="item">
+                        <td><b>${v.cliente || 'Pasajero'}</b><br><small>${v.celular || ''}</small></td>
+                        <td>$${precio.toFixed(2)}</td>
+                        <td>${v.choferNombre || '<i>Buscando...</i>'}</td>
+                        <td><span class="badge">${v.estado}</span></td>
+                        <td>
+                            ${v.estado === 'aceptado' ? `<button class="btn btn-fin" onclick="cambiarEstadoViaje('${id}', 'completado')">FIN</button>` : ''}
+                            <button class="btn btn-del" onclick="eliminar('${id}', 'viajes')">🗑</button>
+                        </td>
+                    </tr>`;
+            });
+
+            // --- 3. TABLA CONTABILIDAD ---
+            Object.keys(liquidacion).forEach(nom => {
+                const l = liquidacion[nom];
+                const com = (l.bruto * 0.10);
+                document.getElementById('tablaContabilidad').innerHTML += `
+                    <tr class="item">
+                        <td><b>${nom}</b></td>
+                        <td>${l.v}</td>
+                        <td>$${l.bruto.toFixed(2)}</td>
+                        <td style="color:red">-$${com.toFixed(2)}</td>
+                        <td style="color:green; font-weight:bold;">$${(l.bruto - com).toFixed(2)}</td>
+                    </tr>`;
+            });
+
+            // DASHBOARD
+            document.getElementById('totalGlobal').innerText = "$" + globalBruto.toFixed(2);
+            document.getElementById('totalAdmin').innerText = "$" + (globalBruto * 0.10).toFixed(2);
+            document.getElementById('countViajes').innerText = countV;
+        });
+    }
+
+    // FUNCIONES DE ACCIÓN
+    function cambiarEstadoChofer(id, nuevoEst) {
+        db.ref('conductores/' + id).update({ estado: nuevoEst })
+        .then(() => alert("Estado del conductor actualizado a: " + nuevoEst));
+    }
+
+    function cambiarEstadoViaje(id, nuevoEst) {
+        db.ref('viajes/' + id).update({ estado: nuevoEst });
+    }
+
+    function eliminar(id, rama) {
+        if(confirm("¿Estás seguro de eliminar este registro?")) {
+            db.ref(rama + '/' + id).remove();
+        }
+    }
+
+    function filtrarTodo() {
+        const bus = document.getElementById('masterSearch').value.toUpperCase();
+        const rows = document.querySelectorAll('.item');
+        rows.forEach(r => {
+            r.style.display = r.innerText.toUpperCase().includes(bus) ? "" : "none";
+        });
+    }
+
+    window.onload = renderizarTablas;
+</script>
+</body>
+</html>

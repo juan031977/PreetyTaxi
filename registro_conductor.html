@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro Conductor - PreetyTaxi</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #1a1a1a; color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .reg-box { background: #222; padding: 30px; border-radius: 15px; width: 90%; max-width: 400px; border-top: 5px solid #ffc107; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        h2 { color: #ffc107; text-align: center; }
+        input { width: 100%; padding: 12px; margin: 8px 0; border: none; border-radius: 8px; box-sizing: border-box; background: #333; color: white; font-size: 16px; }
+        button { width: 100%; padding: 14px; background: #ffc107; border: none; border-radius: 8px; color: #1a1a1a; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 15px; }
+        .link { display: block; text-align: center; margin-top: 15px; color: #bbb; text-decoration: none; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+    <div class="reg-box">
+        <h2>Registro de Chofer</h2>
+        <input type="text" id="nombre" placeholder="Nombre Completo">
+        <input type="tel" id="celular" placeholder="Número de Celular (8 dígitos)" maxlength="8">
+        <input type="text" id="placa" placeholder="Placa del Vehículo">
+        <input type="password" id="password" placeholder="Crea una Contraseña">
+        
+        <button onclick="registrar()">REGISTRARSE</button>
+        <a href="login_conductor.html" class="link">¿Ya tienes cuenta? Inicia sesión</a>
+    </div>
+
+<script>
+    const firebaseConfig = { databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function registrar() {
+        const nom = document.getElementById('nombre').value;
+        const cel = document.getElementById('celular').value;
+        const pla = document.getElementById('placa').value;
+        const pas = document.getElementById('password').value;
+
+        if(!nom || !cel || !pla || !pas) {
+            alert("Por favor, completa todos los campos.");
+            return;
+        }
+
+        // Guardamos usando el CELULAR como ID único
+        db.ref('conductores/' + cel).set({
+            cNom: nom,
+            cCel: cel,
+            cPla: pla,
+            pass: pas,
+            estado: "pendiente"
+        }).then(() => {
+            alert("✅ Registro enviado. Espera a que el Admin te apruebe.");
+            window.location.href = "login_conductor.html";
+        }).catch(err => alert("Error: " + err));
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PreetyTaxi - Cliente</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        :root { --gold: #ffc107; --dark: #0a0a0a; --red: #ff4444; }
+        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', sans-serif; background: var(--dark); overflow: hidden; }
+        #map { height: 100%; width: 100%; position: absolute; z-index: 1; }
+        .controls { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); width: 92%; max-width: 420px; z-index: 10; background: rgba(26,26,26,0.95); padding: 15px; border-radius: 20px; border: 1px solid #444; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .input-group { position: relative; margin-bottom: 8px; }
+        input { width: 100%; padding: 12px 12px 12px 35px; border-radius: 10px; border: 1px solid #333; background: #222; color: white; box-sizing: border-box; font-size: 14px; outline: none; }
+        .dot { position: absolute; left: 12px; top: 15px; width: 10px; height: 10px; border-radius: 50%; }
+        .dot-ori { background: var(--gold); }
+        .dot-des { background: var(--red); }
+        .panel-info { background: #111; color: var(--gold); padding: 12px; border-radius: 12px; margin: 10px 0; display: none; text-align: center; border: 1px solid var(--gold); }
+        .btn { width: 100%; padding: 16px; border: none; border-radius: 15px; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 5px; }
+        .btn-solicitar { background: var(--gold); color: black; }
+        .btn-cancelar { background: #333; color: white; }
+    </style>
+</head>
+<body>
+
+    <div id="map"></div>
+
+    <div class="controls">
+        <div id="busquedaInputs">
+            <div class="input-group">
+                <div class="dot dot-ori"></div>
+                <input type="text" id="txtOrigen" placeholder="¿Dónde te buscamos?">
+            </div>
+            <div class="input-group">
+                <div class="dot dot-des"></div>
+                <input type="text" id="txtDestino" placeholder="¿A dónde vas?">
+            </div>
+        </div>
+        
+        <div id="infoViaje" class="panel-info">
+            <span id="txtEstado">Tarifa Estimada</span>
+            <div id="txtPrecio" style="font-size: 24px; font-weight: bold;">$0.00</div>
+            <div id="datosChofer" style="color:white; margin-top:5px; font-size:14px;"></div>
+        </div>
+        
+        <button class="btn btn-solicitar" id="btnAccion" onclick="enviarViaje()">PEDIR PREETY TAXI</button>
+        <button class="btn btn-cancelar" id="btnCancelar" onclick="cancelarProceso()" style="display:none;">CANCELAR VIAJE</button>
+    </div>
+
+<script>
+    const firebaseConfig = { databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let map, ds, dr, markerOri, markerDes, precioFinal = 0, viajeId = null;
+
+    function initMap() {
+        ds = new google.maps.DirectionsService();
+        dr = new google.maps.DirectionsRenderer({ map: map, suppressMarkers: true, polylineOptions: { strokeColor: "#ffc107", strokeWeight: 5 } });
+        map = new google.maps.Map(document.getElementById("map"), {
+            center: { lat: 8.983, lng: -79.516 }, zoom: 14, disableDefaultUI: true,
+            styles: [{ "stylers": [{ "invert_lightness": true }, { "saturation": -100 }] }]
+        });
+
+        markerOri = new google.maps.Marker({ position: { lat: 8.983, lng: -79.516 }, map: map, draggable: true, icon: 'http://maps.google.com/mapfiles/ms/icons/yellow-dot.png' });
+        markerDes = new google.maps.Marker({ position: { lat: 8.989, lng: -79.520 }, map: map, draggable: true, icon: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png' });
+
+        const options = { componentRestrictions: { country: "pa" } };
+        const acOri = new google.maps.places.Autocomplete(document.getElementById('txtOrigen'), options);
+        const acDes = new google.maps.places.Autocomplete(document.getElementById('txtDestino'), options);
+
+        acOri.addListener("place_changed", () => { const p = acOri.getPlace(); if(p.geometry) { markerOri.setPosition(p.geometry.location); map.panTo(p.geometry.location); calcularRuta(); } });
+        acDes.addListener("place_changed", () => { const p = acDes.getPlace(); if(p.geometry) { markerDes.setPosition(p.geometry.location); map.panTo(p.geometry.location); calcularRuta(); } });
+
+        [markerOri, markerDes].forEach(m => { m.addListener("dragend", calcularRuta); });
+    }
+
+    function calcularRuta() {
+        ds.route({ origin: markerOri.getPosition(), destination: markerDes.getPosition(), travelMode: 'DRIVING' }, (res, status) => {
+            if(status === 'OK') {
+                dr.setDirections(res);
+                let km = res.routes[0].legs[0].distance.value / 1000;
+                precioFinal = (Math.ceil((1.50 + (km * 0.50)) * 2) / 2).toFixed(2);
+                document.getElementById('infoViaje').style.display = "block";
+                document.getElementById('txtPrecio').innerText = "$" + precioFinal;
+            }
+        });
+    }
+
+    function enviarViaje() {
+        if(precioFinal == 0) return alert("Selecciona origen y destino");
+        const ref = db.ref('viajes').push({
+            cliente: localStorage.getItem('pNom') || "Pasajero",
+            celular: localStorage.getItem('pCel') || "S/N",
+            origen_coords: { lat: markerOri.getPosition().lat(), lng: markerOri.getPosition().lng() },
+            destino_coords: { lat: markerDes.getPosition().lat(), lng: markerDes.getPosition().lng() },
+            precio: precioFinal, estado: "pendiente", timestamp: Date.now()
+        });
+        viajeId = ref.key;
+        document.getElementById('btnAccion').style.display = "none";
+        document.getElementById('btnCancelar').style.display = "block";
+        document.getElementById('txtEstado').innerText = "BUSCANDO CONDUCTOR...";
+        
+        db.ref('viajes/' + viajeId).on('value', snap => {
+            const v = snap.val();
+            if(v && v.estado === "aceptado") {
+                document.getElementById('txtEstado').innerText = "¡CONDUCTOR EN CAMINO!";
+                document.getElementById('datosChofer').innerHTML = `🚗 ${v.choferNombre} <br> <b>Placa:</b> ${v.choferPlaca}`;
+            }
+            if(v && v.estado === "cancelado_chofer") {
+                alert("El conductor canceló. Buscando otro...");
+                db.ref('viajes/' + viajeId).update({ estado: "pendiente", choferNombre: null });
+            }
+        });
+    }
+
+    function cancelarProceso() {
+        if(viajeId) db.ref('viajes/' + viajeId).update({ estado: "cancelado_cliente" });
+        location.reload();
+    }
+</script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg&libraries=places&callback=initMap" async defer></script>
+</body>
+</html>

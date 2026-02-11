@@ -9,8 +9,31 @@
     <style>
         :root { --gold: #ffc107; --dark: #0a0a0a; --red: #ff4444; }
         body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', sans-serif; background: var(--dark); overflow: hidden; }
-        #map { height: 100%; width: 100%; position: absolute; z-index: 1; }
-        .controls { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); width: 92%; max-width: 420px; z-index: 10; background: rgba(26,26,26,0.95); padding: 15px; border-radius: 20px; border: 1px solid #444; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        
+        /* Ajuste para que el mapa reciba toques en Android */
+        #map { 
+            height: 100%; 
+            width: 100%; 
+            position: absolute; 
+            z-index: 1; 
+            touch-action: pan-x pan-y !important;
+        }
+
+        .controls { 
+            position: absolute; 
+            top: 15px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            width: 92%; 
+            max-width: 420px; 
+            z-index: 10; 
+            background: rgba(26,26,26,0.95); 
+            padding: 15px; 
+            border-radius: 20px; 
+            border: 1px solid #444; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
+            pointer-events: auto; /* Permite clics en botones pero no bloquea el mapa abajo */
+        }
         .input-group { position: relative; margin-bottom: 8px; }
         input { width: 100%; padding: 12px 12px 12px 35px; border-radius: 10px; border: 1px solid #333; background: #222; color: white; box-sizing: border-box; font-size: 14px; outline: none; }
         .dot { position: absolute; left: 12px; top: 15px; width: 10px; height: 10px; border-radius: 50%; }
@@ -50,30 +73,78 @@
 
 <script>
     const firebaseConfig = { databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
-    firebase.initializeApp(firebaseConfig);
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
     const db = firebase.database();
 
     let map, ds, dr, markerOri, markerDes, precioFinal = 0, viajeId = null;
 
     function initMap() {
         ds = new google.maps.DirectionsService();
-        dr = new google.maps.DirectionsRenderer({ map: map, suppressMarkers: true, polylineOptions: { strokeColor: "#ffc107", strokeWeight: 5 } });
+        
+        // El mapa ahora tiene 'greedy' para que responda al dedo rápido en Android
         map = new google.maps.Map(document.getElementById("map"), {
-            center: { lat: 8.983, lng: -79.516 }, zoom: 14, disableDefaultUI: true,
+            center: { lat: 8.983, lng: -79.516 }, 
+            zoom: 14, 
+            disableDefaultUI: true,
+            gestureHandling: 'greedy', 
             styles: [{ "stylers": [{ "invert_lightness": true }, { "saturation": -100 }] }]
         });
 
-        markerOri = new google.maps.Marker({ position: { lat: 8.983, lng: -79.516 }, map: map, draggable: true, icon: 'http://maps.google.com/mapfiles/ms/icons/yellow-dot.png' });
-        markerDes = new google.maps.Marker({ position: { lat: 8.989, lng: -79.520 }, map: map, draggable: true, icon: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png' });
+        dr = new google.maps.DirectionsRenderer({ 
+            map: map, 
+            suppressMarkers: true, 
+            polylineOptions: { strokeColor: "#ffc107", strokeWeight: 5 } 
+        });
+
+        // Corregido: Marcadores con íconos estándar que sí cargan en Android
+        markerOri = new google.maps.Marker({ 
+            position: { lat: 8.983, lng: -79.516 }, 
+            map: map, 
+            draggable: true,
+            label: "A"
+        });
+        
+        markerDes = new google.maps.Marker({ 
+            position: { lat: 8.989, lng: -79.520 }, 
+            map: map, 
+            draggable: true,
+            label: "B"
+        });
 
         const options = { componentRestrictions: { country: "pa" } };
         const acOri = new google.maps.places.Autocomplete(document.getElementById('txtOrigen'), options);
         const acDes = new google.maps.places.Autocomplete(document.getElementById('txtDestino'), options);
 
-        acOri.addListener("place_changed", () => { const p = acOri.getPlace(); if(p.geometry) { markerOri.setPosition(p.geometry.location); map.panTo(p.geometry.location); calcularRuta(); } });
-        acDes.addListener("place_changed", () => { const p = acDes.getPlace(); if(p.geometry) { markerDes.setPosition(p.geometry.location); map.panTo(p.geometry.location); calcularRuta(); } });
+        acOri.addListener("place_changed", () => { 
+            const p = acOri.getPlace(); 
+            if(p.geometry) { 
+                markerOri.setPosition(p.geometry.location); 
+                map.panTo(p.geometry.location); 
+                calcularRuta(); 
+            } 
+        });
+        
+        acDes.addListener("place_changed", () => { 
+            const p = acDes.getPlace(); 
+            if(p.geometry) { 
+                markerDes.setPosition(p.geometry.location); 
+                map.panTo(p.geometry.location); 
+                calcularRuta(); 
+            } 
+        });
 
         [markerOri, markerDes].forEach(m => { m.addListener("dragend", calcularRuta); });
+        
+        // Intentar obtener ubicación real del pasajero al abrir
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(pos => {
+                const myLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                markerOri.setPosition(myLoc);
+                map.setCenter(myLoc);
+            });
+        }
     }
 
     function calcularRuta() {
@@ -107,10 +178,6 @@
             if(v && v.estado === "aceptado") {
                 document.getElementById('txtEstado').innerText = "¡CONDUCTOR EN CAMINO!";
                 document.getElementById('datosChofer').innerHTML = `🚗 ${v.choferNombre} <br> <b>Placa:</b> ${v.choferPlaca}`;
-            }
-            if(v && v.estado === "cancelado_chofer") {
-                alert("El conductor canceló. Buscando otro...");
-                db.ref('viajes/' + viajeId).update({ estado: "pendiente", choferNombre: null });
             }
         });
     }

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instalar PreetyTaxi</title>
+    <style>
+        body { background: #0b0b0b; color: white; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; text-align: center; }
+        .box { padding: 20px; }
+        .btn-descarga { background: #28a745; color: white; padding: 20px 40px; border-radius: 15px; text-decoration: none; font-weight: bold; font-size: 20px; display: inline-block; box-shadow: 0 5px 15px rgba(40,167,69,0.4); }
+        p { color: #888; margin-top: 20px; }
+    </style>
+    <meta http-equiv="refresh" content="1; url=PreetyTaxi.apk">
+</head>
+<body>
+    <div class="box">
+        <h1 style="color: #ffc107;">PreetyTaxi 🚕</h1>
+        <br>
+        <a href="PreetyTaxi.apk" download class="btn-descarga">👇 TOCAR AQUÍ PARA INSTALAR</a>
+        <p>La descarga debería iniciar sola en 1 segundo...</p>
+    </div>
+
+    <script>
+        // Segundo intento automático por JS
+        setTimeout(function(){
+            window.location.href = "PreetyTaxi.apk";
+        }, 500);
+    </script>
+</body>
+</html>

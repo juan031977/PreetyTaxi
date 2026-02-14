@@ -6,92 +6,28 @@
     <title>Instalar PreetyTaxi</title>
     <style>
         :root { --gold: #ffc107; --dark: #0b0b0b; --card: #1a1a1a; --danger: #ff4d4d; }
-        body { 
-            font-family: 'Segoe UI', Arial, sans-serif; 
-            background: var(--dark); 
-            color: white; 
-            text-align: center; 
-            padding: 20px; 
-            margin: 0; 
-        }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--dark); color: white; text-align: center; padding: 20px; margin: 0; }
         .container { max-width: 450px; margin: auto; }
-        .logo { font-size: 60px; margin-top: 20px; }
+        .logo { font-size: 60px; margin-top: 10px; }
         h1 { color: var(--gold); margin-bottom: 5px; font-size: 28px; }
-        .tagline { color: #888; margin-bottom: 30px; }
-        
-        .card { 
-            background: var(--card); 
-            padding: 25px; 
-            border-radius: 25px; 
-            border: 1px solid #333; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
-        }
+        .tagline { color: #888; margin-bottom: 25px; }
+        .card { background: var(--card); padding: 25px; border-radius: 25px; border: 1px solid #333; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         
         .btn-descarga { 
-            display: block; 
-            background: var(--gold); 
-            color: black; 
-            padding: 18px; 
-            text-decoration: none; 
-            border-radius: 15px; 
-            font-weight: bold; 
-            margin-bottom: 25px; 
-            font-size: 20px;
-            box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
-            transition: 0.3s;
+            display: block; background: var(--gold); color: black; padding: 18px; 
+            text-decoration: none; border-radius: 15px; font-weight: bold; margin-bottom: 25px; font-size: 20px;
+            box-shadow: 0 4px 15px rgba(255, 193, 7, 0.4); cursor: pointer; border: none; width: 100%;
         }
-        .btn-descarga:active { transform: scale(0.95); }
 
-        .guia-titulo { 
-            text-align: left; 
-            color: var(--gold); 
-            font-size: 16px; 
-            font-weight: bold; 
-            margin-bottom: 15px; 
-            border-bottom: 1px solid #333; 
-            padding-bottom: 5px; 
-        }
+        .guia-titulo { text-align: left; color: var(--gold); font-size: 16px; font-weight: bold; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 5px; }
+        .paso { display: flex; align-items: flex-start; text-align: left; background: #222; padding: 12px; border-radius: 12px; margin: 10px 0; font-size: 14px; line-height: 1.5; }
+        .numero { background: var(--gold); color: black; min-width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold; margin-right: 12px; flex-shrink: 0; }
         
-        .paso { 
-            display: flex; 
-            align-items: flex-start; 
-            text-align: left; 
-            background: #222; 
-            padding: 12px; 
-            border-radius: 12px; 
-            margin: 10px 0; 
-            font-size: 14px; 
-            line-height: 1.5; 
-        }
-        .numero { 
-            background: var(--gold); 
-            color: black; 
-            min-width: 26px; 
-            height: 26px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            border-radius: 50%; 
-            font-weight: bold; 
-            margin-right: 12px; 
-            flex-shrink: 0; 
-        }
-
-        /* Estilo especial para la advertencia de Play Protect */
-        .paso-critico { 
-            border: 2px solid var(--danger); 
-            background: #2a1010; 
-        }
+        .paso-critico { border: 2px solid var(--danger); background: #2a1010; }
         .numero-critico { background: var(--danger); color: white; }
         .alerta-texto { color: var(--danger); font-weight: bold; display: block; margin-bottom: 5px; }
         
-        .help-link { 
-            display: inline-block; 
-            margin-top: 25px; 
-            color: #888; 
-            text-decoration: none; 
-            font-size: 14px; 
-        }
+        .help-link { display: inline-block; margin-top: 25px; color: #888; text-decoration: none; font-size: 14px; }
         .help-link b { color: var(--gold); }
     </style>
 </head>
@@ -100,41 +36,53 @@
 <div class="container">
     <div class="logo">🚖</div>
     <h1>PreetyTaxi Panamá</h1>
-    <p class="tagline">¡Transporte seguro a un click!</p>
+    <p class="tagline">Instalación Oficial</p>
 
     <div class="card">
-        <a href="https://github.com/juan031977/PreetyTaxi/raw/refs/heads/main/app-release.apk" class="btn-descarga">📥 DESCARGAR APP</a>
+        <button onclick="descargarApp()" class="btn-descarga">📥 DESCARGAR AHORA</button>
 
-        <div class="guia-titulo">GUÍA RÁPIDA DE INSTALACIÓN:</div>
+        <div class="guia-titulo">SIGUE ESTOS PASOS:</div>
         
         <div class="paso">
             <div class="numero">1</div>
-            <div>Presiona <b>Descargar</b>. Si el navegador pide confirmar, dale a "Aceptar" o "Descargar de todos modos".</div>
+            <div>Toca el botón amarillo y confirma la descarga si el celular te pregunta.</div>
         </div>
         
         <div class="paso">
             <div class="numero">2</div>
-            <div>Cuando termine, abre el archivo y selecciona <b>Instalar</b>.</div>
+            <div>Al terminar, abre el archivo y selecciona <b>Instalar</b>.</div>
         </div>
         
         <div class="paso paso-critico">
             <div class="numero numero-critico">3</div>
             <div>
-                <span class="alerta-texto">⚠️ AVISO IMPORTANTE DE GOOGLE:</span>
-                Si aparece un cuadro de "Play Protect", <b>NO toques el botón "Analizar" ni "Aceptar"</b>.<br><br>
-                Toca donde dice <b style="color: var(--gold); text-decoration: underline;">"Más detalles"</b> y luego presiona <b style="color: var(--gold);">"Instalar de todas formas"</b>.
+                <span class="alerta-texto">⚠️ SI SALE "PLAY PROTECT":</span>
+                <b>NO toques el botón "Analizar" ni "Aceptar"</b>.<br><br>
+                Toca en <b style="color: var(--gold);">"Más detalles"</b> y luego en <b style="color: var(--gold);">"Instalar de todas formas"</b>.
             </div>
         </div>
     </div>
 
-    <a href="https://wa.me/50760000000" class="help-link">¿Problemas con la instalación? <br>Chatea con <b>Soporte PreetyTaxi</b></a>
-    
-    <p style="font-size: 11px; color: #444; margin-top: 40px;">
-        PreetyTaxi App © 2026<br>
-        Optimizado para dispositivos Android
-    </p>
+    <a href="https://wa.me/50760000000" class="help-link">¿Necesitas ayuda? Chatea con <b>Soporte</b></a>
 </div>
+
+<script>
+    function descargarApp() {
+        // AQUÍ REEMPLAZA POR TU LINK REAL DEL APK EN GITHUB
+        const urlReal = "https://github.com/juan031977/PreetyTaxi/raw/refs/heads/main/app-release.apk";
+        
+        // El truco: añade un número único al final para engañar al caché del celular
+        const antiCacheUrl = urlReal + "?t=" + new Date().getTime();
+        
+        // Inicia la descarga
+        window.location.href = antiCacheUrl;
+
+        // Aviso visual para que no se pierdan
+        setTimeout(() => {
+            alert("La descarga ha comenzado. Recuerda revisar la barra de notificaciones y seguir el PASO 3 de la guía.");
+        }, 1000);
+    }
+</script>
 
 </body>
 </html>
-

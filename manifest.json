@@ -1,0 +1,15 @@
+{
+  "short_name": "PreetyTaxi",
+  "name": "PreetyTaxi - Conductor",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3448/3448339.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/PreetyTaxi/panel_trabajo.html",
+  "background_color": "#000000",
+  "display": "standalone",
+  "theme_color": "#ffc107"
+}

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Conductor - PreetyTaxi</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; padding: 10px; margin: 0; }
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #1a1a1a; border-radius: 12px; margin-bottom: 12px; border: 1px solid #333; }
+        .btn-logout { background: #ff4d4d; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: bold; cursor: pointer; }
+        .billetera { background: linear-gradient(145deg, #1a1a1a, #000); padding: 18px; border-radius: 20px; border: 1px solid #ffc107; margin-bottom: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; box-shadow: 0 4px 15px rgba(255,193,7,0.1); }
+        .billetera div { text-align: center; }
+        .billetera b { display: block; font-size: 22px; color: #ffc107; margin-top: 4px; }
+        .card { background: #1a1a1a; padding: 18px; border-radius: 18px; border-left: 6px solid #ffc107; margin-bottom: 15px; }
+        .btn { width: 100%; padding: 15px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; text-transform: uppercase; text-decoration: none; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+        .btn-accept { background: #ffc107; color: #000; }
+        .btn-gps { background: #007bff; color: white; }
+        .btn-finish { background: #28a745; color: white; }
+        .historial-box { background: #111; border-radius: 18px; padding: 15px; margin-top: 20px; border: 1px solid #222; }
+        .historial-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #222; font-size: 13px; }
+        #bloqueo-screen { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); z-index: 9999; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 20px; box-sizing: border-box; }
+    </style>
+</head>
+<body>
+
+    <div id="bloqueo-screen">
+        <h1 style="color: #ff4d4d; font-size: 50px; margin: 0;">🛑</h1>
+        <h2 style="color: white;">CUENTA BLOQUEADA</h2>
+        <p style="color: #888;">Favor cancelar sus comisiones pendientes para activar el panel.</p>
+        <button class="btn-logout" onclick="cerrarSesion()">SALIR</button>
+    </div>
+
+    <div id="panel-principal">
+        <div class="header">
+            <span>🚖 PLACA: <b id="disp-placa" style="color:#ffc107">---</b></span>
+            <button class="btn-logout" onclick="cerrarSesion()">CERRAR SESIÓN</button>
+        </div>
+
+        <div class="billetera">
+            <div><small>VENTAS HOY</small><b id="ganado-hoy">B/. 0.00</b></div>
+            <div><small>MI DEUDA</small><b id="mi-deuda" style="color:#ff4d4d">B/. 0.00</b></div>
+        </div>
+
+        <div id="viaje-activo-cont"></div>
+        <h4 style="color:#ffc107; margin-left:10px;">PEDIDOS DISPONIBLES</h4>
+        <div id="lista-pedidos"></div>
+
+        <div class="historial-box">
+            <h4 style="margin: 0; color: #666; font-size: 12px;">REGISTRO DE HOY</h4>
+            <div id="historial-hoy"></div>
+        </div>
+    </div>
+
+<script>
+    const firebaseConfig = { apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let miPlaca = localStorage.getItem('userPlaca');
+    let miNombre = localStorage.getItem('userName');
+
+    if (!miPlaca) {
+        miPlaca = prompt("INGRESE PLACA:").toUpperCase().trim();
+        miNombre = prompt("SU NOMBRE:");
+        if (miPlaca && miNombre) {
+            localStorage.setItem('userPlaca', miPlaca);
+            localStorage.setItem('userName', miNombre);
+        } else { location.reload(); }
+    }
+    document.getElementById('disp-placa').innerText = miPlaca;
+    const hoyStr = new Date().toISOString().split('T')[0];
+
+    // SINCRONIZACIÓN DE DEUDA Y BLOQUEO
+    db.ref('conductores').on('value', snap => {
+        snap.forEach(c => {
+            if(String(c.val().placa).trim().toUpperCase() === miPlaca.toUpperCase()) {
+                document.getElementById('mi-deuda').innerText = "B/. " + (parseFloat(c.val().deuda) || 0).toFixed(2);
+                const bloq = c.val().estado === 'bloqueado';
+                document.getElementById('bloqueo-screen').style.display = bloq ? 'flex' : 'none';
+                document.getElementById('panel-principal').style.display = bloq ? 'none' : 'block';
+            }
+        });
+    });
+
+    // GESTIÓN DE VIAJES E HISTORIAL
+    db.ref('viajes').on('value', snap => {
+        const ped = document.getElementById('lista-pedidos');
+        const act = document.getElementById('viaje-activo-cont');
+        const hist = document.getElementById('historial-hoy');
+        ped.innerHTML = ""; act.innerHTML = ""; hist.innerHTML = "";
+        let vHoy = 0;
+
+        snap.forEach(child => {
+            const v = child.val();
+            const pV = v.placa ? String(v.placa).trim().toUpperCase() : "";
+
+            if(v.estado === 'buscando') {
+                ped.innerHTML += `<div class="card">
+                    <b>Oferta: B/. ${v.precio}</b><br><small>Cliente: ${v.cliente}</small>
+                    <button class="btn btn-accept" onclick="aceptar('${child.key}')">ACEPTAR</button>
+                </div>`;
+            } else if(v.estado === 'en curso' && pV === miPlaca.toUpperCase()) {
+                act.innerHTML = `<div class="card" style="border-color:#007bff; background:#050505;">
+                    <b style="color:#007bff">🚕 VIAJE EN CURSO</b><br>
+                    <a href="tel:${v.telefono}" class="btn" style="background:#444; color:white;">📞 LLAMAR</a>
+                    <a href="https://www.google.com/maps/dir/?api=1&destination=${v.latA},${v.lngA}" target="_blank" class="btn btn-gps">📍 IR POR CLIENTE</a>
+                    <a href="https://www.google.com/maps/dir/?api=1&destination=${v.latB},${v.lngB}" target="_blank" class="btn btn-gps" style="background:#6610f2">🏁 IR AL DESTINO</a>
+                    <button class="btn btn-finish" onclick="finalizar('${child.key}')">FINALIZAR VIAJE</button>
+                </div>`;
+            } else if(v.estado === 'completado' && pV === miPlaca.toUpperCase() && v.fecha === hoyStr) {
+                vHoy += parseFloat(v.precio);
+                hist.innerHTML += `<div class="historial-item"><span>✅ ${v.cliente}</span><b>B/. ${parseFloat(v.precio).toFixed(2)}</b></div>`;
+            }
+        });
+        document.getElementById('ganado-hoy').innerText = "B/. " + vHoy.toFixed(2);
+    });
+
+    function aceptar(id) { db.ref('viajes/' + id).update({ estado: 'en curso', placa: miPlaca, chofer: miNombre }); }
+
+    function finalizar(id) {
+        if(!confirm("¿Cobraste el viaje?")) return;
+        db.ref('viajes/' + id).once('value', snap => {
+            const v = snap.val();
+            db.ref('viajes/' + id).update({ estado: 'completado' });
+            db.ref('conductores').once('value', cSnap => {
+                cSnap.forEach(c => {
+                    if(String(c.val().placa).trim().toUpperCase() === miPlaca.toUpperCase()) {
+                        db.ref('conductores/' + c.key).update({
+                            totalGenerado: (parseFloat(c.val().totalGenerado) || 0) + parseFloat(v.precio),
+                            deuda: (parseFloat(c.val().deuda) || 0) + (parseFloat(v.precio) * 0.10)
+                        });
+                    }
+                });
+            });
+        });
+    }
+
+    function cerrarSesion() { if(confirm("¿Cerrar sesión?")) { localStorage.clear(); location.reload(); } }
+</script>
+</body>
+</html>

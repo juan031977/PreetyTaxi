@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro Pasajero - PreetyTaxi</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #0f0f0f; color: white; text-align: center; padding: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+        .box { background: #1a1a1a; padding: 30px; border-radius: 20px; border: 1px solid #333; width: 90%; max-width: 350px; }
+        h2 { color: #ffc107; margin-bottom: 20px; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #222; color: white; box-sizing: border-box; font-size: 16px; }
+        button { background: #ffc107; width: 100%; padding: 15px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h2>Crear Cuenta Pasajero 👤</h2>
+        <input type="text" id="nom" placeholder="Nombre Completo">
+        <input type="tel" id="tel" placeholder="Número Celular">
+        <input type="password" id="pass" placeholder="Crea tu Clave">
+        <button onclick="registrar()">REGISTRARME</button>
+    </div>
+
+    <script>
+        const firebaseConfig = { 
+            apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg",
+            databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" 
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        function registrar() {
+            const n = document.getElementById('nom').value;
+            const t = document.getElementById('tel').value;
+            const p = document.getElementById('pass').value;
+
+            if(n && t && p) {
+                db.ref('pasajeros/' + t).set({
+                    nombre: n,
+                    celular: t,
+                    password: p
+                }).then(() => { 
+                    alert("¡Éxito! Bienvenido a PreetyTaxi."); 
+                    window.location.href = "pedir_taxi.html"; 
+                }).catch(err => alert("Error: " + err.message));
+            } else { 
+                alert("Completa todos los datos"); 
+            }
+        }
+    </script>
+</body>
+</html>

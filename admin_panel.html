@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin PreetyTaxi - Control</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        body { font-family: sans-serif; background: #f4f7f6; padding: 20px; }
+        .card { background: white; padding: 20px; border-radius: 12px; text-align: center; border-top: 5px solid #ffc107; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
+        .btn { padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 11px; }
+        .btn-off { background: #dc3545; color: white; }
+        .btn-on { background: #28a745; color: white; }
+        .btn-reset { background: #000; color: white; }
+    </style>
+</head>
+<body>
+
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h2>Admin PreetyTaxi</h2>
+        <button class="btn btn-reset" onclick="cierreSemanal()">⚠️ RESET SEMANAL</button>
+    </div>
+
+    <div class="card">
+        <h3>Comisiones Totales: <span id="b-comi" style="color:green">B/. 0.00</span></h3>
+    </div>
+
+    <div style="background:white; padding:20px; border-radius:15px;">
+        <h3>💰 Control de Deudas por Placa</h3>
+        <table>
+            <thead><tr><th>Placa</th><th>Conductor</th><th>Deuda</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <tbody id="lista-choferes"></tbody>
+        </table>
+    </div>
+
+<script>
+    const firebaseConfig = { apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function cargarTodo() {
+        // ESCUCHA CONDUCTORES
+        db.ref('conductores').on('value', snap => {
+            const tc = document.getElementById('lista-choferes');
+            let tComi = 0; tc.innerHTML = "";
+            snap.forEach(c => {
+                const d = c.val();
+                const activo = d.estado !== 'bloqueado';
+                tComi += (parseFloat(d.deuda) || 0);
+                tc.innerHTML += `<tr>
+                    <td><b>${d.placa}</b></td>
+                    <td>${d.nombre}</td>
+                    <td style="color:red; font-weight:bold;">B/. ${(parseFloat(d.deuda) || 0).toFixed(2)}</td>
+                    <td>${activo ? '✅' : '🚫'}</td>
+                    <td>
+                        <button class="btn ${activo ? 'btn-off' : 'btn-on'}" onclick="toggleConductor('${c.key}', '${d.estado}')">${activo ? 'BLOQUEAR' : 'ACTIVAR'}</button>
+                        <button class="btn btn-on" style="background:#007bff" onclick="resetDeuda('${c.key}', '${d.placa}')">PAGÓ (RESET)</button>
+                    </td>
+                </tr>`;
+            });
+            document.getElementById('b-comi').innerText = "B/. " + tComi.toFixed(2);
+        });
+    }
+
+    function toggleConductor(id, est) { db.ref('conductores/'+id).update({ estado: est === 'bloqueado' ? 'activo' : 'bloqueado' }); }
+
+    function resetDeuda(id, placa) {
+        if(confirm("¿Resetear deuda de la placa " + placa + "?")) {
+            db.ref('conductores/'+id).update({ deuda: 0, estado: 'activo' });
+        }
+    }
+
+    function cierreSemanal() {
+        if(confirm("¿Borrar todo?")){
+            db.ref('viajes').remove();
+            db.ref('conductores').once('value', s => s.forEach(c => db.ref('conductores/'+c.key).update({ deuda: 0, totalGenerado: 0 })));
+        }
+    }
+    window.onload = cargarTodo;
+</script>
+</body>
+</html>

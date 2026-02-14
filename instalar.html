@@ -3,32 +3,104 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Instalar PreetyTaxi</title>
+    <title>Descargar PreetyTaxi</title>
     <style>
-        :root { --gold: #ffc107; --dark: #0b0b0b; --card: #1a1a1a; --danger: #ff4d4d; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--dark); color: white; text-align: center; padding: 20px; margin: 0; }
+        :root { --gold: #ffc107; --dark: #0b0b0b; --card: #1a1a1a; --danger: #ff4d4d; --success: #28a745; }
+        body { 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            background: var(--dark); 
+            color: white; 
+            text-align: center; 
+            padding: 20px; 
+            margin: 0; 
+        }
         .container { max-width: 450px; margin: auto; }
         .logo { font-size: 60px; margin-top: 10px; }
         h1 { color: var(--gold); margin-bottom: 5px; font-size: 28px; }
         .tagline { color: #888; margin-bottom: 25px; }
-        .card { background: var(--card); padding: 25px; border-radius: 25px; border: 1px solid #333; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        
+        .card { 
+            background: var(--card); 
+            padding: 25px; 
+            border-radius: 25px; 
+            border: 1px solid #333; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
+        }
         
         .btn-descarga { 
-            display: block; background: var(--gold); color: black; padding: 18px; 
-            text-decoration: none; border-radius: 15px; font-weight: bold; margin-bottom: 25px; font-size: 20px;
-            box-shadow: 0 4px 15px rgba(255, 193, 7, 0.4); cursor: pointer; border: none; width: 100%;
+            display: block; 
+            background: var(--gold); 
+            color: black; 
+            padding: 20px; 
+            text-decoration: none; 
+            border-radius: 15px; 
+            font-weight: bold; 
+            margin-bottom: 25px; 
+            font-size: 20px;
+            box-shadow: 0 4px 15px rgba(255, 193, 7, 0.4); 
+            cursor: pointer; 
+            border: none; 
+            width: 100%;
+            transition: 0.3s;
         }
 
-        .guia-titulo { text-align: left; color: var(--gold); font-size: 16px; font-weight: bold; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 5px; }
-        .paso { display: flex; align-items: flex-start; text-align: left; background: #222; padding: 12px; border-radius: 12px; margin: 10px 0; font-size: 14px; line-height: 1.5; }
-        .numero { background: var(--gold); color: black; min-width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold; margin-right: 12px; flex-shrink: 0; }
+        .guia-titulo { 
+            text-align: left; 
+            color: var(--gold); 
+            font-size: 16px; 
+            font-weight: bold; 
+            margin-bottom: 15px; 
+            border-bottom: 1px solid #333; 
+            padding-bottom: 5px; 
+        }
         
-        .paso-critico { border: 2px solid var(--danger); background: #2a1010; }
+        .paso { 
+            display: flex; 
+            align-items: flex-start; 
+            text-align: left; 
+            background: #222; 
+            padding: 12px; 
+            border-radius: 12px; 
+            margin: 10px 0; 
+            font-size: 14px; 
+            line-height: 1.5; 
+        }
+        
+        .numero { 
+            background: var(--gold); 
+            color: black; 
+            min-width: 26px; 
+            height: 26px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            border-radius: 50%; 
+            font-weight: bold; 
+            margin-right: 12px; 
+            flex-shrink: 0; 
+        }
+        
+        .paso-critico { 
+            border: 2px solid var(--danger); 
+            background: #2a1010; 
+        }
+        
         .numero-critico { background: var(--danger); color: white; }
-        .alerta-texto { color: var(--danger); font-weight: bold; display: block; margin-bottom: 5px; }
         
-        .help-link { display: inline-block; margin-top: 25px; color: #888; text-decoration: none; font-size: 14px; }
-        .help-link b { color: var(--gold); }
+        .alerta-texto { 
+            color: var(--danger); 
+            font-weight: bold; 
+            display: block; 
+            margin-bottom: 5px; 
+        }
+
+        .help-link { 
+            display: inline-block; 
+            margin-top: 25px; 
+            color: #888; 
+            text-decoration: none; 
+            font-size: 14px; 
+        }
     </style>
 </head>
 <body>
@@ -39,48 +111,54 @@
     <p class="tagline">Instalación Oficial</p>
 
     <div class="card">
-        <button onclick="descargarApp()" class="btn-descarga">📥 DESCARGAR AHORA</button>
+        <button id="mainBtn" onclick="descargarApp()" class="btn-descarga">📥 DESCARGAR APP</button>
 
-        <div class="guia-titulo">SIGUE ESTOS PASOS:</div>
+        <div class="guia-titulo">GUÍA DE INSTALACIÓN:</div>
         
         <div class="paso">
             <div class="numero">1</div>
-            <div>Toca el botón amarillo y confirma la descarga si el celular te pregunta.</div>
+            <div>Toca el botón amarillo y <b>confirma la descarga</b> en tu navegador.</div>
         </div>
         
         <div class="paso">
             <div class="numero">2</div>
-            <div>Al terminar, abre el archivo y selecciona <b>Instalar</b>.</div>
+            <div>Mira tus <b>notificaciones (arriba)</b>, toca el archivo y dale a <b>Instalar</b>.</div>
         </div>
         
         <div class="paso paso-critico">
             <div class="numero numero-critico">3</div>
             <div>
-                <span class="alerta-texto">⚠️ SI SALE "PLAY PROTECT":</span>
-                <b>NO toques el botón "Analizar" ni "Aceptar"</b>.<br><br>
-                Toca en <b style="color: var(--gold);">"Más detalles"</b> y luego en <b style="color: var(--gold);">"Instalar de todas formas"</b>.
+                <span class="alerta-texto">⚠️ SI APARECE "PLAY PROTECT":</span>
+                <b>NO toques "Analizar" ni "Aceptar"</b>.<br><br>
+                Toca en <b style="color: var(--gold);">"Más detalles"</b> y luego presiona <b style="color: var(--gold);">"Instalar de todas formas"</b>.
             </div>
         </div>
     </div>
 
-    <a href="https://wa.me/50760000000" class="help-link">¿Necesitas ayuda? Chatea con <b>Soporte</b></a>
+    <a href="https://wa.me/50760000000" class="help-link">¿Problemas? Chatea con <b>Soporte</b></a>
 </div>
 
 <script>
     function descargarApp() {
-        // AQUÍ REEMPLAZA POR TU LINK REAL DEL APK EN GITHUB
+        // REEMPLAZA ESTE LINK POR TU ARCHIVO APK REAL EN GITHUB
         const urlReal = "https://github.com/juan031977/PreetyTaxi/raw/refs/heads/main/app-release.apk";
         
-        // El truco: añade un número único al final para engañar al caché del celular
-        const antiCacheUrl = urlReal + "?t=" + new Date().getTime();
+        // Evita que el celular use versiones viejas guardadas en memoria
+        const antiCacheUrl = urlReal + "?v=" + new Date().getTime();
         
+        // Cambia el estilo del botón para dar seguridad al usuario
+        const btn = document.getElementById('mainBtn');
+        btn.innerHTML = "✅ DESCARGANDO...";
+        btn.style.background = "#28a745";
+        btn.style.color = "white";
+
         // Inicia la descarga
         window.location.href = antiCacheUrl;
 
-        // Aviso visual para que no se pierdan
+        // Alerta para guiar al usuario que no sabe dónde quedó el archivo
         setTimeout(() => {
-            alert("La descarga ha comenzado. Recuerda revisar la barra de notificaciones y seguir el PASO 3 de la guía.");
-        }, 1000);
+            alert("🚀 ¡Descarga Iniciada!\n\nBusca el archivo en la barra de notificaciones arriba de tu pantalla y tócalo para instalar.");
+        }, 1500);
     }
 </script>
 

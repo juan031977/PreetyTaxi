@@ -9,16 +9,31 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg&libraries=places"></script>
     <style>
-        /* ELIMINA LA FLECHA DE REINICIO Y BLOQUEA EL REFRESCO */
+        /* BLOQUEO TOTAL DE MOVIMIENTO DE PÁGINA */
         body, html { 
             margin: 0; padding: 0; height: 100%; 
             font-family: 'Segoe UI', sans-serif; 
-            overflow: hidden; 
-            overscroll-behavior-y: none; /* Bloqueo por CSS */
+            overflow: hidden !important; 
+            overscroll-behavior: none !important; 
+            position: fixed; /* Esto ancla la app al borde superior, matando la flecha */
+            width: 100%;
+            touch-action: none; /* Impide que el navegador gestione los gestos */
         }
-        #map { height: 100%; width: 100%; position: absolute; top: 0; left: 0; z-index: 1; }
+
+        #map { 
+            height: 100%; width: 100%; 
+            position: absolute; top: 0; left: 0; z-index: 1; 
+            touch-action: pan-x pan-y; /* Solo permite mover el mapa, no la página */
+        }
+
         .ui-panel { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: 92%; max-width: 420px; z-index: 10; }
-        .box { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 -8px 25px rgba(0,0,0,0.25); border-top: 4px solid #ffc107; }
+        
+        .box { 
+            background: white; padding: 20px; border-radius: 20px; 
+            box-shadow: 0 -8px 25px rgba(0,0,0,0.25); border-top: 4px solid #ffc107;
+            touch-action: auto; /* Permite escribir en los inputs */
+        }
+
         input { width: 100%; padding: 12px; margin: 6px 0; border-radius: 10px; border: 1px solid #eee; box-sizing: border-box; font-size: 14px; background: #f9f9f9; }
         .btn { width: 100%; padding: 15px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.3s; }
         .btn-yellow { background: #ffc107; color: #000; font-size: 16px; }
@@ -27,7 +42,7 @@
         .price-tag { font-size: 35px; font-weight: bold; color: #1a1a1a; margin: 5px 0; }
     </style>
 </head>
-<body>
+<body onload="initMap()">
 
     <div id="map"></div>
 
@@ -54,11 +69,19 @@
     </div>
 
 <script>
-    // --- BLOQUEADOR DE FLECHA (PULL TO REFRESH) ---
-    // Esto evita que al deslizar hacia abajo el navegador refresque la página
+    // BLOQUEO DEFINITIVO POR JAVASCRIPT
+    document.addEventListener('touchstart', function(e) {
+        if (e.target.tagName !== 'INPUT') {
+            // Solo permite el toque si no es para refrescar
+        }
+    }, {passive: false});
+
     document.addEventListener('touchmove', function(e) {
-        if (e.target.tagName !== 'INPUT') e.preventDefault();
-    }, { passive: false });
+        // Si el usuario intenta deslizar hacia abajo desde el tope, lo bloqueamos
+        if (window.scrollY <= 0 && e.touches[0].pageY > e.touches[0].target.offsetTop) {
+             if (e.target.tagName !== 'INPUT') e.preventDefault();
+        }
+    }, {passive: false});
 
     const firebaseConfig = { apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
@@ -155,8 +178,6 @@
             if(v.estado === "completado") { alert("¡Llegaste a tu destino!"); location.reload(); }
         });
     }
-
-    window.onload = initMap;
 </script>
 </body>
 </html>

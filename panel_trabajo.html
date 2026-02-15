@@ -25,6 +25,8 @@
 </head>
 <body>
 
+    <audio id="snd-alerta" src="alerta.mp3" loop></audio>
+
     <div id="bloqueo-screen">
         <h1 style="color: #ff4d4d; font-size: 50px; margin: 0;">🛑</h1>
         <h2 style="color: white;">CUENTA BLOQUEADA</h2>
@@ -60,6 +62,8 @@
 
     let miPlaca = localStorage.getItem('userPlaca');
     let miNombre = localStorage.getItem('userName');
+    let idViajeActivo = null;
+    let watchID = null;
 
     if (!miPlaca) {
         miPlaca = prompt("INGRESE PLACA:").toUpperCase().trim();
@@ -89,7 +93,11 @@
         const ped = document.getElementById('lista-pedidos');
         const act = document.getElementById('viaje-activo-cont');
         const hist = document.getElementById('historial-hoy');
-        ped.innerHTML = ""; act.innerHTML = ""; hist.innerHTML = "";
+        
+        let contenidoPedidos = "";
+        let hayNuevos = false;
+        
+        act.innerHTML = ""; hist.innerHTML = "";
         let vHoy = 0;
 
         snap.forEach(child => {
@@ -97,33 +105,70 @@
             const pV = v.placa ? String(v.placa).trim().toUpperCase() : "";
 
             if(v.estado === 'buscando') {
-                ped.innerHTML += `<div class="card">
+                hayNuevos = true;
+                contenidoPedidos += `<div class="card">
                     <b>Oferta: B/. ${v.precio}</b><br><small>Cliente: ${v.cliente}</small>
                     <button class="btn btn-accept" onclick="aceptar('${child.key}')">ACEPTAR</button>
                 </div>`;
             } else if(v.estado === 'en curso' && pV === miPlaca.toUpperCase()) {
+                idViajeActivo = child.key;
+                iniciarSeguimientoGPS(); // ACTIVAR GPS AL ESTAR EN CURSO
+                
                 act.innerHTML = `<div class="card" style="border-color:#007bff; background:#050505;">
                     <b style="color:#007bff">🚕 VIAJE EN CURSO</b><br>
-                    <a href="tel:${v.telefono}" class="btn" style="background:#444; color:white;">📞 LLAMAR</a>
+                    <a href="tel:${v.telefono}" class="btn" style="background:#444; color:white;">📞 LLAMAR AL CLIENTE</a>
                     <a href="https://www.google.com/maps/dir/?api=1&destination=${v.latA},${v.lngA}" target="_blank" class="btn btn-gps">📍 IR POR CLIENTE</a>
                     <a href="https://www.google.com/maps/dir/?api=1&destination=${v.latB},${v.lngB}" target="_blank" class="btn btn-gps" style="background:#6610f2">🏁 IR AL DESTINO</a>
-                    <button class="btn btn-finish" onclick="finalizar('${child.key}')">FINALIZAR VIAJE</button>
+                    <button class="btn btn-finish" onclick="finalizar('${child.key}')">FINALIZAR Y COBRAR</button>
                 </div>`;
             } else if(v.estado === 'completado' && pV === miPlaca.toUpperCase() && v.fecha === hoyStr) {
                 vHoy += parseFloat(v.precio);
                 hist.innerHTML += `<div class="historial-item"><span>✅ ${v.cliente}</span><b>B/. ${parseFloat(v.precio).toFixed(2)}</b></div>`;
             }
         });
+
+        ped.innerHTML = contenidoPedidos;
         document.getElementById('ganado-hoy').innerText = "B/. " + vHoy.toFixed(2);
+        
+        // Manejo de sonido de alerta
+        const snd = document.getElementById('snd-alerta');
+        if(hayNuevos) { snd.play().catch(e => {}); } else { snd.pause(); snd.currentTime = 0; }
     });
 
-    function aceptar(id) { db.ref('viajes/' + id).update({ estado: 'en curso', placa: miPlaca, chofer: miNombre }); }
+    // FUNCIÓN DE SEGUIMIENTO GPS REAL
+    function iniciarSeguimientoGPS() {
+        if (watchID) return; // Si ya está activo, no duplicar
+        if (navigator.geolocation) {
+            watchID = navigator.geolocation.watchPosition(pos => {
+                if(idViajeActivo) {
+                    db.ref('viajes/' + idViajeActivo).update({
+                        latC: pos.coords.latitude,
+                        lngC: pos.coords.longitude
+                    });
+                }
+            }, err => console.error(err), { enableHighAccuracy: true });
+        }
+    }
+
+    function detenerSeguimientoGPS() {
+        if (watchID) {
+            navigator.geolocation.clearWatch(watchID);
+            watchID = null;
+        }
+    }
+
+    function aceptar(id) { 
+        db.ref('viajes/' + id).update({ estado: 'en curso', placa: miPlaca, chofer: miNombre }); 
+    }
 
     function finalizar(id) {
-        if(!confirm("¿Cobraste el viaje?")) return;
+        if(!confirm("¿Confirmas que el cliente pagó B/.?")) return;
+        detenerSeguimientoGPS(); // Apagar GPS al terminar
         db.ref('viajes/' + id).once('value', snap => {
             const v = snap.val();
             db.ref('viajes/' + id).update({ estado: 'completado' });
+            idViajeActivo = null;
+
             db.ref('conductores').once('value', cSnap => {
                 cSnap.forEach(c => {
                     if(String(c.val().placa).trim().toUpperCase() === miPlaca.toUpperCase()) {

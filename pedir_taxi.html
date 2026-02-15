@@ -14,7 +14,7 @@
             margin: 0; padding: 0; height: 100%; 
             font-family: 'Segoe UI', sans-serif; 
             overflow: hidden; 
-            overscroll-behavior-y: none; /* Esta es la clave */
+            overscroll-behavior-y: none; /* Bloqueo por CSS */
         }
         #map { height: 100%; width: 100%; position: absolute; top: 0; left: 0; z-index: 1; }
         .ui-panel { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: 92%; max-width: 420px; z-index: 10; }
@@ -54,6 +54,12 @@
     </div>
 
 <script>
+    // --- BLOQUEADOR DE FLECHA (PULL TO REFRESH) ---
+    // Esto evita que al deslizar hacia abajo el navegador refresque la página
+    document.addEventListener('touchmove', function(e) {
+        if (e.target.tagName !== 'INPUT') e.preventDefault();
+    }, { passive: false });
+
     const firebaseConfig = { apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
@@ -65,7 +71,7 @@
             center: {lat: 8.9833, lng: -79.5167},
             zoom: 14,
             disableDefaultUI: true,
-            gestureHandling: "greedy" // Prioriza el movimiento del mapa sobre el scroll de la página
+            gestureHandling: "greedy" 
         });
 
         ds = new google.maps.DirectionsService();

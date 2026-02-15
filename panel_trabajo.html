@@ -76,7 +76,6 @@
     document.getElementById('disp-placa').innerText = miPlaca;
     const hoyStr = new Date().toISOString().split('T')[0];
 
-    // SINCRONIZACIÓN DE DEUDA Y BLOQUEO
     db.ref('conductores').on('value', snap => {
         snap.forEach(c => {
             if(String(c.val().placa).trim().toUpperCase() === miPlaca.toUpperCase()) {
@@ -88,15 +87,12 @@
         });
     });
 
-    // GESTIÓN DE VIAJES E HISTORIAL
     db.ref('viajes').on('value', snap => {
         const ped = document.getElementById('lista-pedidos');
         const act = document.getElementById('viaje-activo-cont');
         const hist = document.getElementById('historial-hoy');
-        
         let contenidoPedidos = "";
         let hayNuevos = false;
-        
         act.innerHTML = ""; hist.innerHTML = "";
         let vHoy = 0;
 
@@ -112,13 +108,17 @@
                 </div>`;
             } else if(v.estado === 'en curso' && pV === miPlaca.toUpperCase()) {
                 idViajeActivo = child.key;
-                iniciarSeguimientoGPS(); // ACTIVAR GPS AL ESTAR EN CURSO
+                iniciarSeguimientoGPS();
                 
+                // --- BOTONES CON ENLACES CORREGIDOS ---
                 act.innerHTML = `<div class="card" style="border-color:#007bff; background:#050505;">
                     <b style="color:#007bff">🚕 VIAJE EN CURSO</b><br>
                     <a href="tel:${v.telefono}" class="btn" style="background:#444; color:white;">📞 LLAMAR AL CLIENTE</a>
-                    <a href="https://www.google.com/maps/dir/?api=1&destination=${v.latA},${v.lngA}" target="_blank" class="btn btn-gps">📍 IR POR CLIENTE</a>
-                    <a href="https://www.google.com/maps/dir/?api=1&destination=${v.latB},${v.lngB}" target="_blank" class="btn btn-gps" style="background:#6610f2">🏁 IR AL DESTINO</a>
+                    
+                    <a href="https://www.google.com/maps/dir/?api=1&destination=${v.latA},${v.lngA}&travelmode=driving" target="_blank" class="btn btn-gps">📍 IR POR CLIENTE</a>
+                    
+                    <a href="https://www.google.com/maps/dir/?api=1&destination=${v.latB},${v.lngB}&travelmode=driving" target="_blank" class="btn btn-gps" style="background:#6610f2">🏁 IR AL DESTINO</a>
+                    
                     <button class="btn btn-finish" onclick="finalizar('${child.key}')">FINALIZAR Y COBRAR</button>
                 </div>`;
             } else if(v.estado === 'completado' && pV === miPlaca.toUpperCase() && v.fecha === hoyStr) {
@@ -126,18 +126,14 @@
                 hist.innerHTML += `<div class="historial-item"><span>✅ ${v.cliente}</span><b>B/. ${parseFloat(v.precio).toFixed(2)}</b></div>`;
             }
         });
-
         ped.innerHTML = contenidoPedidos;
         document.getElementById('ganado-hoy').innerText = "B/. " + vHoy.toFixed(2);
-        
-        // Manejo de sonido de alerta
         const snd = document.getElementById('snd-alerta');
         if(hayNuevos) { snd.play().catch(e => {}); } else { snd.pause(); snd.currentTime = 0; }
     });
 
-    // FUNCIÓN DE SEGUIMIENTO GPS REAL
     function iniciarSeguimientoGPS() {
-        if (watchID) return; // Si ya está activo, no duplicar
+        if (watchID) return;
         if (navigator.geolocation) {
             watchID = navigator.geolocation.watchPosition(pos => {
                 if(idViajeActivo) {
@@ -146,29 +142,23 @@
                         lngC: pos.coords.longitude
                     });
                 }
-            }, err => console.error(err), { enableHighAccuracy: true });
+            }, null, { enableHighAccuracy: true });
         }
     }
 
     function detenerSeguimientoGPS() {
-        if (watchID) {
-            navigator.geolocation.clearWatch(watchID);
-            watchID = null;
-        }
+        if (watchID) { navigator.geolocation.clearWatch(watchID); watchID = null; }
     }
 
-    function aceptar(id) { 
-        db.ref('viajes/' + id).update({ estado: 'en curso', placa: miPlaca, chofer: miNombre }); 
-    }
+    function aceptar(id) { db.ref('viajes/' + id).update({ estado: 'en curso', placa: miPlaca, chofer: miNombre }); }
 
     function finalizar(id) {
-        if(!confirm("¿Confirmas que el cliente pagó B/.?")) return;
-        detenerSeguimientoGPS(); // Apagar GPS al terminar
+        if(!confirm("¿Cobraste el viaje?")) return;
+        detenerSeguimientoGPS();
         db.ref('viajes/' + id).once('value', snap => {
             const v = snap.val();
             db.ref('viajes/' + id).update({ estado: 'completado' });
             idViajeActivo = null;
-
             db.ref('conductores').once('value', cSnap => {
                 cSnap.forEach(c => {
                     if(String(c.val().placa).trim().toUpperCase() === miPlaca.toUpperCase()) {

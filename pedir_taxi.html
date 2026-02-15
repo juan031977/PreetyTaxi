@@ -2,14 +2,20 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <title>PreetyTaxi - Pedir Viaje</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg&libraries=places"></script>
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
+        /* ELIMINA LA FLECHA DE REINICIO Y BLOQUEA EL REFRESCO */
+        body, html { 
+            margin: 0; padding: 0; height: 100%; 
+            font-family: 'Segoe UI', sans-serif; 
+            overflow: hidden; 
+            overscroll-behavior-y: none; /* Esta es la clave */
+        }
         #map { height: 100%; width: 100%; position: absolute; top: 0; left: 0; z-index: 1; }
         .ui-panel { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: 92%; max-width: 420px; z-index: 10; }
         .box { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 -8px 25px rgba(0,0,0,0.25); border-top: 4px solid #ffc107; }
@@ -58,7 +64,8 @@
         map = new google.maps.Map(document.getElementById("map"), {
             center: {lat: 8.9833, lng: -79.5167},
             zoom: 14,
-            disableDefaultUI: true
+            disableDefaultUI: true,
+            gestureHandling: "greedy" // Prioriza el movimiento del mapa sobre el scroll de la página
         });
 
         ds = new google.maps.DirectionsService();
@@ -68,8 +75,8 @@
             polylineOptions: { strokeColor: "#ffc107", strokeWeight: 6 } 
         });
 
-        markerA = new google.maps.Marker({ position: {lat: 8.9800, lng: -79.5100}, map: map, draggable: true, icon: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png' });
-        markerB = new google.maps.Marker({ position: {lat: 8.9900, lng: -79.5200}, map: map, draggable: true, icon: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png' });
+        markerA = new google.maps.Marker({ position: {lat: 8.9800, lng: -79.5100}, map: map, draggable: true, icon: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png' });
+        markerB = new google.maps.Marker({ position: {lat: 8.9900, lng: -79.5200}, map: map, draggable: true, icon: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png' });
 
         const acOri = new google.maps.places.Autocomplete(document.getElementById('origen-input'), { componentRestrictions: { country: "pa" } });
         const acDes = new google.maps.places.Autocomplete(document.getElementById('destino-input'), { componentRestrictions: { country: "pa" } });
@@ -121,34 +128,20 @@
             const v = snap.val();
             if(!v) return;
 
-            // CUANDO UN CONDUCTOR ACEPTA EL VIAJE
             if(v.estado === "en curso") {
                 document.getElementById('status-label').innerText = "🚕 ¡CONDUCTOR EN CAMINO!";
                 document.getElementById('datos-conductor').style.display = "block";
                 document.getElementById('nombre-ch').innerText = v.chofer;
                 document.getElementById('placa-ch').innerText = "Placa: " + v.placa;
 
-                // SI EL CONDUCTOR ESTÁ MANDANDO SU GPS (latC y lngC)
                 if(v.latC && v.lngC) {
                     const posChofer = {lat: v.latC, lng: v.lngC};
-                    
-                    // Actualizar el marcador del taxi en el mapa
                     if(!markerChofer) {
-                        markerChofer = new google.maps.Marker({ 
-                            position: posChofer, 
-                            map: map, 
-                            icon: 'https://maps.google.com/mapfiles/ms/icons/taxi.png' 
-                        });
+                        markerChofer = new google.maps.Marker({ position: posChofer, map: map, icon: 'http://maps.google.com/mapfiles/ms/icons/taxi.png' });
                     } else {
                         markerChofer.setPosition(posChofer);
                     }
-
-                    // RE-TRAZAR LA RUTA DESDE EL TAXI HACIA EL CLIENTE (Punto A)
-                    ds.route({ 
-                        origin: posChofer, 
-                        destination: {lat: v.latA, lng: v.lngA}, 
-                        travelMode: 'DRIVING' 
-                    }, (res, stat) => {
+                    ds.route({ origin: posChofer, destination: {lat: v.latA, lng: v.lngA}, travelMode: 'DRIVING' }, (res, stat) => {
                         if (stat === 'OK') dr.setDirections(res);
                     });
                 }

@@ -34,10 +34,6 @@
         <div id="panel-espera" class="panel-espera">
             <h3 id="status-label" style="color:#ffc107;">Buscando conductor...</h3>
             <a id="btn-ws-cliente" href="#" target="_blank" class="btn btn-whatsapp">📱 AVISAR POR WHATSAPP</a>
-            <div id="datos-conductor" style="margin-top:15px; padding:10px; background:#333; border-radius:10px; display:none;">
-                <b id="nombre-ch" style="color:#ffc107; font-size:18px;">---</b><br>
-                <small id="placa-ch" style="color:white;">---</small>
-            </div>
             <button class="btn" style="background:transparent; color:#ff4d4d; font-size:13px;" onclick="location.reload()">Cancelar</button>
         </div>
     </div>
@@ -47,35 +43,65 @@
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    let map, ds, dr, markerA, markerB, viajeID;
+    let map, ds, dr, viajeID;
+    // Marcadores invisibles para el cálculo técnico
+    let markerA = new google.maps.Marker();
+    let markerB = new google.maps.Marker();
 
     function initMap() {
-        map = new google.maps.Map(document.getElementById("map"), { center: {lat: 8.9833, lng: -79.5167}, zoom: 14, disableDefaultUI: true });
+        // Mapa centrado en Panamá
+        map = new google.maps.Map(document.getElementById("map"), { 
+            center: {lat: 9.0415, lng: -79.4411}, // Brisas del Golf aprox
+            zoom: 14, 
+            disableDefaultUI: true,
+            gestureHandling: "greedy" // Facilita moverlo en el celular
+        });
+
         ds = new google.maps.DirectionsService();
-        dr = new google.maps.DirectionsRenderer({ map: map, suppressMarkers: true, polylineOptions: { strokeColor: "#ffc107", strokeWeight: 6 } });
         
-        markerA = new google.maps.Marker({ position: {lat: 8.9833, lng: -79.5167}, map: map, draggable: true });
-        markerB = new google.maps.Marker({ position: {lat: 8.9850, lng: -79.5180}, map: map, draggable: true });
+        // CONFIGURACIÓN PARA QUE NO MUEVA EL MAPA Y NO TENGA FLECHAS
+        dr = new google.maps.DirectionsRenderer({ 
+            map: map, 
+            suppressMarkers: true, // ELIMINA LAS FLECHAS Y GLOBOS A y B
+            preserveViewport: true, // EVITA QUE EL MAPA SE MUEVA SOLO AL CALCULAR
+            polylineOptions: { strokeColor: "#ffc107", strokeWeight: 6, strokeOpacity: 0.8 } 
+        });
 
         const opciones = { componentRestrictions: { country: "pa" } };
         const acOri = new google.maps.places.Autocomplete(document.getElementById('origen-input'), opciones);
         const acDes = new google.maps.places.Autocomplete(document.getElementById('destino-input'), opciones);
 
-        acOri.addListener('place_changed', () => { markerA.setPosition(acOri.getPlace().geometry.location); trazar(); });
-        acDes.addListener('place_changed', () => { markerB.setPosition(acDes.getPlace().geometry.location); trazar(); });
-        markerA.addListener('dragend', trazar);
-        markerB.addListener('dragend', trazar);
-        trazar();
+        acOri.addListener('place_changed', () => { 
+            const place = acOri.getPlace();
+            if(place.geometry) {
+                markerA.setPosition(place.geometry.location);
+                trazar();
+            }
+        });
+
+        acDes.addListener('place_changed', () => { 
+            const place = acDes.getPlace();
+            if(place.geometry) {
+                markerB.setPosition(place.geometry.location);
+                trazar();
+            }
+        });
     }
 
     function trazar() {
-        ds.route({ origin: markerA.getPosition(), destination: markerB.getPosition(), travelMode: 'DRIVING' }, (res, stat) => {
+        if (!markerA.getPosition() || !markerB.getPosition()) return;
+
+        ds.route({ 
+            origin: markerA.getPosition(), 
+            destination: markerB.getPosition(), 
+            travelMode: 'DRIVING' 
+        }, (res, stat) => {
             if (stat === 'OK') {
-                dr.setDirections(res);
+                dr.setDirections(res); // Dibuja la línea de la ruta
+                
                 const km = res.routes[0].legs[0].distance.value / 1000;
                 
-                // --- NUEVA LÓGICA DE PRECIO ---
-                // Base 0.50 + (km * 0.50). Mínimo 1.50. Redondeo a cada 0.50.
+                // Tu regla: Base 0.50 + (km * 0.50). Mínimo 1.50. Redondeo a 0.50.
                 let subtotal = 0.50 + (km * 0.50);
                 let final = Math.ceil(subtotal * 2) / 2; 
                 if (final < 1.50) final = 1.50;
@@ -90,10 +116,10 @@
         const tel = localStorage.getItem('userCel');
         const nombre = localStorage.getItem('userName') || "Cliente";
         const precio = document.getElementById('precio-txt').innerText;
-        const ori = document.getElementById('origen-input').value || "Ubicación GPS";
-        const des = document.getElementById('destino-input').value || "Destino indicado";
+        const ori = document.getElementById('origen-input').value;
+        const des = document.getElementById('destino-input').value;
 
-        if(!tel) return alert("Inicia sesión primero");
+        if(!tel) return alert("Inicia sesión");
 
         const ref = db.ref('viajes').push({
             cliente: nombre, telefono: tel, precio: precio.replace("B/. ", ""),
@@ -106,23 +132,6 @@
         document.getElementById('btn-ws-cliente').style.display = "flex";
         document.getElementById('panel-cliente').style.display = "none";
         document.getElementById('panel-espera').style.display = "block";
-        escuchar();
-    }
-
-    function escuchar() {
-        db.ref('viajes/' + viajeID).on('value', snap => {
-            const v = snap.val();
-            if(v && v.estado === "en curso") {
-                document.getElementById('status-label').innerText = "🚕 CHOFER EN CAMINO";
-                document.getElementById('datos-conductor').style.display = "block";
-                document.getElementById('nombre-ch').innerText = v.chofer || "Asignado";
-                if(v.conductorCel) {
-                    const msgDirecto = `Hola, soy ${v.cliente}. Te espero en ${v.origen}.`;
-                    document.getElementById('btn-ws-cliente').href = `https://wa.me/507${v.conductorCel}?text=${msgDirecto}`;
-                }
-            }
-            if(v && v.estado === "completado") { alert("Viaje finalizado"); location.reload(); }
-        });
     }
 </script>
 </body>

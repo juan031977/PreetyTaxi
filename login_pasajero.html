@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Pasajero - PreetyTaxi</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #0b0b0b; color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .login-box { background: #1a1a1a; padding: 30px; border-radius: 20px; width: 90%; max-width: 350px; border: 1px solid #333; text-align: center; }
+        h2 { color: #ffc107; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #222; color: white; box-sizing: border-box; }
+        button { background: #ffc107; width: 100%; padding: 15px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <h2>Entrar Pasajero</h2>
+        <input type="tel" id="tel" placeholder="Número Celular">
+        <input type="password" id="pass" placeholder="Tu Contraseña">
+        <button onclick="login()">INGRESAR</button>
+        <a href="registro_pasajero.html" style="color:#888; display:block; margin-top:15px; text-decoration:none; font-size:13px;">Crear cuenta nueva</a>
+    </div>
+
+    <script>
+        const firebaseConfig = { 
+            apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg",
+            databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" 
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+
+        function login() {
+            const t = document.getElementById('tel').value;
+            const p = document.getElementById('pass').value;
+
+            firebase.database().ref('pasajeros/' + t).once('value').then(snap => {
+                const u = snap.val();
+                if(u && u.password === p) {
+                    localStorage.setItem('userCel', t);
+                    localStorage.setItem('userName', u.nombre);
+                    
+                    // RUTA CORREGIDA CON EL GUION BAJO
+                    window.location.href = "pedir_taxi.html"; 
+                    
+                } else {
+                    alert("❌ Error: Celular o clave incorrectos.");
+                }
+            });
+        }
+    </script>
+</body>
+</html>

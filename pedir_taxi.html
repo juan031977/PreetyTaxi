@@ -9,23 +9,39 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg&libraries=places"></script>
     <style>
-        /* BLOQUEO TOTAL DE MOVIMIENTO DE PÁGINA Y RECARGA */
-        body, html { 
-            margin: 0; padding: 0; height: 100%; 
+        /* BLOQUEO RADICAL DE GESTOS DEL NAVEGADOR */
+        html {
+            overflow: hidden;
+            height: 100%;
+            width: 100%;
+        }
+
+        body { 
+            margin: 0; 
+            padding: 0; 
+            height: 100%; 
+            width: 100%;
             font-family: 'Segoe UI', sans-serif; 
             overflow: hidden !important; 
-            /* ESTO MATA LA FLECHA DE RECARGA EN ANDROID Y IPHONE */
-            overscroll-behavior: none !important; 
-            overscroll-behavior-y: none !important;
+            
+            /* Esta línea es la clave definitiva para la flecha de Android */
+            overscroll-behavior-y: contain !important; 
+            
             position: fixed; 
-            width: 100%;
-            touch-action: none; 
+            top: 0;
+            left: 0;
+            
+            /* Solo permite mover el mapa, bloquea el gesto de refrescar del navegador */
+            touch-action: pan-x pan-y !important; 
         }
 
         #map { 
-            height: 100%; width: 100%; 
-            position: absolute; top: 0; left: 0; z-index: 1; 
-            touch-action: pan-x pan-y; 
+            height: 100%; 
+            width: 100%; 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            z-index: 1; 
         }
 
         .ui-panel { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: 92%; max-width: 420px; z-index: 10; }
@@ -33,6 +49,7 @@
         .box { 
             background: white; padding: 20px; border-radius: 20px; 
             box-shadow: 0 -8px 25px rgba(0,0,0,0.25); border-top: 4px solid #ffc107;
+            /* Los controles si deben permitir toques normales */
             touch-action: auto; 
         }
 
@@ -71,18 +88,12 @@
     </div>
 
 <script>
-    // ESTO BLOQUEA CUALQUER INTENTO DEL NAVEGADOR DE DESLIZAR
-    window.addEventListener('load', function() {
-        document.body.addEventListener('touchmove', function(e) {
-            if (e.target.id === 'map' || e.target.closest('#map')) {
-                // Dejamos que el mapa se mueva
-            } else if (e.target.tagName === 'INPUT' || e.target.closest('.box')) {
-                // Dejamos que los inputs funcionen
-            } else {
-                e.preventDefault(); // Bloqueamos todo lo demás (la recarga)
-            }
-        }, {passive: false});
-    });
+    // BLOQUEO POR SCRIPT PARA REFORZAR
+    document.addEventListener('touchmove', function(e) {
+        if (e.target.id !== 'origen-input' && e.target.id !== 'destino-input') {
+            e.preventDefault();
+        }
+    }, { passive: false });
 
     const firebaseConfig = { apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);

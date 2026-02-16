@@ -8,166 +8,80 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
         body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; padding: 10px; margin: 0; }
-        .header { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #1a1a1a; border-radius: 12px; margin-bottom: 12px; border: 1px solid #333; }
-        .btn-logout { background: #ff4d4d; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: bold; cursor: pointer; }
-        .billetera { background: linear-gradient(145deg, #1a1a1a, #000); padding: 18px; border-radius: 20px; border: 1px solid #ffc107; margin-bottom: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; box-shadow: 0 4px 15px rgba(255,193,7,0.1); }
-        .billetera div { text-align: center; }
-        .billetera b { display: block; font-size: 22px; color: #ffc107; margin-top: 4px; }
-        .card { background: #1a1a1a; padding: 18px; border-radius: 18px; border-left: 6px solid #ffc107; margin-bottom: 15px; }
-        .btn { width: 100%; padding: 15px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; text-transform: uppercase; text-decoration: none; display: flex; align-items: center; justify-content: center; font-size: 14px; }
-        .btn-accept { background: #ffc107; color: #000; }
-        .btn-aviso { background: #007bff; color: white; }
-        .btn-finish { background: #28a745; color: white; }
-        .historial-box { background: #111; border-radius: 18px; padding: 15px; margin-top: 20px; border: 1px solid #222; }
-        .historial-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #222; font-size: 13px; }
-        #bloqueo-screen { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); z-index: 9999; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 20px; box-sizing: border-box; }
+        .billetera { background: linear-gradient(145deg, #1a1a1a, #000); padding: 18px; border-radius: 20px; border: 1px solid #ffc107; margin-bottom: 15px; text-align: center; }
+        .grid-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .stat-card { background: #222; padding: 10px; border-radius: 12px; }
+        .stat-card small { color: #888; font-size: 11px; display: block; }
+        .stat-card div { font-size: 18px; font-weight: bold; color: #ffc107; }
+        .viaje-box { background: white; color: black; padding: 15px; border-radius: 15px; margin-top: 10px; }
+        .btn { width: 100%; padding: 12px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 8px; font-size: 14px; text-decoration: none; display: flex; align-items: center; justify-content: center; }
+        .btn-ws { background: #25d366; color: white; }
+        .btn-fin { background: #ffc107; color: black; }
     </style>
 </head>
 <body>
-
-    <audio id="snd-alerta" src="alerta.mp3" loop></audio>
-
-    <div id="bloqueo-screen">
-        <h1 style="color: #ff4d4d; font-size: 50px; margin: 0;">🛑</h1>
-        <h2 style="color: white;">CUENTA BLOQUEADA</h2>
-        <p style="color: #888;">Favor cancelar sus comisiones pendientes para activar el panel.</p>
-        <button class="btn-logout" onclick="cerrarSesion()">SALIR</button>
-    </div>
-
-    <div id="panel-principal">
-        <div class="header">
-            <span>🚖 PLACA: <b id="disp-placa" style="color:#ffc107">---</b></span>
-            <button class="btn-logout" onclick="cerrarSesion()">CERRAR SESIÓN</button>
-        </div>
-
-        <div class="billetera">
-            <div><small>VENTAS HOY</small><b id="ganado-hoy">B/. 0.00</b></div>
-            <div><small>MI DEUDA</small><b id="mi-deuda" style="color:#ff4d4d">B/. 0.00</b></div>
-        </div>
-
-        <div id="viaje-activo-cont"></div>
-        <h4 style="color:#ffc107; margin-left:10px;">PEDIDOS DISPONIBLES</h4>
-        <div id="lista-pedidos"></div>
-
-        <div class="historial-box">
-            <h4 style="margin: 0; color: #666; font-size: 12px;">REGISTRO DE HOY</h4>
-            <div id="historial-hoy"></div>
+    <div class="billetera">
+        <div style="font-size:12px; color:#888; margin-bottom:10px;" id="lbl-cel">---</div>
+        <div class="grid-stats">
+            <div class="stat-card"><small>VENTAS HOY</small><div id="txt-ventas">B/. 0.00</div></div>
+            <div class="stat-card"><small>DEUDA (10%)</small><div id="txt-deuda">B/. 0.00</div></div>
         </div>
     </div>
+    <div id="lista-viajes"></div>
 
 <script>
     const firebaseConfig = { apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+    const miCel = localStorage.getItem('driverCel');
+    const hoy = new Date().toISOString().split('T')[0];
 
-    let miCelular = localStorage.getItem('driverCel'); 
-    let miPlaca = "";
-    let miNombre = "";
-    let idViajeActivo = null;
+    function cargar() {
+        if(!miCel) return window.location.href="login_conductor.html";
+        document.getElementById('lbl-cel').innerText = "Chofer: " + miCel;
 
-    if (!miCelular) { window.location.href = "login_conductor.html"; }
-
-    const hoyStr = new Date().toISOString().split('T')[0];
-
-    db.ref('conductores/' + miCelular).on('value', snap => {
-        const d = snap.val();
-        if(d) {
-            miNombre = d.nombre;
-            miPlaca = d.placa;
-            document.getElementById('disp-placa').innerText = miPlaca;
-            document.getElementById('mi-deuda').innerText = "B/. " + (parseFloat(d.deuda) || 0).toFixed(2);
-            
-            const bloq = d.estado === 'bloqueado';
-            document.getElementById('bloqueo-screen').style.display = bloq ? 'flex' : 'none';
-            document.getElementById('panel-principal').style.display = bloq ? 'none' : 'block';
-        }
-    });
-
-    db.ref('viajes').on('value', snap => {
-        const ped = document.getElementById('lista-pedidos');
-        const act = document.getElementById('viaje-activo-cont');
-        const hist = document.getElementById('historial-hoy');
-        let contenidoPedidos = "";
-        let hayNuevos = false;
-        act.innerHTML = ""; hist.innerHTML = "";
-        let vHoy = 0;
-
-        snap.forEach(child => {
-            const v = child.val();
-            const conductorDelViaje = v.driverCel || ""; 
-
-            if(v.estado === 'buscando') {
-                hayNuevos = true;
-                contenidoPedidos += `<div class="card">
-                    <b>Oferta: B/. ${parseFloat(v.precio).toFixed(2)}</b><br><small>Cliente: ${v.cliente}</small>
-                    <button class="btn btn-accept" onclick="aceptar('${child.key}')">ACEPTAR</button>
-                </div>`;
-            } else if(v.estado === 'en curso' && conductorDelViaje === miCelular) {
-                idViajeActivo = child.key;
-                act.innerHTML = `<div class="card" style="border-color:#ffc107; background:#050505;">
-                    <b style="color:#ffc107">🚕 SERVICIO EN CURSO</b><br>
-                    <p>Monto a cobrar: <b>B/. ${parseFloat(v.precio).toFixed(2)}</b></p>
-                    <a href="tel:${v.telefono}" class="btn" style="background:#444; color:white;">📞 LLAMAR AL CLIENTE</a>
-                    <button class="btn btn-aviso" onclick="avisarCamino('${child.key}')">🔔 AVISAR: VOY EN CAMINO</button>
-                    <button class="btn btn-finish" style="margin-top:20px;" onclick="finalizar('${child.key}')">FINALIZAR Y COBRAR</button>
-                </div>`;
-            } else if(v.estado === 'completado' && conductorDelViaje === miCelular && v.fecha === hoyStr) {
-                vHoy += parseFloat(v.precio);
-                hist.innerHTML += `<div class="historial-item"><span>✅ ${v.cliente}</span><b>B/. ${parseFloat(v.precio).toFixed(2)}</b></div>`;
+        db.ref('conductores/' + miCel).on('value', snap => {
+            const d = snap.val();
+            if(d) {
+                if(d.ultimoDia !== hoy) db.ref('conductores/' + miCel).update({ totalGeneradoHoy: 0, ultimoDia: hoy });
+                document.getElementById('txt-ventas').innerText = "B/. " + (parseFloat(d.totalGeneradoHoy) || 0).toFixed(2);
+                document.getElementById('txt-deuda').innerText = "B/. " + (parseFloat(d.deuda) || 0).toFixed(2);
             }
         });
 
-        ped.innerHTML = contenidoPedidos;
-        document.getElementById('ganado-hoy').innerText = "B/. " + vHoy.toFixed(2);
-        const snd = document.getElementById('snd-alerta');
-        if(hayNuevos) { snd.play().catch(e => {}); } else { snd.pause(); snd.currentTime = 0; }
-    });
-
-    function aceptar(id) { 
-        db.ref('viajes/' + id).update({ 
-            estado: 'en curso', 
-            placa: miPlaca, 
-            chofer: miNombre,
-            driverCel: miCelular 
-        }); 
-    }
-
-    function avisarCamino(id) {
-        db.ref('viajes/' + id).update({ notificacion: "El taxi va en camino" })
-        .then(() => { alert("Aviso enviado al pasajero"); });
-    }
-
-    function finalizar(id) {
-        if(!confirm("¿Confirmas que cobraste el viaje?")) return;
-        const idV = id;
-        db.ref('viajes/' + idV).once('value', snap => {
-            const v = snap.val();
-            if(!v) return;
-            const precioViaje = parseFloat(v.precio) || 0;
-            const comision = precioViaje * 0.10;
-
-            db.ref('viajes/' + idV).update({ estado: 'completado' });
-
-            const refConductor = db.ref('conductores/' + miCelular);
-            refConductor.once('value', cSnap => {
-                const d = cSnap.val();
-                if(d) {
-                    const nuevoTotal = (parseFloat(d.totalGenerado) || 0) + precioViaje;
-                    const nuevaDeuda = (parseFloat(d.deuda) || 0) + comision;
-
-                    refConductor.update({
-                        totalGenerado: nuevoTotal.toFixed(2),
-                        deuda: nuevaDeuda.toFixed(2)
-                    }).then(() => {
-                        alert("¡Viaje Finalizado!\nComisión 10%: B/. " + comision.toFixed(2));
-                        idViajeActivo = null;
-                    });
+        db.ref('viajes').on('value', snap => {
+            const lista = document.getElementById('lista-viajes');
+            lista.innerHTML = "";
+            snap.forEach(child => {
+                const v = child.val();
+                if(v.estado === "buscando") {
+                    lista.innerHTML += `<div class="viaje-box"><b>Pedido: B/. ${v.precio}</b><br><small>${v.origen}</small><button class="btn btn-fin" onclick="aceptar('${child.key}')">ACEPTAR</button></div>`;
+                } else if(v.estado === "en curso" && v.conductorCel === miCel) {
+                    const msg = `🚕 *PreetyTaxi Panamá*%0A¡Hola *${v.cliente}*! Soy tu conductor asignado. Ya voy en camino a buscarte a: %0A📍 _${v.origen}_%0A💰 *Tarifa:* B/. ${v.precio}`;
+                    lista.innerHTML = `<div class="viaje-box" style="border:2px solid #25d366">
+                        <b>En camino a buscar a ${v.cliente}</b><br><small>Destino: ${v.destino}</small>
+                        <a href="https://wa.me/507${v.telefono}?text=${msg}" target="_blank" class="btn btn-ws">📱 CHATEAR CON PASAJERO</a>
+                        <button class="btn btn-fin" onclick="finalizar('${child.key}', ${v.precio})">FINALIZAR VIAJE</button>
+                    </div>`;
                 }
             });
         });
     }
 
-    function cerrarSesion() { if(confirm("¿Cerrar sesión?")) { localStorage.clear(); window.location.href = "login_conductor.html"; } }
+    function aceptar(id) { db.ref('viajes/' + id).update({ estado: 'en curso', conductorCel: miCel, chofer: miCel }); }
+
+    function finalizar(id, precio) {
+        if(!confirm("¿Cobraste?")) return;
+        db.ref('viajes/' + id).update({ estado: 'completado' });
+        const ref = db.ref('conductores/' + miCel);
+        ref.once('value', s => {
+            const d = s.val();
+            const nHoy = (parseFloat(d.totalGeneradoHoy) || 0) + parseFloat(precio);
+            const nDeuda = (parseFloat(d.deuda) || 0) + (precio * 0.10);
+            ref.update({ totalGeneradoHoy: nHoy.toFixed(2), deuda: nDeuda.toFixed(2), ultimoDia: hoy });
+        });
+    }
+    cargar();
 </script>
 </body>
 </html>

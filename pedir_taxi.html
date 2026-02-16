@@ -124,7 +124,7 @@
             if (status === 'OK') {
                 dr.setDirections(result);
                 const km = result.routes[0].legs[0].distance.value / 1000;
-                let final = Math.ceil((1.50 + (km * 0.60)) * 2) / 2;
+                let final = Math.ceil((0.50 + (km * 0.50)) * 2) / 2;
                 if (final < 1.50) final = 1.50;
                 document.getElementById('precio-txt').innerText = "B/. " + final.toFixed(2);
                 document.getElementById('info-viaje').style.display = "block";
@@ -181,3 +181,4 @@
 </script>
 </body>
 </html>
+

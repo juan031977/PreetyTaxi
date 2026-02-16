@@ -8,11 +8,34 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg&libraries=places"></script>
     <style>
-        html, body { margin: 0; padding: 0; height: 100%; width: 100%; font-family: 'Segoe UI', sans-serif; overflow: hidden; position: fixed; }
-        #map { height: 100%; width: 100%; position: absolute; top: 0; left: 0; z-index: 1; }
-        .ui-panel { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: 92%; max-width: 420px; z-index: 10; }
+        /* 1. BLOQUEO TOTAL DE PULL-TO-REFRESH */
+        html, body { 
+            margin: 0; 
+            padding: 0; 
+            height: 100%; 
+            width: 100%; 
+            font-family: 'Segoe UI', sans-serif; 
+            overflow: hidden; 
+            position: fixed;
+            /* Evita que el navegador recargue al deslizar hacia abajo */
+            overscroll-behavior-y: none; 
+            touch-action: none;
+        }
+
+        #map { 
+            height: 100%; 
+            width: 100%; 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            z-index: 1;
+            /* Permite mover el mapa pero bloquea el refresco del navegador */
+            touch-action: pan-x pan-y;
+        }
+        
+        .ui-panel { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: 92%; max-width: 420px; z-index: 10; touch-action: auto; }
         .box { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 -8px 25px rgba(0,0,0,0.25); border-top: 4px solid #ffc107; }
-        input { width: 100%; padding: 12px; margin: 6px 0; border-radius: 10px; border: 1px solid #eee; box-sizing: border-box; font-size: 14px; background: #f9f9f9; }
+        input { width: 100%; padding: 12px; margin: 6px 0; border-radius: 10px; border: 1px solid #eee; box-sizing: border-box; font-size: 16px; background: #f9f9f9; }
         .btn { width: 100%; padding: 15px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 16px; display: flex; align-items: center; justify-content: center; text-decoration: none; }
         .btn-yellow { background: #ffc107; color: #000; }
         .btn-whatsapp { background: #25d366; color: white; display: none; }
@@ -20,17 +43,20 @@
         .panel-espera { background: #1a1a1a; color: white; padding: 20px; border-radius: 20px; display: none; text-align: center; }
     </style>
 </head>
-<body onload="initMap()">
+<body>
     <div id="map"></div>
+    
     <div class="ui-panel">
         <div class="box" id="panel-cliente">
             <input id="origen-input" type="text" placeholder="📍 ¿Dónde te buscamos?">
             <input id="destino-input" type="text" placeholder="🏁 ¿A dónde vas?">
+            
             <div id="info-viaje" style="display:none;">
                 <div class="price-tag" id="precio-txt">B/. 1.50</div>
                 <button class="btn btn-yellow" onclick="confirmarPedido()">PEDIR TAXI AHORA</button>
             </div>
         </div>
+
         <div id="panel-espera" class="panel-espera">
             <h3 id="status-label" style="color:#ffc107;">Buscando conductor...</h3>
             <a id="btn-ws-cliente" href="#" target="_blank" class="btn btn-whatsapp">📱 AVISAR POR WHATSAPP</a>
@@ -39,32 +65,42 @@
     </div>
 
 <script>
+    // 2. BLOQUEO POR JAVASCRIPT (Seguridad extra)
+    document.addEventListener('touchstart', function(e) {
+        if (e.touches.length > 1) e.preventDefault();
+    }, {passive: false});
+
+    document.addEventListener('touchmove', function(e) {
+        // Si el usuario intenta deslizar hacia abajo desde el tope, bloqueamos el evento
+        if (window.scrollY === 0 && e.touches[0].pageY > 0) {
+            // Solo bloqueamos si no es dentro de un input
+            if (e.target.tagName !== 'INPUT') {
+                e.preventDefault();
+            }
+        }
+    }, {passive: false});
+
     const firebaseConfig = { apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    let map, ds, dr, viajeID;
-    // Marcadores invisibles para el cálculo técnico
-    let markerA = new google.maps.Marker();
-    let markerB = new google.maps.Marker();
+    let map, ds, dr;
+    let posA = null, posB = null;
 
     function initMap() {
-        // Mapa centrado en Panamá
         map = new google.maps.Map(document.getElementById("map"), { 
-            center: {lat: 9.0415, lng: -79.4411}, // Brisas del Golf aprox
+            center: {lat: 9.0415, lng: -79.4411}, 
             zoom: 14, 
             disableDefaultUI: true,
-            gestureHandling: "greedy" // Facilita moverlo en el celular
+            gestureHandling: "greedy" 
         });
 
         ds = new google.maps.DirectionsService();
-        
-        // CONFIGURACIÓN PARA QUE NO MUEVA EL MAPA Y NO TENGA FLECHAS
         dr = new google.maps.DirectionsRenderer({ 
             map: map, 
-            suppressMarkers: true, // ELIMINA LAS FLECHAS Y GLOBOS A y B
-            preserveViewport: true, // EVITA QUE EL MAPA SE MUEVA SOLO AL CALCULAR
-            polylineOptions: { strokeColor: "#ffc107", strokeWeight: 6, strokeOpacity: 0.8 } 
+            suppressMarkers: true, 
+            preserveViewport: true, 
+            polylineOptions: { strokeColor: "#ffc107", strokeWeight: 6 } 
         });
 
         const opciones = { componentRestrictions: { country: "pa" } };
@@ -73,39 +109,24 @@
 
         acOri.addListener('place_changed', () => { 
             const place = acOri.getPlace();
-            if(place.geometry) {
-                markerA.setPosition(place.geometry.location);
-                trazar();
-            }
+            if(place.geometry) { posA = place.geometry.location; trazar(); }
         });
 
         acDes.addListener('place_changed', () => { 
             const place = acDes.getPlace();
-            if(place.geometry) {
-                markerB.setPosition(place.geometry.location);
-                trazar();
-            }
+            if(place.geometry) { posB = place.geometry.location; trazar(); }
         });
     }
 
     function trazar() {
-        if (!markerA.getPosition() || !markerB.getPosition()) return;
-
-        ds.route({ 
-            origin: markerA.getPosition(), 
-            destination: markerB.getPosition(), 
-            travelMode: 'DRIVING' 
-        }, (res, stat) => {
+        if (!posA || !posB) return;
+        ds.route({ origin: posA, destination: posB, travelMode: 'DRIVING' }, (res, stat) => {
             if (stat === 'OK') {
-                dr.setDirections(res); // Dibuja la línea de la ruta
-                
+                dr.setDirections(res);
                 const km = res.routes[0].legs[0].distance.value / 1000;
-                
-                // Tu regla: Base 0.50 + (km * 0.50). Mínimo 1.50. Redondeo a 0.50.
                 let subtotal = 0.50 + (km * 0.50);
                 let final = Math.ceil(subtotal * 2) / 2; 
                 if (final < 1.50) final = 1.50;
-
                 document.getElementById('precio-txt').innerText = "B/. " + final.toFixed(2);
                 document.getElementById('info-viaje').style.display = "block";
             }
@@ -125,7 +146,6 @@
             cliente: nombre, telefono: tel, precio: precio.replace("B/. ", ""),
             estado: "buscando", origen: ori, destino: des, fecha: new Date().toISOString()
         });
-        viajeID = ref.key;
 
         const msg = `👋 *NUEVO PEDIDO PREETYTAXI*%0A👤 *Cliente:* ${nombre}%0A📍 *Origen:* ${ori}%0A🏁 *Destino:* ${des}%0A💰 *Tarifa:* ${precio}`;
         document.getElementById('btn-ws-cliente').href = `https://wa.me/507XXXXYYYY?text=${msg}`; 
@@ -133,6 +153,8 @@
         document.getElementById('panel-cliente').style.display = "none";
         document.getElementById('panel-espera').style.display = "block";
     }
+
+    window.onload = initMap;
 </script>
 </body>
 </html>

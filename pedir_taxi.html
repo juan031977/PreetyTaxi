@@ -15,6 +15,7 @@
             font-family: 'Segoe UI', sans-serif; 
             overflow: hidden !important; 
             overscroll-behavior: none !important; 
+            overscroll-behavior-y: none !important; /* Parche extra para Chrome Android */
             position: fixed; /* Esto ancla la app al borde superior, matando la flecha */
             width: 100%;
             touch-action: none; /* Impide que el navegador gestione los gestos */
@@ -70,16 +71,19 @@
 
 <script>
     // BLOQUEO DEFINITIVO POR JAVASCRIPT
+    // Se agrega el preventDefault para asegurar que el navegador no recargue
     document.addEventListener('touchstart', function(e) {
-        if (e.target.tagName !== 'INPUT') {
-            // Solo permite el toque si no es para refrescar
+        if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+            // Permitimos el toque pero bajo nuestro control
         }
     }, {passive: false});
 
     document.addEventListener('touchmove', function(e) {
-        // Si el usuario intenta deslizar hacia abajo desde el tope, lo bloqueamos
-        if (window.scrollY <= 0 && e.touches[0].pageY > e.touches[0].target.offsetTop) {
-             if (e.target.tagName !== 'INPUT') e.preventDefault();
+        // Bloqueo estricto del pull-to-refresh
+        if (e.touches[0].pageY > 0) {
+             if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                 e.preventDefault();
+             }
         }
     }, {passive: false});
 
@@ -181,4 +185,3 @@
 </script>
 </body>
 </html>
-

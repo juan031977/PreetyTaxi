@@ -39,7 +39,10 @@
                 if(u && u.password === p) {
                     localStorage.setItem('userCel', t);
                     localStorage.setItem('userName', u.nombre);
-                    window.location.href = "pedir_taxi.html";
+                    
+                    // RUTA CORREGIDA CON EL GUION BAJO
+                    window.location.href = "pedir_taxi.html"; 
+                    
                 } else {
                     alert("❌ Error: Celular o clave incorrectos.");
                 }

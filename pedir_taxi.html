@@ -3,141 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <title>PreetyTaxi - Pedir Viaje</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg&libraries=places"></script>
     <style>
-        /* BLOQUEO RADICAL DE GESTOS DEL NAVEGADOR */
-        html {
-            overflow: hidden;
-            height: 100%;
-            width: 100%;
-        }
-
-        body { 
-            margin: 0; 
-            padding: 0; 
-            height: 100%; 
-            width: 100%;
-            font-family: 'Segoe UI', sans-serif; 
-            overflow: hidden !important; 
-            
-            /* Esta línea es la clave definitiva para la flecha de Android */
-            overscroll-behavior-y: contain !important; 
-            
-            position: fixed; 
-            top: 0;
-            left: 0;
-            
-            /* Solo permite mover el mapa, bloquea el gesto de refrescar del navegador */
-            touch-action: pan-x pan-y !important; 
-        }
-
-        #map { 
-            height: 100%; 
-            width: 100%; 
-            position: absolute; 
-            top: 0; 
-            left: 0; 
-            z-index: 1; 
-        }
-
+        html, body { margin: 0; padding: 0; height: 100%; width: 100%; font-family: 'Segoe UI', sans-serif; overflow: hidden; position: fixed; }
+        #map { height: 100%; width: 100%; position: absolute; top: 0; left: 0; z-index: 1; }
         .ui-panel { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: 92%; max-width: 420px; z-index: 10; }
-        
-        .box { 
-            background: white; padding: 20px; border-radius: 20px; 
-            box-shadow: 0 -8px 25px rgba(0,0,0,0.25); border-top: 4px solid #ffc107;
-            /* Los controles si deben permitir toques normales */
-            touch-action: auto; 
-        }
-
+        .box { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 -8px 25px rgba(0,0,0,0.25); border-top: 4px solid #ffc107; }
         input { width: 100%; padding: 12px; margin: 6px 0; border-radius: 10px; border: 1px solid #eee; box-sizing: border-box; font-size: 14px; background: #f9f9f9; }
-        .btn { width: 100%; padding: 15px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.3s; }
-        .btn-yellow { background: #ffc107; color: #000; font-size: 16px; }
-        #info-viaje { text-align: center; margin-top: 15px; padding-top: 15px; border-top: 1px solid #f0f0f0; display: none; }
-        .driver-card { background: #1a1a1a; color: white; padding: 20px; border-radius: 20px; margin-top: 10px; display: none; text-align: center; }
-        .price-tag { font-size: 35px; font-weight: bold; color: #1a1a1a; margin: 5px 0; }
+        .btn { width: 100%; padding: 15px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 16px; display: flex; align-items: center; justify-content: center; text-decoration: none; }
+        .btn-yellow { background: #ffc107; color: #000; }
+        .btn-whatsapp { background: #25d366; color: white; display: none; }
+        .price-tag { font-size: 35px; font-weight: bold; color: #1a1a1a; text-align: center; margin: 5px 0; }
+        .panel-espera { background: #1a1a1a; color: white; padding: 20px; border-radius: 20px; display: none; text-align: center; }
     </style>
 </head>
 <body onload="initMap()">
-
     <div id="map"></div>
-
     <div class="ui-panel">
         <div class="box" id="panel-cliente">
-            <input id="origen-input" type="text" placeholder="📍 Recogida (Mueve el Pin Verde)">
-            <input id="destino-input" type="text" placeholder="🏁 Destino (Mueve el Pin Rojo)">
-            
-            <div id="info-viaje">
+            <input id="origen-input" type="text" placeholder="📍 ¿Dónde te buscamos?">
+            <input id="destino-input" type="text" placeholder="🏁 ¿A dónde vas?">
+            <div id="info-viaje" style="display:none;">
                 <div class="price-tag" id="precio-txt">B/. 1.50</div>
-                <small style="color: #888; display: block; margin-bottom: 10px;">Estimado de tarifa PreetyTaxi</small>
                 <button class="btn btn-yellow" onclick="confirmarPedido()">PEDIR TAXI AHORA</button>
             </div>
         </div>
-
-        <div id="panel-espera" class="driver-card">
-            <div id="status-label" style="color:#ffc107; font-weight:bold; font-size: 18px;">Buscando conductor...</div>
-            <div id="datos-conductor" style="margin: 15px 0; display:none;">
-                <div id="nombre-ch" style="font-size: 20px; font-weight: bold;">---</div>
-                <div id="placa-ch" style="color: #aaa;">Placa: ---</div>
+        <div id="panel-espera" class="panel-espera">
+            <h3 id="status-label" style="color:#ffc107;">Buscando conductor...</h3>
+            <a id="btn-ws-cliente" href="#" target="_blank" class="btn btn-whatsapp">📱 AVISAR POR WHATSAPP</a>
+            <div id="datos-conductor" style="margin-top:15px; padding:10px; background:#333; border-radius:10px; display:none;">
+                <b id="nombre-ch" style="color:#ffc107; font-size:18px;">---</b><br>
+                <small id="placa-ch" style="color:white;">---</small>
             </div>
-            <button class="btn" style="background:#333; color:white;" onclick="location.reload()">CANCELAR VIAJE</button>
+            <button class="btn" style="background:transparent; color:#ff4d4d; font-size:13px;" onclick="location.reload()">Cancelar</button>
         </div>
     </div>
 
 <script>
-    // BLOQUEO POR SCRIPT PARA REFORZAR
-    document.addEventListener('touchmove', function(e) {
-        if (e.target.id !== 'origen-input' && e.target.id !== 'destino-input') {
-            e.preventDefault();
-        }
-    }, { passive: false });
-
     const firebaseConfig = { apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    let map, ds, dr, markerA, markerB, markerChofer, viajeID;
+    let map, ds, dr, markerA, markerB, viajeID;
 
     function initMap() {
-        map = new google.maps.Map(document.getElementById("map"), {
-            center: {lat: 8.9833, lng: -79.5167},
-            zoom: 14,
-            disableDefaultUI: true,
-            gestureHandling: "greedy" 
-        });
-
+        map = new google.maps.Map(document.getElementById("map"), { center: {lat: 8.9833, lng: -79.5167}, zoom: 14, disableDefaultUI: true });
         ds = new google.maps.DirectionsService();
-        dr = new google.maps.DirectionsRenderer({ 
-            map: map, 
-            suppressMarkers: true, 
-            polylineOptions: { strokeColor: "#ffc107", strokeWeight: 6 } 
-        });
+        dr = new google.maps.DirectionsRenderer({ map: map, suppressMarkers: true, polylineOptions: { strokeColor: "#ffc107", strokeWeight: 6 } });
+        
+        markerA = new google.maps.Marker({ position: {lat: 8.9833, lng: -79.5167}, map: map, draggable: true });
+        markerB = new google.maps.Marker({ position: {lat: 8.9850, lng: -79.5180}, map: map, draggable: true });
 
-        markerA = new google.maps.Marker({ position: {lat: 8.9800, lng: -79.5100}, map: map, draggable: true, icon: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png' });
-        markerB = new google.maps.Marker({ position: {lat: 8.9900, lng: -79.5200}, map: map, draggable: true, icon: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png' });
+        const opciones = { componentRestrictions: { country: "pa" } };
+        const acOri = new google.maps.places.Autocomplete(document.getElementById('origen-input'), opciones);
+        const acDes = new google.maps.places.Autocomplete(document.getElementById('destino-input'), opciones);
 
-        const acOri = new google.maps.places.Autocomplete(document.getElementById('origen-input'), { componentRestrictions: { country: "pa" } });
-        const acDes = new google.maps.places.Autocomplete(document.getElementById('destino-input'), { componentRestrictions: { country: "pa" } });
-
-        acOri.addListener('place_changed', () => { if(acOri.getPlace().geometry) { markerA.setPosition(acOri.getPlace().geometry.location); trazarRecorrido(); } });
-        acDes.addListener('place_changed', () => { if(acDes.getPlace().geometry) { markerB.setPosition(acDes.getPlace().geometry.location); trazarRecorrido(); } });
-
-        markerA.addListener('dragend', trazarRecorrido);
-        markerB.addListener('dragend', trazarRecorrido);
-
-        trazarRecorrido();
+        acOri.addListener('place_changed', () => { markerA.setPosition(acOri.getPlace().geometry.location); trazar(); });
+        acDes.addListener('place_changed', () => { markerB.setPosition(acDes.getPlace().geometry.location); trazar(); });
+        markerA.addListener('dragend', trazar);
+        markerB.addListener('dragend', trazar);
+        trazar();
     }
 
-    function trazarRecorrido() {
-        ds.route({ origin: markerA.getPosition(), destination: markerB.getPosition(), travelMode: 'DRIVING' }, (result, status) => {
-            if (status === 'OK') {
-                dr.setDirections(result);
-                const km = result.routes[0].legs[0].distance.value / 1000;
-                let final = Math.ceil((0.50 + (km * 0.50)) * 2) / 2;
+    function trazar() {
+        ds.route({ origin: markerA.getPosition(), destination: markerB.getPosition(), travelMode: 'DRIVING' }, (res, stat) => {
+            if (stat === 'OK') {
+                dr.setDirections(res);
+                const km = res.routes[0].legs[0].distance.value / 1000;
+                
+                // --- NUEVA LÓGICA DE PRECIO ---
+                // Base 0.50 + (km * 0.50). Mínimo 1.50. Redondeo a cada 0.50.
+                let subtotal = 0.50 + (km * 0.50);
+                let final = Math.ceil(subtotal * 2) / 2; 
                 if (final < 1.50) final = 1.50;
+
                 document.getElementById('precio-txt').innerText = "B/. " + final.toFixed(2);
                 document.getElementById('info-viaje').style.display = "block";
             }
@@ -145,49 +87,41 @@
     }
 
     function confirmarPedido() {
-        const celular = prompt("¿A qué número puede llamarte el chofer?");
-        if(!celular) return;
-        const dataViaje = {
-            cliente: localStorage.getItem('userName') || "Cliente",
-            telefono: celular,
-            latA: markerA.getPosition().lat(), lngA: markerA.getPosition().lng(),
-            latB: markerB.getPosition().lat(), lngB: markerB.getPosition().lng(),
-            precio: document.getElementById('precio-txt').innerText.replace("B/. ", ""),
-            estado: "buscando",
-            fecha: new Date().toISOString().split('T')[0],
-            timestamp: Date.now()
-        };
-        const ref = db.ref('viajes').push(dataViaje);
+        const tel = localStorage.getItem('userCel');
+        const nombre = localStorage.getItem('userName') || "Cliente";
+        const precio = document.getElementById('precio-txt').innerText;
+        const ori = document.getElementById('origen-input').value || "Ubicación GPS";
+        const des = document.getElementById('destino-input').value || "Destino indicado";
+
+        if(!tel) return alert("Inicia sesión primero");
+
+        const ref = db.ref('viajes').push({
+            cliente: nombre, telefono: tel, precio: precio.replace("B/. ", ""),
+            estado: "buscando", origen: ori, destino: des, fecha: new Date().toISOString()
+        });
         viajeID = ref.key;
+
+        const msg = `👋 *NUEVO PEDIDO PREETYTAXI*%0A👤 *Cliente:* ${nombre}%0A📍 *Origen:* ${ori}%0A🏁 *Destino:* ${des}%0A💰 *Tarifa:* ${precio}`;
+        document.getElementById('btn-ws-cliente').href = `https://wa.me/507XXXXYYYY?text=${msg}`; 
+        document.getElementById('btn-ws-cliente').style.display = "flex";
         document.getElementById('panel-cliente').style.display = "none";
         document.getElementById('panel-espera').style.display = "block";
-        escucharActualizaciones();
+        escuchar();
     }
 
-    function escucharActualizaciones() {
+    function escuchar() {
         db.ref('viajes/' + viajeID).on('value', snap => {
             const v = snap.val();
-            if(!v) return;
-
-            if(v.estado === "en curso") {
-                document.getElementById('status-label').innerText = "🚕 ¡CONDUCTOR EN CAMINO!";
+            if(v && v.estado === "en curso") {
+                document.getElementById('status-label').innerText = "🚕 CHOFER EN CAMINO";
                 document.getElementById('datos-conductor').style.display = "block";
-                document.getElementById('nombre-ch').innerText = v.chofer;
-                document.getElementById('placa-ch').innerText = "Placa: " + v.placa;
-
-                if(v.latC && v.lngC) {
-                    const posChofer = {lat: v.latC, lng: v.lngC};
-                    if(!markerChofer) {
-                        markerChofer = new google.maps.Marker({ position: posChofer, map: map, icon: 'http://maps.google.com/mapfiles/ms/icons/taxi.png' });
-                    } else {
-                        markerChofer.setPosition(posChofer);
-                    }
-                    ds.route({ origin: posChofer, destination: {lat: v.latA, lng: v.lngA}, travelMode: 'DRIVING' }, (res, stat) => {
-                        if (stat === 'OK') dr.setDirections(res);
-                    });
+                document.getElementById('nombre-ch').innerText = v.chofer || "Asignado";
+                if(v.conductorCel) {
+                    const msgDirecto = `Hola, soy ${v.cliente}. Te espero en ${v.origen}.`;
+                    document.getElementById('btn-ws-cliente').href = `https://wa.me/507${v.conductorCel}?text=${msgDirecto}`;
                 }
             }
-            if(v.estado === "completado") { alert("¡Llegaste a tu destino!"); location.reload(); }
+            if(v && v.estado === "completado") { alert("Viaje finalizado"); location.reload(); }
         });
     }
 </script>

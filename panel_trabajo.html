@@ -16,7 +16,7 @@
         .card { background: #1a1a1a; padding: 18px; border-radius: 18px; border-left: 6px solid #ffc107; margin-bottom: 15px; }
         .btn { width: 100%; padding: 15px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; text-transform: uppercase; text-decoration: none; display: flex; align-items: center; justify-content: center; font-size: 14px; }
         .btn-accept { background: #ffc107; color: #000; }
-        .btn-gps { background: #007bff; color: white; }
+        .btn-aviso { background: #007bff; color: white; }
         .btn-finish { background: #28a745; color: white; }
         .historial-box { background: #111; border-radius: 18px; padding: 15px; margin-top: 20px; border: 1px solid #222; }
         .historial-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #222; font-size: 13px; }
@@ -60,31 +60,27 @@
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    let miPlaca = localStorage.getItem('userPlaca');
-    let miNombre = localStorage.getItem('userName');
+    let miCelular = localStorage.getItem('driverCel'); 
+    let miPlaca = "";
+    let miNombre = "";
     let idViajeActivo = null;
-    let watchID = null;
 
-    if (!miPlaca) {
-        miPlaca = prompt("INGRESE PLACA:").toUpperCase().trim();
-        miNombre = prompt("SU NOMBRE:");
-        if (miPlaca && miNombre) {
-            localStorage.setItem('userPlaca', miPlaca);
-            localStorage.setItem('userName', miNombre);
-        } else { location.reload(); }
-    }
-    document.getElementById('disp-placa').innerText = miPlaca;
+    if (!miCelular) { window.location.href = "login_conductor.html"; }
+
     const hoyStr = new Date().toISOString().split('T')[0];
 
-    db.ref('conductores').on('value', snap => {
-        snap.forEach(c => {
-            if(String(c.val().placa).trim().toUpperCase() === miPlaca.toUpperCase()) {
-                document.getElementById('mi-deuda').innerText = "B/. " + (parseFloat(c.val().deuda) || 0).toFixed(2);
-                const bloq = c.val().estado === 'bloqueado';
-                document.getElementById('bloqueo-screen').style.display = bloq ? 'flex' : 'none';
-                document.getElementById('panel-principal').style.display = bloq ? 'none' : 'block';
-            }
-        });
+    db.ref('conductores/' + miCelular).on('value', snap => {
+        const d = snap.val();
+        if(d) {
+            miNombre = d.nombre;
+            miPlaca = d.placa;
+            document.getElementById('disp-placa').innerText = miPlaca;
+            document.getElementById('mi-deuda').innerText = "B/. " + (parseFloat(d.deuda) || 0).toFixed(2);
+            
+            const bloq = d.estado === 'bloqueado';
+            document.getElementById('bloqueo-screen').style.display = bloq ? 'flex' : 'none';
+            document.getElementById('panel-principal').style.display = bloq ? 'none' : 'block';
+        }
     });
 
     db.ref('viajes').on('value', snap => {
@@ -98,81 +94,80 @@
 
         snap.forEach(child => {
             const v = child.val();
-            const pV = v.placa ? String(v.placa).trim().toUpperCase() : "";
+            const conductorDelViaje = v.driverCel || ""; 
 
             if(v.estado === 'buscando') {
                 hayNuevos = true;
                 contenidoPedidos += `<div class="card">
-                    <b>Oferta: B/. ${v.precio}</b><br><small>Cliente: ${v.cliente}</small>
+                    <b>Oferta: B/. ${parseFloat(v.precio).toFixed(2)}</b><br><small>Cliente: ${v.cliente}</small>
                     <button class="btn btn-accept" onclick="aceptar('${child.key}')">ACEPTAR</button>
                 </div>`;
-            } else if(v.estado === 'en curso' && pV === miPlaca.toUpperCase()) {
+            } else if(v.estado === 'en curso' && conductorDelViaje === miCelular) {
                 idViajeActivo = child.key;
-                iniciarSeguimientoGPS();
-                
-                // --- BOTONES CON ENLACES CORREGIDOS ---
-                act.innerHTML = `<div class="card" style="border-color:#007bff; background:#050505;">
-                    <b style="color:#007bff">🚕 VIAJE EN CURSO</b><br>
+                act.innerHTML = `<div class="card" style="border-color:#ffc107; background:#050505;">
+                    <b style="color:#ffc107">🚕 SERVICIO EN CURSO</b><br>
+                    <p>Monto a cobrar: <b>B/. ${parseFloat(v.precio).toFixed(2)}</b></p>
                     <a href="tel:${v.telefono}" class="btn" style="background:#444; color:white;">📞 LLAMAR AL CLIENTE</a>
-                    
-                    <a href="https://www.google.com/maps/dir/?api=1&destination=${v.latA},${v.lngA}&travelmode=driving" target="_blank" class="btn btn-gps">📍 IR POR CLIENTE</a>
-                    
-                    <a href="https://www.google.com/maps/dir/?api=1&destination=${v.latB},${v.lngB}&travelmode=driving" target="_blank" class="btn btn-gps" style="background:#6610f2">🏁 IR AL DESTINO</a>
-                    
-                    <button class="btn btn-finish" onclick="finalizar('${child.key}')">FINALIZAR Y COBRAR</button>
+                    <button class="btn btn-aviso" onclick="avisarCamino('${child.key}')">🔔 AVISAR: VOY EN CAMINO</button>
+                    <button class="btn btn-finish" style="margin-top:20px;" onclick="finalizar('${child.key}')">FINALIZAR Y COBRAR</button>
                 </div>`;
-            } else if(v.estado === 'completado' && pV === miPlaca.toUpperCase() && v.fecha === hoyStr) {
+            } else if(v.estado === 'completado' && conductorDelViaje === miCelular && v.fecha === hoyStr) {
                 vHoy += parseFloat(v.precio);
                 hist.innerHTML += `<div class="historial-item"><span>✅ ${v.cliente}</span><b>B/. ${parseFloat(v.precio).toFixed(2)}</b></div>`;
             }
         });
+
         ped.innerHTML = contenidoPedidos;
         document.getElementById('ganado-hoy').innerText = "B/. " + vHoy.toFixed(2);
         const snd = document.getElementById('snd-alerta');
         if(hayNuevos) { snd.play().catch(e => {}); } else { snd.pause(); snd.currentTime = 0; }
     });
 
-    function iniciarSeguimientoGPS() {
-        if (watchID) return;
-        if (navigator.geolocation) {
-            watchID = navigator.geolocation.watchPosition(pos => {
-                if(idViajeActivo) {
-                    db.ref('viajes/' + idViajeActivo).update({
-                        latC: pos.coords.latitude,
-                        lngC: pos.coords.longitude
-                    });
-                }
-            }, null, { enableHighAccuracy: true });
-        }
+    function aceptar(id) { 
+        db.ref('viajes/' + id).update({ 
+            estado: 'en curso', 
+            placa: miPlaca, 
+            chofer: miNombre,
+            driverCel: miCelular 
+        }); 
     }
 
-    function detenerSeguimientoGPS() {
-        if (watchID) { navigator.geolocation.clearWatch(watchID); watchID = null; }
+    function avisarCamino(id) {
+        db.ref('viajes/' + id).update({ notificacion: "El taxi va en camino" })
+        .then(() => { alert("Aviso enviado al pasajero"); });
     }
-
-    function aceptar(id) { db.ref('viajes/' + id).update({ estado: 'en curso', placa: miPlaca, chofer: miNombre }); }
 
     function finalizar(id) {
-        if(!confirm("¿Cobraste el viaje?")) return;
-        detenerSeguimientoGPS();
-        db.ref('viajes/' + id).once('value', snap => {
+        if(!confirm("¿Confirmas que cobraste el viaje?")) return;
+        const idV = id;
+        db.ref('viajes/' + idV).once('value', snap => {
             const v = snap.val();
-            db.ref('viajes/' + id).update({ estado: 'completado' });
-            idViajeActivo = null;
-            db.ref('conductores').once('value', cSnap => {
-                cSnap.forEach(c => {
-                    if(String(c.val().placa).trim().toUpperCase() === miPlaca.toUpperCase()) {
-                        db.ref('conductores/' + c.key).update({
-                            totalGenerado: (parseFloat(c.val().totalGenerado) || 0) + parseFloat(v.precio),
-                            deuda: (parseFloat(c.val().deuda) || 0) + (parseFloat(v.precio) * 0.10)
-                        });
-                    }
-                });
+            if(!v) return;
+            const precioViaje = parseFloat(v.precio) || 0;
+            const comision = precioViaje * 0.10;
+
+            db.ref('viajes/' + idV).update({ estado: 'completado' });
+
+            const refConductor = db.ref('conductores/' + miCelular);
+            refConductor.once('value', cSnap => {
+                const d = cSnap.val();
+                if(d) {
+                    const nuevoTotal = (parseFloat(d.totalGenerado) || 0) + precioViaje;
+                    const nuevaDeuda = (parseFloat(d.deuda) || 0) + comision;
+
+                    refConductor.update({
+                        totalGenerado: nuevoTotal.toFixed(2),
+                        deuda: nuevaDeuda.toFixed(2)
+                    }).then(() => {
+                        alert("¡Viaje Finalizado!\nComisión 10%: B/. " + comision.toFixed(2));
+                        idViajeActivo = null;
+                    });
+                }
             });
         });
     }
 
-    function cerrarSesion() { if(confirm("¿Cerrar sesión?")) { localStorage.clear(); location.reload(); } }
+    function cerrarSesion() { if(confirm("¿Cerrar sesión?")) { localStorage.clear(); window.location.href = "login_conductor.html"; } }
 </script>
 </body>
 </html>

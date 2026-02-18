@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Reportes - PreetyTaxi</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        body { background: #0b0b0b; color: #fff; font-family: sans-serif; padding: 15px; }
+        .filtro { background: #1a1a1a; padding: 15px; border-radius: 15px; margin-bottom: 20px; border: 1px solid #333; }
+        input[type="date"] { width: 100%; background: #000; border: 1px solid #444; color: #fff; padding: 10px; border-radius: 10px; box-sizing: border-box; }
+        .resumen { display: flex; gap: 10px; margin-bottom: 20px; }
+        .caja { flex: 1; background: #1a1a1a; padding: 15px; border-radius: 15px; border: 1px solid #333; text-align: center; }
+        .caja b { font-size: 18px; color: #ffc107; display: block; }
+        .viaje-item { background: #1a1a1a; padding: 12px; border-radius: 12px; margin-bottom: 8px; border-left: 4px solid #ffc107; display: flex; justify-content: space-between; }
+        .vacio { text-align: center; color: #444; margin-top: 50px; }
+    </style>
+</head>
+<body onload="iniciar()">
+
+    <div style="margin-bottom:20px;"><a href="panel_trabajo.html" style="color:#ffc107; text-decoration:none;">⬅ VOLVER</a></div>
+
+    <div class="filtro">
+        <label style="font-size:10px; color:#888;">FECHA DE CONSULTA:</label>
+        <input type="date" id="fecha-bus" onchange="buscar()">
+    </div>
+
+    <div class="resumen">
+        <div class="caja"><small>GANADO</small><b id="res-ganado">B/. 0.00</b></div>
+        <div class="caja"><small>CUOTA</small><b id="res-cuota" style="color:#ff4d4d">B/. 0.00</b></div>
+    </div>
+
+    <div id="contenedor-reportes"></div>
+
+<script>
+    const firebaseConfig = { apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const miCel = localStorage.getItem('driverCel');
+
+    function iniciar() {
+        const ahora = new Date();
+        const y = ahora.getFullYear();
+        const m = String(ahora.getMonth() + 1).padStart(2, '0');
+        const d = String(ahora.getDate()).padStart(2, '0');
+        document.getElementById('fecha-bus').value = `${y}-${m}-${d}`;
+        buscar();
+    }
+
+    function buscar() {
+        const fRaw = document.getElementById('fecha-bus').value;
+        if(!fRaw) return;
+        const p = fRaw.split('-');
+        // Forzamos formato D-M-YYYY sin ceros (Ej: 16-2-2026)
+        const fechaFirebase = parseInt(p[2]) + "-" + parseInt(p[1]) + "-" + p[0];
+
+        db.ref('reportes_diarios/' + miCel + '/' + fechaFirebase).on('value', snap => {
+            const cont = document.getElementById('contenedor-reportes');
+            cont.innerHTML = "";
+            let tG = 0; let tC = 0;
+
+            if(!snap.exists()) {
+                cont.innerHTML = '<div class="vacio">No hay viajes registrados.</div>';
+                document.getElementById('res-ganado').innerText = "B/. 0.00";
+                document.getElementById('res-cuota').innerText = "B/. 0.00";
+                return;
+            }
+
+            snap.forEach(child => {
+                const v = child.val();
+                tG += parseFloat(v.ganancia);
+                tC += parseFloat(v.cuota);
+                cont.innerHTML += `<div class="viaje-item">
+                    <div><b>${v.cliente}</b><br><small style="color:#666">${v.hora}</small></div>
+                    <div style="text-align:right"><b style="color:#ffc107">B/. ${v.ganancia}</b><br><small style="color:#ff4d4d">App: B/. ${v.cuota}</small></div>
+                </div>`;
+            });
+            document.getElementById('res-ganado').innerText = "B/. " + tG.toFixed(2);
+            document.getElementById('res-cuota').innerText = "B/. " + tC.toFixed(2);
+        });
+    }
+</script>
+</body>
+</html>

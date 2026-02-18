@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin - Reportes Detallados</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { background: #f4f7f6; color: #333; font-family: sans-serif; padding: 20px; }
+        .container { max-width: 900px; margin: auto; }
+        header { background: #000; color: #ffc107; padding: 20px; border-radius: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .filtros { background: #fff; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: flex; gap: 15px; margin-bottom: 20px; align-items: flex-end; }
+        .f-grupo { flex: 1; }
+        select, input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd; }
+        .btn-buscar { background: #ffc107; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .resumen { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .card { background: #fff; padding: 20px; border-radius: 15px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 15px; overflow: hidden; }
+        th { background: #eee; padding: 15px; text-align: left; }
+        td { padding: 15px; border-bottom: 1px solid #eee; }
+        .vacio { text-align: center; padding: 40px; color: #999; }
+    </style>
+</head>
+<body onload="cargarConductores()">
+
+<div class="container">
+    <header>
+        <a href="javascript:history.back()" style="color:#ffc107; text-decoration:none; font-weight:bold;">
+            <i class="fa-solid fa-arrow-left"></i> VOLVER
+        </a>
+        <h2 style="margin:0">Reportes Diarios</h2>
+        <div></div>
+    </header>
+
+    <div class="filtros">
+        <div class="f-grupo">
+            <label style="font-size:11px; font-weight:bold;">CHOFER:</label>
+            <select id="select-conductor"><option>Cargando...</option></select>
+        </div>
+        <div class="f-grupo">
+            <label style="font-size:11px; font-weight:bold;">FECHA:</label>
+            <input type="date" id="fecha-admin">
+        </div>
+        <button class="btn-buscar" onclick="consultar()">BUSCAR VIAJES</button>
+    </div>
+
+    <div class="resumen">
+        <div class="card"><h3>GANANCIA CHOFER</h3><p id="total-ganado" style="font-size:24px; font-weight:bold; color:green;">B/. 0.00</p></div>
+        <div class="card"><h3>COMISIÓN APP</h3><p id="total-comision" style="font-size:24px; font-weight:bold; color:red;">B/. 0.00</p></div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Hora</th>
+                <th>Cliente</th>
+                <th>Ganancia</th>
+                <th>Cuota App</th>
+            </tr>
+        </thead>
+        <tbody id="tabla-reporte">
+            <tr><td colspan="4" class="vacio">Selecciona un conductor y fecha para ver los datos.</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+    const firebaseConfig = { apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function cargarConductores() {
+        db.ref('conductores').once('value', snap => {
+            const select = document.getElementById('select-conductor');
+            select.innerHTML = '<option value="">-- Selecciona Conductor --</option>';
+            snap.forEach(child => {
+                select.innerHTML += `<option value="${child.key}">${child.val().nombre} (${child.key})</option>`;
+            });
+        });
+        const hoy = new Date();
+        document.getElementById('fecha-admin').value = hoy.toISOString().split('T')[0];
+    }
+
+    function consultar() {
+        const cel = document.getElementById('select-conductor').value;
+        const fRaw = document.getElementById('fecha-admin').value;
+        if(!cel || !fRaw) return alert("Selecciona datos");
+
+        const p = fRaw.split('-');
+        const fechaFB = parseInt(p[2]) + "-" + parseInt(p[1]) + "-" + p[0];
+
+        db.ref('reportes_diarios/' + cel + '/' + fechaFB).on('value', snap => {
+            const tbody = document.getElementById('tabla-reporte');
+            tbody.innerHTML = "";
+            let tG = 0; let tC = 0;
+
+            if(!snap.exists()){
+                tbody.innerHTML = '<tr><td colspan="4" class="vacio">No hay registros para este día.</td></tr>';
+                document.getElementById('total-ganado').innerText = "B/. 0.00";
+                document.getElementById('total-comision').innerText = "B/. 0.00";
+                return;
+            }
+
+            snap.forEach(child => {
+                const v = child.val();
+                tG += parseFloat(v.ganancia); tC += parseFloat(v.cuota);
+                tbody.innerHTML += `<tr>
+                    <td>${v.hora}</td>
+                    <td>${v.cliente}</td>
+                    <td>B/. ${v.ganancia}</td>
+                    <td style="color:red">B/. ${v.cuota}</td>
+                </tr>`;
+            });
+
+            document.getElementById('total-ganado').innerText = "B/. " + tG.toFixed(2);
+            document.getElementById('total-comision').innerText = "B/. " + tC.toFixed(2);
+        });
+    }
+</script>
+</body>
+</html>

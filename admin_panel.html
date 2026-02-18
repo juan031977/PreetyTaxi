@@ -5,6 +5,7 @@
     <title>Admin PreetyTaxi - Control</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body { font-family: sans-serif; background: #f4f7f6; padding: 20px; }
         .card { background: white; padding: 20px; border-radius: 12px; text-align: center; border-top: 5px solid #ffc107; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
@@ -15,17 +16,25 @@
         .btn-on { background: #28a745; color: white; }
         .btn-reset { background: #000; color: white; padding: 12px 20px; font-size: 13px; }
         .header-admin { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        
+        /* Nuevo estilo para el botón de reportes */
+        .btn-reportes { background: #ffc107; color: #000; text-decoration: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; font-size: 13px; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
     </style>
 </head>
-<body>
+<body onload="cargarTodo()">
 
     <div class="header-admin">
         <h2>Admin PreetyTaxi</h2>
-        <button class="btn btn-reset" onclick="cierreSemanal()">⚠️ RESET SEMANAL (LIMPIAR TODO)</button>
+        <div style="display: flex; gap: 10px;">
+            <a href="admin_reportes.html" class="btn-reportes">
+                <i class="fa-solid fa-file-invoice-dollar"></i> VER REPORTES DIARIOS
+            </a>
+            <button class="btn btn-reset" onclick="cierreSemanal()">⚠️ RESET SEMANAL</button>
+        </div>
     </div>
 
     <div class="card">
-        <h3>Comisiones Totales por Cobrar: <span id="b-comi" style="color:green">B/. 0.00</span></h3>
+        <h3>Comisiones Totales por Cobrar (Deuda): <span id="b-comi" style="color:green">B/. 0.00</span></h3>
     </div>
 
     <div style="background:white; padding:20px; border-radius:15px;">
@@ -46,16 +55,11 @@
     </div>
 
 <script>
-    // Configuración de Firebase
-    const firebaseConfig = { 
-        apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", 
-        databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" 
-    };
+    const firebaseConfig = { apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
     function cargarTodo() {
-        // Escucha en tiempo real de los conductores
         db.ref('conductores').on('value', snap => {
             const tc = document.getElementById('lista-choferes');
             let tComi = 0; 
@@ -63,10 +67,9 @@
             
             snap.forEach(c => {
                 const d = c.val();
-                const idConductor = c.key; // Este es el número de celular
+                const idConductor = c.key;
                 const esBloqueado = d.estado === 'bloqueado';
                 const deudaActual = parseFloat(d.deuda) || 0;
-                
                 tComi += deudaActual;
                 
                 tc.innerHTML += `<tr>
@@ -89,43 +92,28 @@
         });
     }
 
-    // Función para bloquear o desbloquear conductor individualmente
     function toggleConductor(id, est) { 
         const nuevoEstado = (est === 'bloqueado') ? 'activo' : 'bloqueado';
         db.ref('conductores/' + id).update({ estado: nuevoEstado }); 
     }
 
-    // Función para resetear deuda individual cuando un conductor paga
     function resetDeuda(id, placa) {
-        if(confirm("¿Confirmas que el conductor de la placa " + placa + " ya pagó su deuda?")) {
-            db.ref('conductores/' + id).update({ 
-                deuda: 0, 
-                estado: 'activo' 
-            });
+        if(confirm("¿Confirmas que la placa " + placa + " ya pagó su deuda?")) {
+            db.ref('conductores/' + id).update({ deuda: 0, estado: 'activo' });
         }
     }
 
-    // FUNCIÓN DE CIERRE SEMANAL: Resetea a TODOS y borra viajes antiguos
     function cierreSemanal() {
-        if(confirm("⚠️ ATENCIÓN: Esto eliminará el historial de viajes y pondrá la DEUDA de TODOS los conductores en B/. 0.00.\n\n¿Deseas continuar?")) {
-            // 1. Borrar el historial de viajes para optimizar la base de datos
+        if(confirm("⚠️ ATENCIÓN: Esto eliminará el historial de viajes y reseteará deudas.\n¿Deseas continuar?")) {
             db.ref('viajes').remove();
-            
-            // 2. Recorrer todos los conductores para poner sus contadores a cero
             db.ref('conductores').once('value', s => {
                 s.forEach(c => {
-                    db.ref('conductores/' + c.key).update({ 
-                        deuda: 0, 
-                        totalGenerado: 0,
-                        totalGeneradoHoy: 0 
-                    });
+                    db.ref('conductores/' + c.key).update({ deuda: 0, totalGeneradoHoy: 0 });
                 });
-                alert("✅ El sistema ha sido reseteado. Todos los conductores inician la semana en B/. 0.00.");
+                alert("✅ Sistema reseteado.");
             });
         }
     }
-
-    window.onload = cargarTodo;
 </script>
 </body>
 </html>

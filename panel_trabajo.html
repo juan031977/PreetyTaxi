@@ -9,30 +9,16 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body { background: #0b0b0b; color: #fff; font-family: 'Segoe UI', Roboto, sans-serif; padding: 15px; margin: 0; overscroll-behavior-y: contain; }
-        
-        /* Billetera Superior */
         .billetera { background: linear-gradient(145deg, #1a1a1a, #000); padding: 20px; border-radius: 20px; border: 1px solid #333; margin-bottom: 20px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        .billetera small { color: #888; text-transform: uppercase; letter-spacing: 1px; font-size: 10px; }
         .monto { color: #ffc107; font-size: 22px; font-weight: bold; margin-top: 5px; }
-
-        /* Tarjeta de Viaje Activo */
-        .viaje-activo { background: #fff; color: #000; padding: 20px; border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); border-left: 8px solid #ffc107; position: relative; overflow: hidden; }
-        .viaje-activo::before { content: ""; position: absolute; top: 0; right: 0; width: 100px; height: 100px; background: #ffc10715; border-radius: 50%; transform: translate(30%, -30%); }
         
-        .badge-status { background: #ffc107; color: #000; padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; display: inline-block; margin-bottom: 10px; }
+        .viaje-activo { background: #fff; color: #000; padding: 20px; border-radius: 24px; border-left: 8px solid #ffc107; position: relative; }
+        .viaje-info h2 { margin: 5px 0; font-size: 22px; }
         
-        .viaje-info h2 { margin: 5px 0; font-size: 22px; color: #1a1a1a; }
-        .viaje-info p { margin: 8px 0; color: #444; font-size: 14px; display: flex; align-items: center; }
-        .viaje-info i { margin-right: 10px; color: #ffc107; width: 20px; text-align: center; }
-
-        .precio-grande { font-size: 28px; font-weight: 900; color: #000; margin: 15px 0; border-top: 1px solid #eee; padding-top: 15px; }
-
-        /* Botones */
-        .btn { width: 100%; padding: 16px; border: none; border-radius: 14px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.3s; text-decoration: none; }
+        .btn { width: 100%; padding: 16px; border: none; border-radius: 14px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; text-decoration: none; transition: 0.3s; }
         .btn-ws { background: #25d366; color: white; box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3); }
-        .btn-fin { background: #000; color: #fff; margin-top: 15px; }
+        .btn-fin { background: #000; color: #fff; }
         
-        /* Lista de disponibles */
         .viaje-card { background: #1a1a1a; padding: 15px; border-radius: 15px; margin-bottom: 12px; border: 1px solid #333; }
         .btn-aceptar { background: #ffc107; color: #000; padding: 10px; width: 100%; border-radius: 10px; font-weight: bold; border: none; margin-top: 10px; }
     </style>
@@ -43,19 +29,21 @@
         <div id="lbl-cel" style="margin-bottom: 10px; font-size: 12px; opacity: 0.6;">Conectando...</div>
         <div style="display:flex; justify-content: space-around;">
             <div>
-                <small>Hoy Generado</small>
+                <small style="color:#888; font-size:10px;">GANANCIA HOY</small>
                 <div id="txt-ventas" class="monto">B/. 0.00</div>
             </div>
             <div style="border-left: 1px solid #333;"></div>
             <div>
-                <small>Mi Deuda (10%)</small>
+                <small style="color:#888; font-size:10px;">CUOTA APP</small>
                 <div id="txt-deuda" class="monto" style="color: #ff4d4d;">B/. 0.00</div>
             </div>
         </div>
+        <a href="reportes.html" style="color: #ffc107; font-size: 11px; text-decoration: none; display: block; margin-top: 15px;">
+            <i class="fa-solid fa-clock-rotate-left"></i> VER MIS REPORTES
+        </a>
     </div>
 
-    <div id="lista-viajes">
-        </div>
+    <div id="lista-viajes"></div>
 
 <script>
     const firebaseConfig = { apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
@@ -67,55 +55,54 @@
         if(!miCel) return window.location.href="login.html";
         document.getElementById('lbl-cel').innerText = "Conductor: " + miCel;
 
-        // Escuchar datos del chofer
+        const d_ahora = new Date();
+        const hoy = d_ahora.getDate() + "-" + (d_ahora.getMonth() + 1) + "-" + d_ahora.getFullYear();
+
+        // 1. Datos del Conductor y Reseteo Diario
         db.ref('conductores/' + miCel).on('value', s => {
             const d = s.val();
             if(d) {
+                if (d.ultimaFecha !== hoy) {
+                    db.ref('conductores/' + miCel).update({ ultimaFecha: hoy, totalGeneradoHoy: "0.00" });
+                }
                 document.getElementById('txt-ventas').innerText = "B/. " + (parseFloat(d.totalGeneradoHoy) || 0).toFixed(2);
                 document.getElementById('txt-deuda').innerText = "B/. " + (parseFloat(d.deuda) || 0).toFixed(2);
             }
         });
 
-        // Escuchar viajes
+        // 2. Lista de Viajes
         db.ref('viajes').on('value', snap => {
             const lista = document.getElementById('lista-viajes');
             lista.innerHTML = "";
-            
             snap.forEach(child => {
                 const v = child.val();
+                
                 if(v.estado === "buscando") {
-                    lista.innerHTML += `
-                        <div class="viaje-card">
-                            <div style="display:flex; justify-content:space-between">
-                                <span>📍 Origen</span>
-                                <b style="color:#ffc107">B/. ${v.precio}</b>
-                            </div>
-                            <div style="font-size:14px; margin-top:5px;">${v.origen}</div>
-                            <button class="btn-aceptar" onclick="aceptar('${child.key}')">TOMAR VIAJE</button>
-                        </div>`;
+                    lista.innerHTML += `<div class="viaje-card">
+                        <div style="display:flex; justify-content:space-between"><span>📍 Nueva Solicitud</span><b style="color:#ffc107">B/. ${v.precio}</b></div>
+                        <div style="font-size:14px; margin-top:5px; color: #ccc;"><b>A:</b> ${v.destino}</div>
+                        <button class="btn-aceptar" onclick="aceptar('${child.key}')">TOMAR VIAJE</button>
+                    </div>`;
                 } else if(v.estado === "en curso" && v.conductorCel === miCel) {
                     
-                    // MENSAJE DE WHATSAPP PROFESIONAL
-                    const mensaje = `Hola *${v.cliente}*, soy tu conductor de *PreetyTaxi* 🚕. Ya voy en camino a buscarte a *${v.origen}*. %0A%0A💰 *Tarifa acordada:* B/. ${v.precio}%0A🔔 *Favor estar pendiente.*`;
+                    // MENSAJE DE WHATSAPP PERSONALIZADO
+                    const msg = `Hola *${v.cliente}*, soy tu conductor de *PreetyTaxi* 🚕. Ya voy en camino a buscarte. %0A%0A💰 *Tarifa:* B/. ${v.precio}%0A🔔 *Favor estar pendiente.*`;
 
-                    lista.innerHTML = `
-                        <div class="viaje-activo">
-                            <div class="badge-status">VIAJE EN CURSO</div>
-                            <div class="viaje-info">
-                                <h2>${v.cliente}</h2>
-                                <p><i class="fa-solid fa-location-dot"></i> ${v.origen}</p>
-                                <p><i class="fa-solid fa-flag-checkered"></i> ${v.destino}</p>
-                                <div class="precio-grande">B/. ${v.precio}</div>
-                            </div>
-                            
-                            <a href="https://wa.me/507${v.telefono}?text=${mensaje}" class="btn btn-ws">
-                                <i class="fa-brands fa-whatsapp"></i> AVISAR QUE VOY EN CAMINO
-                            </a>
-                            
-                            <button class="btn btn-fin" onclick="finalizar('${child.key}', ${v.precio})">
-                                FINALIZAR VIAJE
-                            </button>
-                        </div>`;
+                    lista.innerHTML = `<div class="viaje-activo">
+                        <div style="font-size:11px; font-weight:bold; color:#ffc107; margin-bottom:5px;">VIAJE EN CURSO</div>
+                        <h2>${v.cliente}</h2>
+                        <p style="font-size:14px; color:#444; margin:5px 0;">📍 <b>De:</b> ${v.origen}</p>
+                        <p style="font-size:14px; color:#444; margin:5px 0;">🏁 <b>A:</b> ${v.destino}</p>
+                        <div style="font-size:26px; font-weight:bold; margin:15px 0; border-top:1px solid #eee; padding-top:10px;">B/. ${v.precio}</div>
+                        
+                        <a href="https://wa.me/507${v.telefono}?text=${msg}" class="btn btn-ws">
+                            <i class="fa-brands fa-whatsapp"></i> CHATEAR CON CLIENTE
+                        </a>
+                        
+                        <button class="btn btn-fin" onclick="finalizar('${child.key}')">
+                            FINALIZAR Y COBRAR
+                        </button>
+                    </div>`;
                 }
             });
         });
@@ -124,26 +111,47 @@
     function aceptar(id) {
         db.ref('conductores/' + miCel).once('value', s => {
             const d = s.val();
-            db.ref('viajes/' + id).update({
-                estado: 'en curso',
-                conductorCel: miCel,
+            // Enviamos nombre y placa al viaje para que el cliente lo vea
+            db.ref('viajes/' + id).update({ 
+                estado: 'en curso', 
+                conductorCel: miCel, 
                 conductorNombre: d.nombre || "Conductor",
-                conductorPlaca: d.placa || "S/P"
+                conductorPlaca: d.placa || "S/P" 
             });
         });
     }
 
-    function finalizar(id, precio) {
-        if(confirm("¿Completaste el viaje y cobraste B/. " + precio + "?")) {
-            db.ref('viajes/' + id).update({ estado: 'completado' });
-            const ref = db.ref('conductores/' + miCel);
-            ref.once('value', s => {
-                const d = s.val();
-                const nHoy = (parseFloat(d.totalGeneradoHoy) || 0) + parseFloat(precio);
-                const nDeuda = (parseFloat(d.deuda) || 0) + (precio * 0.10); // Comisión del 10%
-                ref.update({ totalGeneradoHoy: nHoy, deuda: nDeuda });
-            });
-        }
+    function finalizar(id) {
+        db.ref('viajes/' + id).once('value', snap => {
+            const v = snap.val();
+            if(!v) return;
+            const d_actual = new Date();
+            const hoy = d_actual.getDate() + "-" + (d_actual.getMonth() + 1) + "-" + d_actual.getFullYear();
+            const pChofer = parseFloat(v.precioChofer) || 0;
+            const cApp = parseFloat(v.comisionApp) || 0;
+
+            if(confirm("¿Confirmas finalizar y cobrar B/. " + v.precio + "?")) {
+                // GUARDAR EN REPORTE
+                db.ref('reportes_diarios/' + miCel + '/' + hoy).push({
+                    cliente: v.cliente,
+                    ganancia: pChofer.toFixed(2),
+                    cuota: cApp.toFixed(2),
+                    hora: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+                }).then(() => {
+                    // ACTUALIZAR SALDOS DEL CONDUCTOR
+                    db.ref('conductores/' + miCel).once('value', s => {
+                        const dc = s.val();
+                        db.ref('conductores/' + miCel).update({
+                            totalGeneradoHoy: (parseFloat(dc.totalGeneradoHoy || 0) + pChofer).toFixed(2),
+                            deuda: (parseFloat(dc.deuda || 0) + cApp).toFixed(2),
+                            ultimaFecha: hoy
+                        });
+                        // CERRAR VIAJE
+                        db.ref('viajes/' + id).update({ estado: 'completado' });
+                    });
+                });
+            }
+        });
     }
 </script>
 </body>

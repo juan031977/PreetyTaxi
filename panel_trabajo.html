@@ -2,45 +2,44 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Panel Conductor - PreetyTaxi</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Panel de Trabajo - PreetyTaxi</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { background: #0b0b0b; color: #fff; font-family: 'Segoe UI', Roboto, sans-serif; padding: 15px; margin: 0; overscroll-behavior-y: contain; }
-        .billetera { background: linear-gradient(145deg, #1a1a1a, #000); padding: 20px; border-radius: 20px; border: 1px solid #333; margin-bottom: 20px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        .monto { color: #ffc107; font-size: 22px; font-weight: bold; margin-top: 5px; }
-        
-        .viaje-activo { background: #fff; color: #000; padding: 20px; border-radius: 24px; border-left: 8px solid #ffc107; position: relative; }
-        .viaje-info h2 { margin: 5px 0; font-size: 22px; }
-        
-        .btn { width: 100%; padding: 16px; border: none; border-radius: 14px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; text-decoration: none; transition: 0.3s; }
-        .btn-ws { background: #25d366; color: white; box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3); }
+        body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; padding: 15px; margin: 0; }
+        .billetera { background: linear-gradient(145deg, #1a1a1a, #000); padding: 20px; border-radius: 24px; border: 1px solid #333; margin-bottom: 15px; text-align: center; }
+        .monto { color: #ffc107; font-size: 26px; font-weight: bold; }
+        .status-bar { display: flex; align-items: center; justify-content: space-between; background: #1a1a1a; padding: 12px 20px; border-radius: 50px; border: 1px solid #333; margin-bottom: 20px; }
+        .switch { position: relative; display: inline-block; width: 54px; height: 28px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #25d366; }
+        input:checked + .slider:before { transform: translateX(26px); }
+        .viaje-card { background: #111; padding: 18px; border-radius: 20px; margin-bottom: 12px; border: 1px solid #222; }
+        .btn-aceptar { background: #ffc107; color: #000; padding: 14px; width: 100%; border-radius: 14px; font-weight: bold; border: none; margin-top: 10px; font-size: 16px; width: 100%; }
+        .viaje-activo { background: #fff; color: #000; padding: 25px; border-radius: 28px; border-left: 10px solid #ffc107; }
+        .btn { width: 100%; padding: 16px; border: none; border-radius: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; text-decoration: none; }
+        .btn-ws { background: #25d366; color: white; }
         .btn-fin { background: #000; color: #fff; }
-        
-        .viaje-card { background: #1a1a1a; padding: 15px; border-radius: 15px; margin-bottom: 12px; border: 1px solid #333; }
-        .btn-aceptar { background: #ffc107; color: #000; padding: 10px; width: 100%; border-radius: 10px; font-weight: bold; border: none; margin-top: 10px; }
+        .btn-cancelar { background: #fff; color: #ff4d4d; border: 1px solid #ff4d4d; margin-top: 15px; font-size: 12px; }
     </style>
 </head>
 <body onload="cargar()">
+    <div class="status-bar">
+        <span id="status-text">Cargando...</span>
+        <label class="switch"><input type="checkbox" id="check-status" onchange="toggleConexion(this)"><span class="slider"></span></label>
+    </div>
 
     <div class="billetera">
-        <div id="lbl-cel" style="margin-bottom: 10px; font-size: 12px; opacity: 0.6;">Conectando...</div>
+        <div id="lbl-cel" style="font-size: 10px; opacity: 0.5; margin-bottom: 8px;">---</div>
         <div style="display:flex; justify-content: space-around;">
-            <div>
-                <small style="color:#888; font-size:10px;">GANANCIA HOY</small>
-                <div id="txt-ventas" class="monto">B/. 0.00</div>
-            </div>
-            <div style="border-left: 1px solid #333;"></div>
-            <div>
-                <small style="color:#888; font-size:10px;">CUOTA APP</small>
-                <div id="txt-deuda" class="monto" style="color: #ff4d4d;">B/. 0.00</div>
-            </div>
+            <div><small style="color:#888;">GANANCIA</small><div id="txt-ventas" class="monto">B/. 0.00</div></div>
+            <div><small style="color:#888;">CUOTA</small><div id="txt-deuda" class="monto" style="color:#ff4d4d;">B/. 0.00</div></div>
         </div>
-        <a href="reportes.html" style="color: #ffc107; font-size: 11px; text-decoration: none; display: block; margin-top: 15px;">
-            <i class="fa-solid fa-clock-rotate-left"></i> VER MIS REPORTES
-        </a>
+        <a href="reportes.html" style="color: #ffc107; font-size: 12px; text-decoration: none; display: block; margin-top: 15px;">VER REPORTES</a>
     </div>
 
     <div id="lista-viajes"></div>
@@ -53,106 +52,100 @@
 
     function cargar() {
         if(!miCel) return window.location.href="login.html";
-        document.getElementById('lbl-cel').innerText = "Conductor: " + miCel;
-
-        const d_ahora = new Date();
-        const hoy = d_ahora.getDate() + "-" + (d_ahora.getMonth() + 1) + "-" + d_ahora.getFullYear();
-
-        // 1. Datos del Conductor y Reseteo Diario
+        document.getElementById('lbl-cel').innerText = "CHOFER: " + miCel;
+        
+        // Listener principal del conductor
         db.ref('conductores/' + miCel).on('value', s => {
-            const d = s.val();
-            if(d) {
-                if (d.ultimaFecha !== hoy) {
-                    db.ref('conductores/' + miCel).update({ ultimaFecha: hoy, totalGeneradoHoy: "0.00" });
-                }
-                document.getElementById('txt-ventas').innerText = "B/. " + (parseFloat(d.totalGeneradoHoy) || 0).toFixed(2);
-                document.getElementById('txt-deuda').innerText = "B/. " + (parseFloat(d.deuda) || 0).toFixed(2);
-            }
-        });
+            const d = s.val() || {};
+            document.getElementById('txt-ventas').innerText = "B/. " + (parseFloat(d.totalGeneradoHoy) || 0).toFixed(2);
+            document.getElementById('txt-deuda').innerText = "B/. " + (parseFloat(d.deuda) || 0).toFixed(2);
+            document.getElementById('check-status').checked = d.conectado || false;
+            
+            const statusTxt = document.getElementById('status-text');
+            statusTxt.innerText = d.conectado ? "ESTÁS ACTIVO" : "DESCONECTADO";
+            statusTxt.style.color = d.conectado ? "#25d366" : "#ff4d4d";
 
-        // 2. Lista de Viajes
+            if(d.conectado) escucharViajes();
+            else document.getElementById('lista-viajes').innerHTML = '<p style="text-align:center; color:#444;">Ponte en línea para recibir pedidos</p>';
+        });
+    }
+
+    function toggleConexion(el) { db.ref('conductores/' + miCel).update({ conectado: el.checked }); }
+
+    function escucharViajes() {
         db.ref('viajes').on('value', snap => {
             const lista = document.getElementById('lista-viajes');
-            lista.innerHTML = "";
+            let html = ""; 
+            let hay = false;
+
             snap.forEach(child => {
                 const v = child.val();
-                
                 if(v.estado === "buscando") {
-                    lista.innerHTML += `<div class="viaje-card">
-                        <div style="display:flex; justify-content:space-between"><span>📍 Nueva Solicitud</span><b style="color:#ffc107">B/. ${v.precio}</b></div>
-                        <div style="font-size:14px; margin-top:5px; color: #ccc;"><b>A:</b> ${v.destino}</div>
-                        <button class="btn-aceptar" onclick="aceptar('${child.key}')">TOMAR VIAJE</button>
+                    hay = true;
+                    html += `<div class="viaje-card">
+                        <div style="display:flex; justify-content:space-between"><span>📍 Pedido</span><b style="color:#ffc107;">B/. ${v.precio}</b></div>
+                        <div style="font-size:14px;">${v.origen} ➔ ${v.destino}</div>
+                        <button class="btn-aceptar" onclick="aceptar('${child.key}')">ACEPTAR</button>
                     </div>`;
                 } else if(v.estado === "en curso" && v.conductorCel === miCel) {
-                    
-                    // MENSAJE DE WHATSAPP PERSONALIZADO
-                    const msg = `Hola *${v.cliente}*, soy tu conductor de *PreetyTaxi* 🚕. Ya voy en camino a buscarte. %0A%0A💰 *Tarifa:* B/. ${v.precio}%0A🔔 *Favor estar pendiente.*`;
-
-                    lista.innerHTML = `<div class="viaje-activo">
-                        <div style="font-size:11px; font-weight:bold; color:#ffc107; margin-bottom:5px;">VIAJE EN CURSO</div>
+                    hay = true;
+                    const textoChat = `Hola *${v.cliente}*, soy tu conductor. Ya voy por ti. El total es *B/. ${v.precio}*.`;
+                    html = `<div class="viaje-activo">
                         <h2>${v.cliente}</h2>
-                        <p style="font-size:14px; color:#444; margin:5px 0;">📍 <b>De:</b> ${v.origen}</p>
-                        <p style="font-size:14px; color:#444; margin:5px 0;">🏁 <b>A:</b> ${v.destino}</p>
-                        <div style="font-size:26px; font-weight:bold; margin:15px 0; border-top:1px solid #eee; padding-top:10px;">B/. ${v.precio}</div>
-                        
-                        <a href="https://wa.me/507${v.telefono}?text=${msg}" class="btn btn-ws">
-                            <i class="fa-brands fa-whatsapp"></i> CHATEAR CON CLIENTE
-                        </a>
-                        
-                        <button class="btn btn-fin" onclick="finalizar('${child.key}')">
-                            FINALIZAR Y COBRAR
-                        </button>
+                        <p>📍 ${v.origen}</p>
+                        <div style="font-size:30px; font-weight:bold; margin:10px 0;">B/. ${v.precio}</div>
+                        <a href="https://wa.me/507${v.telefono}?text=${encodeURIComponent(textoChat)}" class="btn btn-ws">CHATEAR</a>
+                        <button class="btn btn-fin" onclick="finalizar('${child.key}')">FINALIZAR</button>
+                        <button class="btn btn-cancelar" onclick="cancelarPorChofer('${child.key}')">CANCELAR</button>
                     </div>`;
                 }
             });
+            lista.innerHTML = hay ? html : '<p style="text-align:center; color:#333;">Esperando viajes...</p>';
         });
     }
 
     function aceptar(id) {
         db.ref('conductores/' + miCel).once('value', s => {
-            const d = s.val();
-            // Enviamos nombre y placa al viaje para que el cliente lo vea
+            const d = s.val() || {};
             db.ref('viajes/' + id).update({ 
                 estado: 'en curso', 
                 conductorCel: miCel, 
-                conductorNombre: d.nombre || "Conductor",
+                conductorNombre: d.nombre || "Chofer", 
                 conductorPlaca: d.placa || "S/P" 
             });
         });
     }
 
     function finalizar(id) {
+        if(!confirm("¿Cobrar viaje?")) return;
         db.ref('viajes/' + id).once('value', snap => {
             const v = snap.val();
-            if(!v) return;
-            const d_actual = new Date();
-            const hoy = d_actual.getDate() + "-" + (d_actual.getMonth() + 1) + "-" + d_actual.getFullYear();
-            const pChofer = parseFloat(v.precioChofer) || 0;
-            const cApp = parseFloat(v.comisionApp) || 0;
+            const precioTotal = parseFloat(v.precio);
+            const cuotaApp = precioTotal <= 3.25 ? 0.25 : (precioTotal <= 6.50 ? 0.50 : 1.00);
+            const gananciaChofer = precioTotal - cuotaApp;
+            const hoy = obtenerFechaHoy();
 
-            if(confirm("¿Confirmas finalizar y cobrar B/. " + v.precio + "?")) {
-                // GUARDAR EN REPORTE
-                db.ref('reportes_diarios/' + miCel + '/' + hoy).push({
-                    cliente: v.cliente,
-                    ganancia: pChofer.toFixed(2),
-                    cuota: cApp.toFixed(2),
-                    hora: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-                }).then(() => {
-                    // ACTUALIZAR SALDOS DEL CONDUCTOR
-                    db.ref('conductores/' + miCel).once('value', s => {
-                        const dc = s.val();
-                        db.ref('conductores/' + miCel).update({
-                            totalGeneradoHoy: (parseFloat(dc.totalGeneradoHoy || 0) + pChofer).toFixed(2),
-                            deuda: (parseFloat(dc.deuda || 0) + cApp).toFixed(2),
-                            ultimaFecha: hoy
-                        });
-                        // CERRAR VIAJE
-                        db.ref('viajes/' + id).update({ estado: 'completado' });
+            // Guardar reporte y actualizar saldo simultáneamente
+            const updates = {};
+            updates['viajes/' + id + '/estado'] = 'completado';
+            updates['reportes_diarios/' + miCel + '/' + hoy + '/' + id] = {
+                cliente: v.cliente, ganancia: gananciaChofer.toFixed(2), cuota: cuotaApp.toFixed(2), hora: new Date().toLocaleTimeString()
+            };
+
+            db.ref().update(updates).then(() => {
+                db.ref('conductores/' + miCel).once('value', s => {
+                    const dc = s.val() || {};
+                    db.ref('conductores/' + miCel).update({
+                        totalGeneradoHoy: (parseFloat(dc.totalGeneradoHoy || 0) + gananciaChofer).toFixed(2),
+                        deuda: (parseFloat(dc.deuda || 0) + cuotaApp).toFixed(2)
                     });
                 });
-            }
+            });
         });
     }
+
+    function cancelarPorChofer(id) { if(confirm("¿Cancelar?")) db.ref('viajes/' + id).update({ estado: 'cancelado' }); }
+    function obtenerFechaHoy() { const d = new Date(); return d.getDate() + "-" + (d.getMonth() + 1) + "-" + d.getFullYear(); }
 </script>
 </body>
 </html>

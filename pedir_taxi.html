@@ -19,7 +19,13 @@
         .btn { width: 100%; padding: 15px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 16px; display: flex; align-items: center; justify-content: center; text-decoration: none; }
         .btn-yellow { background: #ffc107; color: #000; }
         .btn-whatsapp { background: #25d366; color: white; display: none; }
-        .price-tag { font-size: 35px; font-weight: bold; color: #1a1a1a; text-align: center; margin: 5px 0; }
+        .price-tag { font-size: 38px; font-weight: 900; color: #1a1a1a; text-align: center; margin: 5px 0; }
+        
+        /* BLOQUE DE CONFIANZA RESTAURADO */
+        .trust-badge { background: #fff3cd; border: 1px solid #ffeeba; padding: 12px; border-radius: 15px; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+        .trust-badge b { color: #856404; font-size: 14px; display: block; text-align: left; }
+        .trust-badge small { color: #666; font-size: 11px; line-height: 1.2; text-align: left; display: block; }
+
         .panel-espera { background: #1a1a1a; color: white; padding: 20px; border-radius: 20px; display: none; text-align: center; }
         #datos-conductor { margin-top: 15px; padding: 15px; background: #222; border-radius: 15px; display: none; border: 1px solid #ffc107; }
     </style>
@@ -30,20 +36,27 @@
         <div class="box" id="panel-cliente">
             <input id="origen-input" type="text" placeholder="📍 ¿Dónde te buscamos?">
             <input id="destino-input" type="text" placeholder="🏁 ¿A dónde vas?">
-            <div id="info-viaje" style="display:none;">
-                <div class="price-tag" id="precio-txt">B/. 1.50</div>
+            <div id="info-viaje" style="display:none; margin-top: 15px;">
+                <div class="trust-badge">
+                    <span style="font-size: 24px;">🛡️</span>
+                    <div>
+                        <b>¡Paga lo justo con PreetyTaxi!</b>
+                        <small>Tarifa fija calculada por GPS. No aceptes cobros extra por tranque o lluvia.</small>
+                    </div>
+                </div>
+                <div class="price-tag" id="precio-txt">B/. 1.75</div>
                 <button class="btn btn-yellow" onclick="confirmarPedido()">PEDIR TAXI AHORA</button>
             </div>
         </div>
         <div id="panel-espera" class="panel-espera">
             <h3 id="status-label" style="color:#ffc107;">Buscando conductor...</h3>
             <div id="datos-conductor">
-                <small style="color:#888">TU CONDUCTOR:</small>
+                <small style="color:#888">TU CONDUCTOR ASIGNADO:</small>
                 <div id="nombre-ch" style="font-size:20px; font-weight:bold; color:#ffc107;">---</div>
-                <div id="placa-ch" style="font-size:14px; margin-bottom:10px;">PLACA: ---</div>
+                <div id="placa-ch" style="font-size:16px; margin-top:5px; color:#fff; background:#444; display:inline-block; padding:2px 10px; border-radius:5px;">PLACA: ---</div>
             </div>
             <a id="btn-ws-cliente" href="#" target="_blank" class="btn btn-whatsapp">📱 CHATEAR POR WHATSAPP</a>
-            <button class="btn" style="background:transparent; color:#ff4d4d; font-size:13px;" onclick="location.reload()">Cancelar</button>
+            <button class="btn" style="background:transparent; color:#ff4d4d; font-size:13px;" onclick="location.reload()">Cancelar Viaje</button>
         </div>
     </div>
 <script>
@@ -51,7 +64,10 @@
     const firebaseConfig = { apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+    
     let map, ds, dr, viajeID, posA, posB;
+    let pagoNetoChofer = 0;
+    let miComision = 0;
 
     function initMap() {
         map = new google.maps.Map(document.getElementById("map"), { center: {lat: 9.0415, lng: -79.4411}, zoom: 14, disableDefaultUI: true });
@@ -70,10 +86,22 @@
             if (stat === 'OK') {
                 dr.setDirections(res);
                 const km = res.routes[0].legs[0].distance.value / 1000;
-                let subtotal = 0.50 + (km * 0.50);
-                let final = Math.ceil(subtotal * 2) / 2; 
-                if (final < 1.50) final = 1.50;
-                document.getElementById('precio-txt').innerText = "B/. " + final.toFixed(2);
+                
+                // LÓGICA MENDES: 0.50 Base + 0.60/km
+                let brutoChofer = 0.50 + (km * 0.60);
+                pagoNetoChofer = Math.round(brutoChofer * 4) / 4;
+                if (pagoNetoChofer < 1.50) pagoNetoChofer = 1.50;
+
+                // TABLA DE COMISIONES MENDES
+                if (pagoNetoChofer <= 3.00) miComision = 0.25;
+                else if (pagoNetoChofer <= 6.00) miComision = 0.50;
+                else miComision = 1.00;
+
+                // TOTAL CLIENTE (Mínimo 1.75)
+                let totalCliente = pagoNetoChofer + miComision;
+                if (totalCliente < 1.75) totalCliente = 1.75;
+
+                document.getElementById('precio-txt').innerText = "B/. " + totalCliente.toFixed(2);
                 document.getElementById('info-viaje').style.display = "block";
             }
         });
@@ -82,17 +110,23 @@
     function confirmarPedido() {
         const tel = localStorage.getItem('userCel');
         const nombre = localStorage.getItem('userName') || "Cliente";
-        const precio = document.getElementById('precio-txt').innerText;
+        const precioTotal = document.getElementById('precio-txt').innerText.replace("B/. ", "");
         const ori = document.getElementById('origen-input').value;
         const des = document.getElementById('destino-input').value;
-        if(!tel) return alert("Inicia sesión");
+
+        if(!tel) return alert("Inicia sesión primero");
+
         const ref = db.ref('viajes').push({
-            cliente: nombre, telefono: tel, precio: precio.replace("B/. ", ""),
+            cliente: nombre, telefono: tel, precio: precioTotal, 
+            precioChofer: pagoNetoChofer.toFixed(2), comisionApp: miComision.toFixed(2),
             estado: "buscando", origen: ori, destino: des, fecha: new Date().toISOString()
         });
         viajeID = ref.key;
-        document.getElementById('btn-ws-cliente').href = `https://wa.me/507XXXXYYYY?text=Nuevo pedido de ${nombre}`; 
-        document.getElementById('btn-ws-cliente').style.display = "flex";
+
+        // MENSAJE DE WHATSAPP PARA LA CENTRAL / CONDUCTOR
+        const msg = `*PREETY TAXI 🚕*%0A👤 *Cliente:* ${nombre}%0A📍 *Origen:* ${ori}%0A💰 *TARIFA FIJA:* B/. ${precioTotal}%0A🛡️ _Precio monitoreado por GPS._`;
+        document.getElementById('btn-ws-cliente').href = `https://wa.me/507XXXXYYYY?text=${msg}`; 
+
         document.getElementById('panel-cliente').style.display = "none";
         document.getElementById('panel-espera').style.display = "block";
         escuchar();
@@ -102,13 +136,17 @@
         db.ref('viajes/' + viajeID).on('value', snap => {
             const v = snap.val();
             if(v && v.estado === "en curso") {
-                document.getElementById('status-label').innerText = "🚕 CHOFER EN CAMINO";
+                document.getElementById('status-label').innerText = "🚕 ¡CHOFER EN CAMINO!";
                 document.getElementById('datos-conductor').style.display = "block";
                 document.getElementById('nombre-ch').innerText = v.conductorNombre || "Asignado";
                 document.getElementById('placa-ch').innerText = "PLACA: " + (v.conductorPlaca || "---");
-                document.getElementById('btn-ws-cliente').href = `https://wa.me/507${v.conductorCel}?text=Hola soy ${v.cliente}, te espero.`;
+                
+                // MENSAJE PARA CHATEAR CON EL CHOFER
+                const textoChat = `Hola ${v.cliente}, te espero en ${v.origen}. El total es B/. ${v.precio}.`;
+                document.getElementById('btn-ws-cliente').style.display = "flex";
+                document.getElementById('btn-ws-cliente').href = `https://wa.me/507${v.conductorCel}?text=${encodeURIComponent(textoChat)}`;
             }
-            if(v && v.estado === "completado") { alert("Viaje finalizado"); location.reload(); }
+            if(v && v.estado === "completado") location.reload();
         });
     }
     window.onload = initMap;

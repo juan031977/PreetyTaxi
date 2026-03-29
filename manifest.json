@@ -1,17 +1,15 @@
 {
   "name": "PreetyTaxi Chofer",
-  "short_name": "PreetyTaxi",
+  "short_name": "Preety",
   "start_url": "panel_trabajo.html",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#ffc107",
-  "orientation": "portrait",
   "icons": [
     {
-      "src": "icon.png",
+      "src": "https://cdn-icons-png.flaticon.com/512/71/71222.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     }
   ]
 }

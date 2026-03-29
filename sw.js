@@ -7,7 +7,7 @@ self.addEventListener('activate', (e) => {
     e.waitUntil(clients.claim());
 });
 
-// Abre la app cuando el chofer toca la notificación
+// Al tocar la notificación, abre o enfoca el panel de trabajo
 self.addEventListener('notificationclick', (e) => {
     e.notification.close();
     e.waitUntil(

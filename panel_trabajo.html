@@ -50,11 +50,13 @@
     const db = firebase.database();
     const miCel = localStorage.getItem('driverCel');
 
+    // CONFIGURACIÓN DEL SONIDO (Silbido)
+    const sonidoAlerta = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
+
     function cargar() {
         if(!miCel) return window.location.href="login.html";
         document.getElementById('lbl-cel').innerText = "CHOFER: " + miCel;
         
-        // Listener principal del conductor
         db.ref('conductores/' + miCel).on('value', s => {
             const d = s.val() || {};
             document.getElementById('txt-ventas').innerText = "B/. " + (parseFloat(d.totalGeneradoHoy) || 0).toFixed(2);
@@ -82,6 +84,10 @@
                 const v = child.val();
                 if(v.estado === "buscando") {
                     hay = true;
+                    
+                    // EJECUTAR SONIDO AL DETECTAR VIAJE NUEVO
+                    sonidoAlerta.play().catch(e => console.log("Audio bloqueado: Toca la pantalla primero"));
+
                     html += `<div class="viaje-card">
                         <div style="display:flex; justify-content:space-between"><span>📍 Pedido</span><b style="color:#ffc107;">B/. ${v.precio}</b></div>
                         <div style="font-size:14px;">${v.origen} ➔ ${v.destino}</div>
@@ -125,7 +131,6 @@
             const gananciaChofer = precioTotal - cuotaApp;
             const hoy = obtenerFechaHoy();
 
-            // Guardar reporte y actualizar saldo simultáneamente
             const updates = {};
             updates['viajes/' + id + '/estado'] = 'completado';
             updates['reportes_diarios/' + miCel + '/' + hoy + '/' + id] = {

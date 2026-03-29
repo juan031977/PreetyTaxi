@@ -26,8 +26,7 @@
         .btn-ws { background: #25d366; color: white; }
         .btn-fin { background: #000; color: #fff; }
         .btn-cancelar { background: #fff; color: #ff4d4d; border: 1px solid #ff4d4d; margin-top: 15px; font-size: 12px; }
-        /* Botón de alerta */
-        .btn-alertas { background: #333; color: #ffc107; border: 1px dashed #ffc107; padding: 10px; border-radius: 12px; font-size: 11px; width: 100%; margin-top: 10px; }
+        .btn-alertas { background: #222; color: #ffc107; border: 1px dashed #ffc107; padding: 8px; border-radius: 10px; font-size: 10px; width: 100%; margin-top: 10px; cursor: pointer; }
     </style>
 </head>
 <body onload="cargar()">
@@ -46,7 +45,7 @@
             <div><small style="color:#888;">GANANCIA</small><div id="txt-ventas" class="monto">B/. 0.00</div></div>
             <div><small style="color:#888;">CUOTA</small><div id="txt-deuda" class="monto" style="color:#ff4d4d;">B/. 0.00</div></div>
         </div>
-        <button class="btn-alertas" onclick="activarNotificaciones()">🔔 ACTIVAR ALERTAS EN BOLSILLO</button>
+        <button class="btn-alertas" onclick="activarAlertas()">🔔 ACTIVAR ALERTAS (Tocar una vez)</button>
         <a href="reportes.html" style="color: #ffc107; font-size: 12px; text-decoration: none; display: block; margin-top: 15px;">VER REPORTES</a>
     </div>
 
@@ -60,28 +59,15 @@
     const sonidoAlerta = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
     let ultimoViajeId = "";
 
-    // --- REGISTRO DEL MOTOR INVISIBLE ---
+    // Registro del Motor
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js').then(() => console.log("Motor Preety Activo"));
+        navigator.serviceWorker.register('sw.js').then(() => console.log("Motor Activo"));
     }
 
-    function activarNotificaciones() {
-        Notification.requestPermission().then(perm => {
-            if(perm === 'granted') alert("✅ Alertas activadas. El celular sonará aunque esté bloqueado.");
+    function activarAlertas() {
+        Notification.requestPermission().then(p => {
+            if(p === 'granted') alert("¡Alertas activadas correctamente!");
         });
-    }
-
-    function alertaPantallaApagada(origen, precio) {
-        if (Notification.permission === "granted") {
-            navigator.serviceWorker.ready.then(reg => {
-                reg.showNotification("🚕 ¡VIAJE NUEVO!", {
-                    body: `Precio: B/. ${precio} | Origen: ${origen}`,
-                    icon: 'https://cdn-icons-png.flaticon.com/512/3448/3448654.png',
-                    vibrate: [300, 100, 300],
-                    tag: 'nuevo-viaje'
-                });
-            });
-        }
     }
 
     function cargar() {
@@ -93,23 +79,20 @@
             document.getElementById('txt-ventas').innerText = "B/. " + (parseFloat(d.totalGeneradoHoy) || 0).toFixed(2);
             document.getElementById('txt-deuda').innerText = "B/. " + (parseFloat(d.deuda) || 0).toFixed(2);
             document.getElementById('check-status').checked = d.conectado || false;
-            
-            const statusTxt = document.getElementById('status-text');
-            statusTxt.innerText = d.conectado ? "ESTÁS ACTIVO" : "DESCONECTADO";
-            statusTxt.style.color = d.conectado ? "#25d366" : "#ff4d4d";
+            document.getElementById('status-text').innerText = d.conectado ? "ESTÁS ACTIVO" : "DESCONECTADO";
+            document.getElementById('status-text').style.color = d.conectado ? "#25d366" : "#ff4d4d";
 
             if(d.conectado) escucharViajes();
             else {
-                document.getElementById('lista-viajes').innerHTML = '<p style="text-align:center; color:#444;">Ponte en línea para recibir pedidos</p>';
+                document.getElementById('lista-viajes').innerHTML = '<p style="text-align:center; color:#444;">Conéctate para recibir pedidos</p>';
                 db.ref('viajes').off();
             }
         });
     }
 
     function toggleConexion(el) {
-        sonidoAlerta.play().then(() => { sonidoAlerta.pause(); sonidoAlerta.currentTime = 0; });
+        sonidoAlerta.play().then(() => { sonidoAlerta.pause(); });
         db.ref('conductores/' + miCel).update({ conectado: el.checked });
-        if(!el.checked) setTimeout(() => { location.reload(); }, 500);
     }
 
     function escucharViajes() {
@@ -122,13 +105,14 @@
                 if(v.estado === "buscando") {
                     hay = true;
                     if(ultimoViajeId !== child.key) {
-                        sonidoAlerta.play().catch(e => console.log("Audio bloqueado"));
-                        // ESTO HACE QUE AVISE CON PANTALLA APAGADA:
-                        alertaPantallaApagada(v.origen, v.precio);
+                        sonidoAlerta.play();
+                        if(Notification.permission === "granted") {
+                            navigator.serviceWorker.ready.then(reg => {
+                                reg.showNotification("🚕 ¡VIAJE NUEVO!", { body: `B/. ${v.precio} - ${v.origen}`, tag: 'taxi' });
+                            });
+                        }
                         ultimoViajeId = child.key;
-                        if(navigator.vibrate) navigator.vibrate([200, 100, 200]);
                     }
-
                     html += `<div class="viaje-card">
                         <div style="display:flex; justify-content:space-between"><span>📍 NUEVO PEDIDO</span><b style="color:#ffc107;">B/. ${v.precio}</b></div>
                         <div style="font-size:14px; margin: 10px 0;">${v.origen} ➔ ${v.destino}</div>
@@ -136,20 +120,15 @@
                     </div>`;
                 } else if(v.estado === "en curso" && v.conductorCel === miCel) {
                     hay = true;
-                    const textoChat = `Hola *${v.cliente}*, soy tu conductor de PreetyTaxi. Ya voy en camino por ti.`;
                     html = `<div class="viaje-activo">
-                        <small>CLIENTE</small>
                         <h2 style="margin:0;">${v.cliente}</h2>
                         <p>📍 ${v.origen}</p>
                         <div style="font-size:30px; font-weight:bold; margin:10px 0;">B/. ${v.precio}</div>
-                        <a href="https://wa.me/507${v.telefono}?text=${encodeURIComponent(textoChat)}" class="btn btn-ws"><i class="fab fa-whatsapp"></i> CHATEAR</a>
+                        <a href="https://wa.me/507${v.telefono}" class="btn btn-ws"><i class="fab fa-whatsapp"></i> CHATEAR</a>
                         <button class="btn btn-fin" onclick="finalizar('${child.key}')">FINALIZAR VIAJE</button>
-                        <button class="btn btn-cancelar" onclick="cancelarPorChofer('${child.key}')">CANCELAR</button>
                     </div>`;
                 }
             });
-            
-            if(!hay) ultimoViajeId = "";
             lista.innerHTML = hay ? html : '<p style="text-align:center; color:#333;">Esperando viajes...</p>';
         });
     }
@@ -157,51 +136,27 @@
     function aceptar(id) {
         db.ref('conductores/' + miCel).once('value', s => {
             const d = s.val() || {};
-            db.ref('viajes/' + id).update({ 
-                estado: 'en curso', 
-                conductorCel: miCel, 
-                conductorNombre: d.nombre || "Chofer", 
-                conductorPlaca: d.placa || "S/P" 
-            });
+            db.ref('viajes/' + id).update({ estado: 'en curso', conductorCel: miCel, conductorNombre: d.nombre });
         });
     }
 
     function finalizar(id) {
-        if(!confirm("¿Deseas finalizar y cobrar este viaje?")) return;
+        if(!confirm("¿Finalizar viaje?")) return;
         db.ref('viajes/' + id).once('value', snap => {
             const v = snap.val();
-            const precioTotal = parseFloat(v.precio);
-            const cuotaApp = precioTotal <= 3.25 ? 0.25 : (precioTotal <= 6.50 ? 0.50 : 1.00);
-            const gananciaChofer = precioTotal - cuotaApp;
-            const hoy = obtenerFechaHoy();
-
-            const updates = {};
-            updates['viajes/' + id + '/estado'] = 'completado';
-            updates['reportes_diarios/' + miCel + '/' + hoy + '/' + id] = {
-                cliente: v.cliente, ganancia: gananciaChofer.toFixed(2), cuota: cuotaApp.toFixed(2), hora: new Date().toLocaleTimeString()
-            };
-
-            db.ref().update(updates).then(() => {
-                db.ref('conductores/' + miCel).once('value', s => {
-                    const dc = s.val() || {};
-                    db.ref('conductores/' + miCel).update({
-                        totalGeneradoHoy: (parseFloat(dc.totalGeneradoHoy || 0) + gananciaChofer).toFixed(2),
-                        deuda: (parseFloat(dc.deuda || 0) + cuotaApp).toFixed(2)
-                    });
+            const precio = parseFloat(v.precio);
+            const cuota = precio <= 3.25 ? 0.25 : (precio <= 6.50 ? 0.50 : 1.00);
+            const hoy = new Date().getDate() + "-" + (new Date().getMonth() + 1) + "-" + new Date().getFullYear();
+            
+            db.ref('viajes/' + id).update({ estado: 'completado' });
+            db.ref('conductores/' + miCel).once('value', s => {
+                const dc = s.val() || {};
+                db.ref('conductores/' + miCel).update({
+                    totalGeneradoHoy: (parseFloat(dc.totalGeneradoHoy || 0) + (precio - cuota)).toFixed(2),
+                    deuda: (parseFloat(dc.deuda || 0) + cuota).toFixed(2)
                 });
             });
         });
-    }
-
-    function cancelarPorChofer(id) { if(confirm("¿Estás seguro de cancelar el viaje?")) db.ref('viajes/' + id).update({ estado: 'cancelado' }); }
-    function obtenerFechaHoy() { const d = new Date(); return d.getDate() + "-" + (d.getMonth() + 1) + "-" + d.getFullYear(); }
-
-    if ('wakeLock' in navigator) {
-        let wakeLock = null;
-        const requestWakeLock = async () => {
-            try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) { }
-        };
-        requestWakeLock();
     }
 </script>
 </body>

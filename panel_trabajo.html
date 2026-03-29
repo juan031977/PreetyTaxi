@@ -50,8 +50,9 @@
     const db = firebase.database();
     const miCel = localStorage.getItem('driverCel');
 
-    // CONFIGURACIÓN DEL SONIDO (Silbido)
+    // SONIDO Y CONTROL DE NOTIFICACIÓN
     const sonidoAlerta = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
+    let viajeNotificado = ""; // Evita que el silbido suene repetidamente por el mismo viaje
 
     function cargar() {
         if(!miCel) return window.location.href="login.html";
@@ -72,7 +73,10 @@
         });
     }
 
-    function toggleConexion(el) { db.ref('conductores/' + miCel).update({ conectado: el.checked }); }
+    function toggleConexion(el) { 
+        // Al tocar este switch, el navegador habilita el sonido para la sesión
+        db.ref('conductores/' + miCel).update({ conectado: el.checked }); 
+    }
 
     function escucharViajes() {
         db.ref('viajes').on('value', snap => {
@@ -85,8 +89,11 @@
                 if(v.estado === "buscando") {
                     hay = true;
                     
-                    // EJECUTAR SONIDO AL DETECTAR VIAJE NUEVO
-                    sonidoAlerta.play().catch(e => console.log("Audio bloqueado: Toca la pantalla primero"));
+                    // LÓGICA DE SONIDO: Solo suena si el ID del viaje es nuevo
+                    if (viajeNotificado !== child.key) {
+                        sonidoAlerta.play().catch(e => console.log("Interacción requerida"));
+                        viajeNotificado = child.key; 
+                    }
 
                     html += `<div class="viaje-card">
                         <div style="display:flex; justify-content:space-between"><span>📍 Pedido</span><b style="color:#ffc107;">B/. ${v.precio}</b></div>
@@ -106,6 +113,10 @@
                     </div>`;
                 }
             });
+
+            // Si no hay viajes buscando, reseteamos el ID para que el próximo viaje que entre vuelva a sonar
+            if (!hay) { viajeNotificado = ""; }
+
             lista.innerHTML = hay ? html : '<p style="text-align:center; color:#333;">Esperando viajes...</p>';
         });
     }

@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Panel de Trabajo - PreetyTaxi</title>
-    <!-- Agregamos versión al script para forzar actualización sin desinstalar -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -27,9 +26,12 @@
         .btn-ws { background: #25d366; color: white; }
         .btn-fin { background: #000; color: #fff; }
         .btn-cancelar { background: #fff; color: #ff4d4d; border: 1px solid #ff4d4d; margin-top: 15px; font-size: 12px; }
+        /* Botón de alerta */
+        .btn-alertas { background: #333; color: #ffc107; border: 1px dashed #ffc107; padding: 10px; border-radius: 12px; font-size: 11px; width: 100%; margin-top: 10px; }
     </style>
 </head>
 <body onload="cargar()">
+
     <div class="status-bar">
         <span id="status-text">Cargando...</span>
         <label class="switch">
@@ -44,27 +46,48 @@
             <div><small style="color:#888;">GANANCIA</small><div id="txt-ventas" class="monto">B/. 0.00</div></div>
             <div><small style="color:#888;">CUOTA</small><div id="txt-deuda" class="monto" style="color:#ff4d4d;">B/. 0.00</div></div>
         </div>
+        <button class="btn-alertas" onclick="activarNotificaciones()">🔔 ACTIVAR ALERTAS EN BOLSILLO</button>
         <a href="reportes.html" style="color: #ffc107; font-size: 12px; text-decoration: none; display: block; margin-top: 15px;">VER REPORTES</a>
     </div>
 
     <div id="lista-viajes"></div>
 
 <script>
-    // 1. CONFIGURACIÓN Y AUDIO
     const firebaseConfig = { apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const miCel = localStorage.getItem('driverCel');
-    
-    // Sonido de alerta (Taxi Horn / Beep)
     const sonidoAlerta = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
     let ultimoViajeId = "";
+
+    // --- REGISTRO DEL MOTOR INVISIBLE ---
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').then(() => console.log("Motor Preety Activo"));
+    }
+
+    function activarNotificaciones() {
+        Notification.requestPermission().then(perm => {
+            if(perm === 'granted') alert("✅ Alertas activadas. El celular sonará aunque esté bloqueado.");
+        });
+    }
+
+    function alertaPantallaApagada(origen, precio) {
+        if (Notification.permission === "granted") {
+            navigator.serviceWorker.ready.then(reg => {
+                reg.showNotification("🚕 ¡VIAJE NUEVO!", {
+                    body: `Precio: B/. ${precio} | Origen: ${origen}`,
+                    icon: 'https://cdn-icons-png.flaticon.com/512/3448/3448654.png',
+                    vibrate: [300, 100, 300],
+                    tag: 'nuevo-viaje'
+                });
+            });
+        }
+    }
 
     function cargar() {
         if(!miCel) return window.location.href="login.html";
         document.getElementById('lbl-cel').innerText = "CHOFER: " + miCel;
         
-        // Listener de datos del conductor
         db.ref('conductores/' + miCel).on('value', s => {
             const d = s.val() || {};
             document.getElementById('txt-ventas').innerText = "B/. " + (parseFloat(d.totalGeneradoHoy) || 0).toFixed(2);
@@ -78,37 +101,31 @@
             if(d.conectado) escucharViajes();
             else {
                 document.getElementById('lista-viajes').innerHTML = '<p style="text-align:center; color:#444;">Ponte en línea para recibir pedidos</p>';
-                db.ref('viajes').off(); // Detener escucha si está desconectado
+                db.ref('viajes').off();
             }
         });
     }
 
     function toggleConexion(el) {
-        // Truco para activar el sonido en móviles: tocar el switch "despierta" el audio
         sonidoAlerta.play().then(() => { sonidoAlerta.pause(); sonidoAlerta.currentTime = 0; });
-        
         db.ref('conductores/' + miCel).update({ conectado: el.checked });
-        if(!el.checked) {
-            // Forzar recarga limpia si se desconecta para asegurar que no haya procesos fantasma
-            setTimeout(() => { location.reload(); }, 500);
-        }
+        if(!el.checked) setTimeout(() => { location.reload(); }, 500);
     }
 
     function escucharViajes() {
         db.ref('viajes').on('value', snap => {
             const lista = document.getElementById('lista-viajes');
-            let html = ""; 
-            let hay = false;
+            let html = ""; let hay = false;
 
             snap.forEach(child => {
                 const v = child.val();
                 if(v.estado === "buscando") {
                     hay = true;
-                    // SI ES UN VIAJE NUEVO, SONAR
                     if(ultimoViajeId !== child.key) {
-                        sonidoAlerta.play().catch(e => console.log("Esperando interacción"));
+                        sonidoAlerta.play().catch(e => console.log("Audio bloqueado"));
+                        // ESTO HACE QUE AVISE CON PANTALLA APAGADA:
+                        alertaPantallaApagada(v.origen, v.precio);
                         ultimoViajeId = child.key;
-                        // Vibración si el celular lo permite
                         if(navigator.vibrate) navigator.vibrate([200, 100, 200]);
                     }
 
@@ -132,7 +149,7 @@
                 }
             });
             
-            if(!hay) ultimoViajeId = ""; // Resetear si no hay viajes
+            if(!hay) ultimoViajeId = "";
             lista.innerHTML = hay ? html : '<p style="text-align:center; color:#333;">Esperando viajes...</p>';
         });
     }
@@ -154,7 +171,6 @@
         db.ref('viajes/' + id).once('value', snap => {
             const v = snap.val();
             const precioTotal = parseFloat(v.precio);
-            // Lógica de cuota: B/. 1.50 es el mínimo
             const cuotaApp = precioTotal <= 3.25 ? 0.25 : (precioTotal <= 6.50 ? 0.50 : 1.00);
             const gananciaChofer = precioTotal - cuotaApp;
             const hoy = obtenerFechaHoy();
@@ -180,13 +196,10 @@
     function cancelarPorChofer(id) { if(confirm("¿Estás seguro de cancelar el viaje?")) db.ref('viajes/' + id).update({ estado: 'cancelado' }); }
     function obtenerFechaHoy() { const d = new Date(); return d.getDate() + "-" + (d.getMonth() + 1) + "-" + d.getFullYear(); }
 
-    // EVITAR QUE LA PANTALLA SE APAGUE (Wake Lock)
     if ('wakeLock' in navigator) {
         let wakeLock = null;
         const requestWakeLock = async () => {
-            try {
-                wakeLock = await navigator.wakeLock.request('screen');
-            } catch (err) { console.log(err); }
+            try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) { }
         };
         requestWakeLock();
     }

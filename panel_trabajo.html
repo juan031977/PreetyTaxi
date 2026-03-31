@@ -21,24 +21,20 @@
         .viaje-card { background: #111; padding: 18px; border-radius: 20px; margin-bottom: 12px; border: 1px solid #222; animation: notify 0.5s infinite alternate; }
         @keyframes notify { from { border-color: #222; } to { border-color: #ffc107; } }
         .btn-aceptar { background: #ffc107; color: #000; padding: 14px; width: 100%; border-radius: 14px; font-weight: bold; border: none; margin-top: 10px; font-size: 16px; }
-        .viaje-activo { background: #fff; color: #000; padding: 25px; border-radius: 28px; border-left: 10px solid #ffc107; }
-        .btn { width: 100%; padding: 16px; border: none; border-radius: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; text-decoration: none; }
-        .btn-ws { background: #25d366; color: white; }
-        .btn-fin { background: #000; color: #fff; }
-        .btn-cancelar { background: #fff; color: #ff4d4d; border: 1px solid #ff4d4d; margin-top: 15px; font-size: 12px; }
+        .btn { width: 100%; padding: 16px; border: none; border-radius: 16px; font-weight: bold; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 10px; text-decoration: none; }
+        .btn-fin { background: #fff; color: #000; }
+        /* Aviso de permisos que no bloquea */
+        #aviso-permiso { display: none; background: #ffc107; color: #000; padding: 10px; text-align: center; font-size: 12px; font-weight: bold; border-radius: 10px; margin-bottom: 10px; }
     </style>
 </head>
 <body onload="cargar()">
-    <!-- MURO DE PERMISOS PARA COLEGAS -->
-    <div id="muro-permisos" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:9999; text-align:center; padding:50px 20px;">
-        <i class="fas fa-bell" style="font-size:80px; color:#ffc107; margin-bottom:20px;"></i>
-        <h2 style="color:#fff;">¡ACTIVA LAS ALERTAS!</h2>
-        <p style="color:#ccc;">Para que el silbido suene y veas los viajes arriba, toca el botón y dale a <b>"Permitir"</b>.</p>
-        <button onclick="solicitarPermisos()" style="background:#ffc107; border:none; padding:18px 35px; border-radius:15px; font-weight:bold; font-size:18px; color:#000; margin-top:20px;">ENTIENDO, ACTIVAR</button>
+
+    <div id="aviso-permiso" onclick="solicitarPermisos()">
+        ⚠️ TOCA AQUÍ PARA ACTIVAR EL SILBIDO Y ALERTAS
     </div>
 
     <div class="status-bar">
-        <span id="status-text">Cargando...</span>
+        <span id="status-text">Conectando...</span>
         <label class="switch">
             <input type="checkbox" id="check-status" onchange="toggleConexion(this)">
             <span class="slider"></span>
@@ -60,17 +56,12 @@
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const miCel = localStorage.getItem('driverCel');
-    
-    // SONIDO SILBIDO GITHUB
     const sonidoAlerta = new Audio('https://raw.githubusercontent.com/juan031977/PreetyTaxi/main/silbido.mp3');
     let ultimoViajeId = "";
 
     function solicitarPermisos() {
         Notification.requestPermission().then(perm => {
-            if(perm === 'granted') {
-                document.getElementById('muro-permisos').style.display = 'none';
-                location.reload();
-            }
+            if(perm === 'granted') document.getElementById('aviso-permiso').style.display = 'none';
         });
     }
 
@@ -78,94 +69,84 @@
         if(!miCel) return window.location.href="login.html";
         document.getElementById('lbl-cel').innerText = "CHOFER: " + miCel;
 
-        // Verificar Permisos
+        // Mostrar aviso solo si no hay permiso, pero no bloquear la carga
         if (Notification.permission !== "granted") {
-            document.getElementById('muro-permisos').style.display = 'block';
+            document.getElementById('aviso-permiso').style.display = 'block';
         }
 
-        // Registro de Mensajero (sw.js)
+        // Registro silencioso del Service Worker
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').catch(e => console.log("Error SW:", e));
+            navigator.serviceWorker.register('sw.js').catch(e => console.log("SW Error"));
         }
         
+        // Carga de datos de Firebase (Esto es lo que se quedaba pegado)
         db.ref('conductores/' + miCel).on('value', s => {
             const d = s.val() || {};
             document.getElementById('txt-ventas').innerText = "B/. " + (parseFloat(d.totalGeneradoHoy) || 0).toFixed(2);
             document.getElementById('txt-deuda').innerText = "B/. " + (parseFloat(d.deuda) || 0).toFixed(2);
             document.getElementById('check-status').checked = d.conectado || false;
-            const statusTxt = document.getElementById('status-text');
-            statusTxt.innerText = d.conectado ? "ESTÁS ACTIVO" : "DESCONECTADO";
-            statusTxt.style.color = d.conectado ? "#25d366" : "#ff4d4d";
+            
+            actualizarEstadoUI(d.conectado);
+
             if(d.conectado) escucharViajes();
+            else {
+                document.getElementById('lista-viajes').innerHTML = '<p style="text-align:center; color:#444;">Desconectado</p>';
+                db.ref('viajes').off();
+            }
+        }, (error) => {
+            document.getElementById('status-text').innerText = "Error de Red";
         });
     }
 
-    function toggleConexion(el) {
-        // Despertar audio al tocar switch
-        sonidoAlerta.play().then(() => { sonidoAlerta.pause(); sonidoAlerta.currentTime = 0; });
-        db.ref('conductores/' + miCel).update({ conectado: el.checked });
-        if(!el.checked) {
-            if ('setAppBadge' in navigator) navigator.clearAppBadge();
-            setTimeout(() => { location.reload(); }, 500);
-        }
+    function actualizarEstadoUI(conectado) {
+        const statusTxt = document.getElementById('status-text');
+        statusTxt.innerText = conectado ? "ESTÁS ACTIVO" : "DESCONECTADO";
+        statusTxt.style.color = conectado ? "#25d366" : "#ff4d4d";
     }
 
-    function lanzarNotificacion(v, id) {
-        if ('serviceWorker' in navigator && Notification.permission === "granted") {
-            navigator.serviceWorker.ready.then(registration => {
-                registration.showNotification("🚕 ¡NUEVO PEDIDO!", {
-                    body: `Precio: B/. ${v.precio}\nOrigen: ${v.origen}`,
-                    icon: "https://juan031977.github.io/PreetyTaxi/icon.png",
-                    badge: "https://juan031977.github.io/PreetyTaxi/icon.png",
-                    vibrate: [200, 100, 200],
-                    tag: id,
-                    renotify: true,
-                    requireInteraction: true
-                });
-            });
-        }
-        // Numerito en el icono (Badge)
-        if ('setAppBadge' in navigator) navigator.setAppBadge(1).catch(() => {});
+    function toggleConexion(el) {
+        // Truco para desbloquear el audio en Android al tocar el switch
+        sonidoAlerta.play().then(() => { sonidoAlerta.pause(); sonidoAlerta.currentTime = 0; }).catch(e => {});
+        
+        db.ref('conductores/' + miCel).update({ conectado: el.checked });
+        actualizarEstadoUI(el.checked);
     }
 
     function escucharViajes() {
         db.ref('viajes').on('value', snap => {
             const lista = document.getElementById('lista-viajes');
             let html = ""; let hay = false;
+
             snap.forEach(child => {
                 const v = child.val();
                 if(v.estado === "buscando") {
                     hay = true;
                     if(ultimoViajeId !== child.key) {
-                        sonidoAlerta.play().catch(e => console.log("Audio"));
-                        lanzarNotificacion(v, child.key);
+                        sonidoAlerta.play().catch(e => {});
+                        if ('setAppBadge' in navigator) navigator.setAppBadge(1).catch(e => {});
                         ultimoViajeId = child.key;
-                        if(navigator.vibrate) navigator.vibrate([200, 100, 200]);
                     }
                     html += `<div class="viaje-card">
-                        <div style="display:flex; justify-content:space-between"><span>📍 NUEVO PEDIDO</span><b style="color:#ffc107;">B/. ${v.precio}</b></div>
+                        <div style="display:flex; justify-content:space-between"><span>📍 NUEVO PEDIDO</span><b>B/. ${v.precio}</b></div>
                         <div style="font-size:14px; margin: 10px 0;">${v.origen} ➔ ${v.destino}</div>
                         <button class="btn-aceptar" onclick="aceptar('${child.key}')">ACEPTAR VIAJE</button>
                     </div>`;
                 } else if(v.estado === "en curso" && v.conductorCel === miCel) {
                     hay = true;
-                    if ('setAppBadge' in navigator) navigator.clearAppBadge();
-                    const textoChat = `Hola *${v.cliente}*, soy tu conductor de PreetyTaxi. Ya voy en camino.`;
-                    html = `<div class="viaje-activo">
-                        <small>CLIENTE</small>
-                        <h2 style="margin:0;">${v.cliente}</h2>
-                        <p>📍 ${v.origen}</p>
-                        <div style="font-size:30px; font-weight:bold; margin:10px 0;">B/. ${v.precio}</div>
-                        <a href="https://wa.me/507${v.telefono}?text=${encodeURIComponent(textoChat)}" class="btn btn-ws"><i class="fab fa-whatsapp"></i> CHATEAR</a>
-                        <button class="btn btn-fin" onclick="finalizar('${child.key}')">FINALIZAR VIAJE</button>
+                    if ('setAppBadge' in navigator) navigator.clearAppBadge().catch(e => {});
+                    html += `<div class="viaje-activo" style="background:#fff; color:#000; padding:20px; border-radius:20px;">
+                        <h2>${v.cliente}</h2>
+                        <p>${v.origen}</p>
+                        <button class="btn btn-fin" onclick="finalizar('${child.key}')">FINALIZAR</button>
                     </div>`;
                 }
             });
-            if(!hay) { 
-                ultimoViajeId = ""; 
-                if ('setAppBadge' in navigator) navigator.clearAppBadge();
+            if(!hay) {
+                ultimoViajeId = "";
+                lista.innerHTML = '<p style="text-align:center; color:#333;">Esperando viajes...</p>';
+            } else {
+                lista.innerHTML = html;
             }
-            lista.innerHTML = hay ? html : '<p style="text-align:center; color:#333;">Esperando viajes...</p>';
         });
     }
 
@@ -174,11 +155,16 @@
     }
 
     function finalizar(id) {
-        if(confirm("¿Finalizar?")) db.ref('viajes/' + id).update({ estado: 'completado' });
+        if(confirm("¿Finalizar viaje?")) db.ref('viajes/' + id).update({ estado: 'completado' });
     }
 
+    // EL DESPERTADOR (WAKE LOCK) SIGUE AQUÍ, NO SE HA BORRADO
     if ('wakeLock' in navigator) {
-        navigator.wakeLock.request('screen').catch(e => console.log(e));
+        let wl = null;
+        const requestWL = async () => {
+            try { wl = await navigator.wakeLock.request('screen'); } catch (e) {}
+        };
+        requestWL();
     }
 </script>
 </body>

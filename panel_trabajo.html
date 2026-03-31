@@ -2,103 +2,79 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>PreetyTaxi - Panel</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Panel PreetyTaxi</title>
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#ffc107">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { background: #000; color: #fff; font-family: sans-serif; padding: 15px; margin: 0; }
-        .status-bar { display: flex; align-items: center; justify-content: space-between; background: #1a1a1a; padding: 15px; border-radius: 50px; border: 1px solid #333; margin-bottom: 20px; }
-        .billetera { background: #111; padding: 20px; border-radius: 24px; border: 1px solid #333; text-align: center; margin-bottom: 15px; }
-        .monto { color: #ffc107; font-size: 26px; font-weight: bold; }
-        .viaje-card { background: #111; padding: 18px; border-radius: 20px; margin-bottom: 12px; border: 2px solid #ffc107; animation: blink 0.8s infinite; }
-        @keyframes blink { 0% { border-color: #ffc107; } 50% { border-color: #333; } 100% { border-color: #ffc107; } }
-        .btn-aceptar { background: #ffc107; color: #000; padding: 15px; width: 100%; border-radius: 12px; font-weight: bold; border: none; font-size: 16px; cursor: pointer; }
-        .btn-alertas { background: #222; color: #ffc107; border: 1px dashed #ffc107; padding: 12px; width: 100%; border-radius: 12px; margin-top: 10px; font-size: 12px; font-weight: bold; }
-        #btn-power { background:none; border:none; font-size:35px; transition: 0.3s; cursor: pointer; }
+        body { background: #000; color: #fff; font-family: sans-serif; padding: 15px; text-align: center; }
+        .status-bar { display: flex; justify-content: space-between; align-items: center; background: #1a1a1a; padding: 15px; border-radius: 50px; border: 1px solid #333; margin-bottom: 20px; }
+        .viaje-card { background: #111; padding: 20px; border-radius: 20px; border: 2px solid #ffc107; margin-top: 15px; animation: blink 1s infinite; }
+        @keyframes blink { 0%, 100% { border-color: #ffc107; } 50% { border-color: #333; } }
+        .btn-aceptar { background: #ffc107; color: #000; padding: 15px; width: 100%; border-radius: 12px; font-weight: bold; border: none; font-size: 18px; margin-top: 10px; }
+        .btn-activar { background: #222; color: #ffc107; border: 1px dashed #ffc107; padding: 10px; width: 100%; border-radius: 12px; margin-top: 10px; font-size: 12px; }
     </style>
 </head>
 <body onload="cargar()">
 
     <div class="status-bar">
-        <span id="status-text" style="font-weight: bold; letter-spacing: 1px;">CARGANDO...</span>
-        <button id="btn-power" onclick="toggleConexion()"><i class="fas fa-power-off"></i></button>
+        <span id="status-text" style="font-weight: bold;">CARGANDO...</span>
+        <button id="btn-power" onclick="toggleConexion()" style="background:none; border:none; font-size:35px; color:#444;"><i class="fas fa-power-off"></i></button>
     </div>
 
-    <div class="billetera">
-        <div id="lbl-cel" style="font-size: 10px; opacity: 0.5; margin-bottom: 8px;">---</div>
+    <div style="background:#111; padding:20px; border-radius:24px; border:1px solid #333;">
         <div style="display:flex; justify-content: space-around;">
-            <div><small style="color:#888;">HOY</small><div id="txt-ventas" class="monto">B/. 0.00</div></div>
-            <div><small style="color:#888;">CUOTA</small><div id="txt-deuda" class="monto" style="color:#ff4d4d;">B/. 0.00</div></div>
+            <div><small>HOY</small><div id="txt-ventas" style="color:#ffc107; font-size:24px; font-weight:bold;">B/. 0.00</div></div>
+            <div><small>CUOTA</small><div id="txt-deuda" style="color:#ff4d4d; font-size:24px; font-weight:bold;">B/. 0.00</div></div>
         </div>
-        <button class="btn-alertas" onclick="activarYProbar()">🔔 ACTIVAR ALERTAS Y SONIDO</button>
+        <button class="btn-activar" onclick="pedirPermisos()">🔔 ACTIVAR ALERTAS (OBLIGATORIO)</button>
     </div>
 
     <div id="lista-viajes"></div>
 
 <script>
-    // Configuración Firebase
     const firebaseConfig = { apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const miCel = localStorage.getItem('driverCel');
-    
-    // Forzamos al navegador a no cachear el sonido viejo
     const sonidoAlerta = new Audio('alerta.mp3?v=' + Date.now());
-    let ultimoViajeId = "";
     let conectado = false;
 
-    // ACTUALIZACIÓN AUTOMÁTICA DEL MOTOR (SW)
+    // REGISTRO DEL MOTOR
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js?v=' + Date.now()).then(reg => {
-            reg.update(); // Obliga a buscar cambios en GitHub cada vez que entras
-            console.log("Motor Preety Actualizado");
+        navigator.serviceWorker.register('sw.js').then(reg => {
+            console.log("Motor listo");
+            reg.update();
         });
     }
 
-    function activarYProbar() {
+    function pedirPermisos() {
         Notification.requestPermission().then(perm => {
             if(perm === 'granted') {
-                sonidoAlerta.play();
-                alert("✅ ¡Alertas y Sonido de Taxi Activos!");
+                sonidoAlerta.play().then(() => { sonidoAlerta.pause(); alert("✅ Sonido y Alertas Listos."); });
             }
         });
     }
 
     function cargar() {
         if(!miCel) return window.location.href="login.html";
-        document.getElementById('lbl-cel').innerText = "CONDUCTOR: " + miCel;
         
-        // Escuchamos en tiempo real para que el botón cambie solo
         db.ref('conductores/' + miCel).on('value', snap => {
             const d = snap.val() || {};
             conectado = d.conectado || false;
-            
-            // Actualizar interfaz
-            document.getElementById('txt-ventas').innerText = "B/. " + (parseFloat(d.totalGeneradoHoy) || 0).toFixed(2);
-            document.getElementById('txt-deuda').innerText = "B/. " + (parseFloat(d.deuda) || 0).toFixed(2);
-            
-            const txt = document.getElementById('status-text');
-            const btn = document.getElementById('btn-power');
-            
-            txt.innerText = conectado ? "ESTÁS EN LÍNEA" : "DESCONECTADO";
-            txt.style.color = conectado ? "#25d366" : "#ff4d4d";
-            btn.style.color = conectado ? "#25d366" : "#444";
+            document.getElementById('txt-ventas').innerText = "B/. " + (d.totalGeneradoHoy || 0);
+            document.getElementById('txt-deuda').innerText = "B/. " + (d.deuda || 0);
+            document.getElementById('status-text').innerText = conectado ? "EN LÍNEA" : "DESCONECTADO";
+            document.getElementById('status-text').style.color = conectado ? "#25d366" : "#ff4d4d";
+            document.getElementById('btn-power').style.color = conectado ? "#25d366" : "#444";
 
             if(conectado) escucharViajes();
-            else {
-                document.getElementById('lista-viajes').innerHTML = "";
-                db.ref('viajes').off(); // Apagamos escucha si estamos desconectados
-            }
         });
     }
 
     function toggleConexion() {
-        // Al tocar, intentamos "despertar" el audio para que el cel nos deje sonar después
-        sonidoAlerta.play().then(() => { sonidoAlerta.pause(); sonidoAlerta.currentTime = 0; });
         db.ref('conductores/' + miCel).update({ conectado: !conectado });
     }
 
@@ -109,31 +85,29 @@
                 const v = child.val();
                 if(v.estado === "buscando") {
                     hay = true;
-                    if(ultimoViajeId !== child.key) {
-                        sonidoAlerta.play().catch(e => console.log("Audio bloqueado por el cel"));
-                        lanzarPush(v.origen, v.precio);
-                        ultimoViajeId = child.key;
-                    }
+                    // SI HAY VIAJE, FORZAMOS SONIDO Y NOTIFICACIÓN
+                    sonidoAlerta.play().catch(() => {});
+                    enviarNotificacion(v.origen, v.precio);
+                    
                     html += `<div class="viaje-card">
-                        <b style="color:#ffc107;">🚕 ¡NUEVO VIAJE DISPONIBLE!</b><br>
-                        <p style="margin:10px 0;">Recoger en: <b>${v.origen}</b></p>
-                        <div style="font-size:24px; font-weight:bold; margin-bottom:10px;">B/. ${v.precio}</div>
-                        <button class="btn-aceptar" onclick="aceptar('${child.key}')">ACEPTAR VIAJE</button>
+                        <b>🚕 ¡NUEVO PEDIDO!</b><br>
+                        <p>${v.origen}</p>
+                        <div style="font-size:22px; color:#ffc107;">B/. ${v.precio}</div>
+                        <button class="btn-aceptar" onclick="aceptar('${child.key}')">ACEPTAR</button>
                     </div>`;
                 }
             });
-            document.getElementById('lista-viajes').innerHTML = hay ? html : "<p style='text-align:center;color:#333;margin-top:20px;'>Esperando carreras...</p>";
+            document.getElementById('lista-viajes').innerHTML = hay ? html : "<p style='color:#333; margin-top:20px;'>Buscando...</p>";
         });
     }
 
-    function lanzarPush(origen, precio) {
+    function enviarNotificacion(origen, precio) {
         if (Notification.permission === "granted" && 'serviceWorker' in navigator) {
             navigator.serviceWorker.ready.then(reg => {
                 reg.showNotification("🚕 PREETY TAXI", {
-                    body: `Viaje de B/. ${precio} en ${origen}`,
+                    body: `B/. ${precio} en ${origen}`,
                     icon: "https://cdn-icons-png.flaticon.com/512/71/71222.png",
-                    badge: "https://cdn-icons-png.flaticon.com/512/71/71222.png",
-                    vibrate: [500, 200, 500],
+                    vibrate: [500, 100, 500],
                     tag: "alerta-viaje",
                     renotify: true
                 });

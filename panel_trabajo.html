@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Panel de Trabajo - PreetyTaxi</title>
-    <!-- Agregamos versión al script para forzar actualización sin desinstalar -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -50,21 +49,20 @@
     <div id="lista-viajes"></div>
 
 <script>
-    // 1. CONFIGURACIÓN Y AUDIO
+    // 1. CONFIGURACIÓN Y AUDIO (ACTUALIZADO AL SILBIDO DE GITHUB)
     const firebaseConfig = { apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const miCel = localStorage.getItem('driverCel');
     
-    // Sonido de alerta (Taxi Horn / Beep)
-    const sonidoAlerta = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+    // URL Directa al silbido de tu GitHub
+    const sonidoAlerta = new Audio('https://raw.githubusercontent.com/juan031977/PreetyTaxi/main/silbido.mp3');
     let ultimoViajeId = "";
 
     function cargar() {
         if(!miCel) return window.location.href="login.html";
         document.getElementById('lbl-cel').innerText = "CHOFER: " + miCel;
         
-        // Listener de datos del conductor
         db.ref('conductores/' + miCel).on('value', s => {
             const d = s.val() || {};
             document.getElementById('txt-ventas').innerText = "B/. " + (parseFloat(d.totalGeneradoHoy) || 0).toFixed(2);
@@ -78,18 +76,17 @@
             if(d.conectado) escucharViajes();
             else {
                 document.getElementById('lista-viajes').innerHTML = '<p style="text-align:center; color:#444;">Ponte en línea para recibir pedidos</p>';
-                db.ref('viajes').off(); // Detener escucha si está desconectado
+                db.ref('viajes').off();
             }
         });
     }
 
     function toggleConexion(el) {
         // Truco para activar el sonido en móviles: tocar el switch "despierta" el audio
-        sonidoAlerta.play().then(() => { sonidoAlerta.pause(); sonidoAlerta.currentTime = 0; });
+        sonidoAlerta.play().then(() => { sonidoAlerta.pause(); sonidoAlerta.currentTime = 0; }).catch(e => console.log("Audio listo"));
         
         db.ref('conductores/' + miCel).update({ conectado: el.checked });
         if(!el.checked) {
-            // Forzar recarga limpia si se desconecta para asegurar que no haya procesos fantasma
             setTimeout(() => { location.reload(); }, 500);
         }
     }
@@ -104,11 +101,10 @@
                 const v = child.val();
                 if(v.estado === "buscando") {
                     hay = true;
-                    // SI ES UN VIAJE NUEVO, SONAR
                     if(ultimoViajeId !== child.key) {
+                        // AQUÍ EJECUTA EL SILBIDO
                         sonidoAlerta.play().catch(e => console.log("Esperando interacción"));
                         ultimoViajeId = child.key;
-                        // Vibración si el celular lo permite
                         if(navigator.vibrate) navigator.vibrate([200, 100, 200]);
                     }
 
@@ -132,7 +128,7 @@
                 }
             });
             
-            if(!hay) ultimoViajeId = ""; // Resetear si no hay viajes
+            if(!hay) ultimoViajeId = ""; 
             lista.innerHTML = hay ? html : '<p style="text-align:center; color:#333;">Esperando viajes...</p>';
         });
     }
@@ -154,7 +150,6 @@
         db.ref('viajes/' + id).once('value', snap => {
             const v = snap.val();
             const precioTotal = parseFloat(v.precio);
-            // Lógica de cuota: B/. 1.50 es el mínimo
             const cuotaApp = precioTotal <= 3.25 ? 0.25 : (precioTotal <= 6.50 ? 0.50 : 1.00);
             const gananciaChofer = precioTotal - cuotaApp;
             const hoy = obtenerFechaHoy();

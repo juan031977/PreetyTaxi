@@ -1,36 +1,34 @@
-// sw.js - Versión Autorenovable
-const CACHE_NAME = 'preety-cache-v' + Date.now(); // Nombre dinámico para forzar actualización
-
-self.addEventListener('install', (event) => {
-    // Fuerza al SW nuevo a tomar el control de inmediato
+// sw.js - El Vigilante de PreetyTaxi
+self.addEventListener('install', (e) => {
     self.skipWaiting();
 });
 
-self.addEventListener('activate', (event) => {
-    // Borra cachés viejos automáticamente
-    event.waitUntil(
-        caches.keys().then((cacheNames) => {
-            return Promise.all(
-                cacheNames.map((cache) => {
-                    if (cache !== CACHE_NAME) {
-                        return caches.delete(cache);
-                    }
-                })
-            );
-        })
-    );
-    return self.clients.claim();
+self.addEventListener('activate', (e) => {
+    e.waitUntil(self.clients.claim());
 });
 
-// Escuchador de notificaciones (Push)
-self.addEventListener('push', (event) => {
+// ESTO ES LO QUE HACE QUE EL CELULAR "DESPIERTE"
+self.addEventListener('push', (e) => {
     const options = {
-        body: "¡NUEVO VIAJE DISPONIBLE! 🚕",
+        body: "🚕 ¡NUEVO VIAJE DISPONIBLE! - Toca para ver",
         icon: "https://cdn-icons-png.flaticon.com/512/71/71222.png",
-        badge: "https://cdn-icons-png.flaticon.com/512/71/71222.png",
-        vibrate: [500, 110, 500, 110, 450],
-        tag: "alerta-taxi",
-        renotify: true
+        badge: "https://cdn-icons-png.flaticon.com/512/71/71222.png", // El icono de arriba
+        vibrate: [500, 100, 500, 100, 500],
+        tag: "alerta-viaje",
+        renotify: true,
+        requireInteraction: true, // No se quita hasta que la toques
+        data: { url: 'panel_trabajo.html' }
     };
-    event.waitUntil(self.registration.showNotification("🚕 PREETY TAXI", options));
+
+    e.waitUntil(
+        self.registration.showNotification("🚕 PREETY TAXI", options)
+    );
+});
+
+// Al tocar la notificación te lleva al panel
+self.addEventListener('notificationclick', (e) => {
+    e.notification.close();
+    e.waitUntil(
+        clients.openWindow('panel_trabajo.html')
+    );
 });

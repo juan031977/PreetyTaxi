@@ -4,14 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>PreetyTaxi - Panel</title>
-    
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ffc107">
-
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
     <style>
         body { background: #000; color: #fff; font-family: sans-serif; padding: 15px; margin: 0; }
         .status-bar { display: flex; align-items: center; justify-content: space-between; background: #1a1a1a; padding: 15px; border-radius: 50px; border: 1px solid #333; margin-bottom: 20px; }
@@ -21,19 +18,21 @@
         @keyframes blink { 0% { border-color: #ffc107; } 50% { border-color: #333; } 100% { border-color: #ffc107; } }
         .btn-aceptar { background: #ffc107; color: #000; padding: 15px; width: 100%; border-radius: 12px; font-weight: bold; border: none; font-size: 16px; cursor: pointer; }
         .btn-alertas { background: #222; color: #ffc107; border: 1px dashed #ffc107; padding: 12px; width: 100%; border-radius: 12px; margin-top: 10px; font-size: 12px; font-weight: bold; }
+        #btn-power { background:none; border:none; font-size:35px; transition: 0.3s; cursor: pointer; }
     </style>
 </head>
 <body onload="cargar()">
 
     <div class="status-bar">
-        <span id="status-text" style="font-weight: bold;">DESCONECTADO</span>
-        <button id="btn-power" onclick="toggleConexion()" style="background:none; border:none; color:#444; font-size:30px;"><i class="fas fa-power-off"></i></button>
+        <span id="status-text" style="font-weight: bold; letter-spacing: 1px;">CARGANDO...</span>
+        <button id="btn-power" onclick="toggleConexion()"><i class="fas fa-power-off"></i></button>
     </div>
 
     <div class="billetera">
+        <div id="lbl-cel" style="font-size: 10px; opacity: 0.5; margin-bottom: 8px;">---</div>
         <div style="display:flex; justify-content: space-around;">
-            <div><small style="color:#888;">GANANCIA</small><div id="txt-ventas" class="monto">B/. 0.00</div></div>
-            <div><small style="color:#888;">DEUDA</small><div id="txt-deuda" class="monto" style="color:#ff4d4d;">B/. 0.00</div></div>
+            <div><small style="color:#888;">HOY</small><div id="txt-ventas" class="monto">B/. 0.00</div></div>
+            <div><small style="color:#888;">CUOTA</small><div id="txt-deuda" class="monto" style="color:#ff4d4d;">B/. 0.00</div></div>
         </div>
         <button class="btn-alertas" onclick="activarYProbar()">🔔 ACTIVAR ALERTAS Y SONIDO</button>
     </div>
@@ -41,52 +40,64 @@
     <div id="lista-viajes"></div>
 
 <script>
+    // Configuración Firebase
     const firebaseConfig = { apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const miCel = localStorage.getItem('driverCel');
     
-    // USANDO TU SONIDO SUBIDO
-    const sonidoAlerta = new Audio('alerta.mp3');
+    // Forzamos al navegador a no cachear el sonido viejo
+    const sonidoAlerta = new Audio('alerta.mp3?v=' + Date.now());
     let ultimoViajeId = "";
     let conectado = false;
 
+    // ACTUALIZACIÓN AUTOMÁTICA DEL MOTOR (SW)
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js').then(() => console.log("Motor listo"));
+        navigator.serviceWorker.register('sw.js?v=' + Date.now()).then(reg => {
+            reg.update(); // Obliga a buscar cambios en GitHub cada vez que entras
+            console.log("Motor Preety Actualizado");
+        });
     }
 
     function activarYProbar() {
         Notification.requestPermission().then(perm => {
             if(perm === 'granted') {
-                // Probamos el sonido inmediatamente para que el navegador lo registre
-                sonidoAlerta.play().catch(e => alert("Toca la pantalla para permitir sonido"));
-                alert("✅ ¡Sonido y Alertas activadas correctamente!");
+                sonidoAlerta.play();
+                alert("✅ ¡Alertas y Sonido de Taxi Activos!");
             }
         });
     }
 
     function cargar() {
         if(!miCel) return window.location.href="login.html";
+        document.getElementById('lbl-cel').innerText = "CONDUCTOR: " + miCel;
         
-        db.ref('conductores/' + miCel).on('value', s => {
-            const d = s.val() || {};
+        // Escuchamos en tiempo real para que el botón cambie solo
+        db.ref('conductores/' + miCel).on('value', snap => {
+            const d = snap.val() || {};
             conectado = d.conectado || false;
-            document.getElementById('txt-ventas').innerText = "B/. " + (d.totalGeneradoHoy || 0);
-            document.getElementById('txt-deuda').innerText = "B/. " + (d.deuda || 0);
+            
+            // Actualizar interfaz
+            document.getElementById('txt-ventas').innerText = "B/. " + (parseFloat(d.totalGeneradoHoy) || 0).toFixed(2);
+            document.getElementById('txt-deuda').innerText = "B/. " + (parseFloat(d.deuda) || 0).toFixed(2);
             
             const txt = document.getElementById('status-text');
             const btn = document.getElementById('btn-power');
-            txt.innerText = conectado ? "EN LÍNEA" : "DESCONECTADO";
+            
+            txt.innerText = conectado ? "ESTÁS EN LÍNEA" : "DESCONECTADO";
             txt.style.color = conectado ? "#25d366" : "#ff4d4d";
             btn.style.color = conectado ? "#25d366" : "#444";
 
             if(conectado) escucharViajes();
-            else document.getElementById('lista-viajes').innerHTML = "";
+            else {
+                document.getElementById('lista-viajes').innerHTML = "";
+                db.ref('viajes').off(); // Apagamos escucha si estamos desconectados
+            }
         });
     }
 
     function toggleConexion() {
-        // Al encender, hacemos un pequeño "play" silencioso para ganar el permiso de audio
+        // Al tocar, intentamos "despertar" el audio para que el cel nos deje sonar después
         sonidoAlerta.play().then(() => { sonidoAlerta.pause(); sonidoAlerta.currentTime = 0; });
         db.ref('conductores/' + miCel).update({ conectado: !conectado });
     }
@@ -99,19 +110,19 @@
                 if(v.estado === "buscando") {
                     hay = true;
                     if(ultimoViajeId !== child.key) {
-                        sonidoAlerta.play(); // DISPARA TU SONIDO
+                        sonidoAlerta.play().catch(e => console.log("Audio bloqueado por el cel"));
                         lanzarPush(v.origen, v.precio);
                         ultimoViajeId = child.key;
                     }
                     html += `<div class="viaje-card">
-                        <b>🚕 ¡VIAJE DISPONIBLE!</b><br>
-                        <p style="margin:8px 0;">Desde: ${v.origen}</p>
-                        <div style="font-size:22px; color:#ffc107;">B/. ${v.precio}</div>
-                        <button class="btn-aceptar" onclick="aceptar('${child.key}')">ACEPTAR</button>
+                        <b style="color:#ffc107;">🚕 ¡NUEVO VIAJE DISPONIBLE!</b><br>
+                        <p style="margin:10px 0;">Recoger en: <b>${v.origen}</b></p>
+                        <div style="font-size:24px; font-weight:bold; margin-bottom:10px;">B/. ${v.precio}</div>
+                        <button class="btn-aceptar" onclick="aceptar('${child.key}')">ACEPTAR VIAJE</button>
                     </div>`;
                 }
             });
-            document.getElementById('lista-viajes').innerHTML = hay ? html : "<p style='text-align:center;color:#444;'>Esperando pedidos...</p>";
+            document.getElementById('lista-viajes').innerHTML = hay ? html : "<p style='text-align:center;color:#333;margin-top:20px;'>Esperando carreras...</p>";
         });
     }
 
@@ -119,11 +130,11 @@
         if (Notification.permission === "granted" && 'serviceWorker' in navigator) {
             navigator.serviceWorker.ready.then(reg => {
                 reg.showNotification("🚕 PREETY TAXI", {
-                    body: `NUEVO VIAJE: B/. ${precio}\nLugar: ${origen}`,
+                    body: `Viaje de B/. ${precio} en ${origen}`,
                     icon: "https://cdn-icons-png.flaticon.com/512/71/71222.png",
                     badge: "https://cdn-icons-png.flaticon.com/512/71/71222.png",
                     vibrate: [500, 200, 500],
-                    tag: "viaje-alerta",
+                    tag: "alerta-viaje",
                     renotify: true
                 });
             });

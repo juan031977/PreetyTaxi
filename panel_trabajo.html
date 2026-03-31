@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Panel de Trabajo - PreetyTaxi</title>
+    <!-- Agregamos versión al script para forzar actualización sin desinstalar -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -21,20 +22,16 @@
         .viaje-card { background: #111; padding: 18px; border-radius: 20px; margin-bottom: 12px; border: 1px solid #222; animation: notify 0.5s infinite alternate; }
         @keyframes notify { from { border-color: #222; } to { border-color: #ffc107; } }
         .btn-aceptar { background: #ffc107; color: #000; padding: 14px; width: 100%; border-radius: 14px; font-weight: bold; border: none; margin-top: 10px; font-size: 16px; }
-        .btn { width: 100%; padding: 16px; border: none; border-radius: 16px; font-weight: bold; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 10px; text-decoration: none; }
-        .btn-fin { background: #fff; color: #000; }
-        /* Aviso de permisos que no bloquea */
-        #aviso-permiso { display: none; background: #ffc107; color: #000; padding: 10px; text-align: center; font-size: 12px; font-weight: bold; border-radius: 10px; margin-bottom: 10px; }
+        .viaje-activo { background: #fff; color: #000; padding: 25px; border-radius: 28px; border-left: 10px solid #ffc107; }
+        .btn { width: 100%; padding: 16px; border: none; border-radius: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; text-decoration: none; }
+        .btn-ws { background: #25d366; color: white; }
+        .btn-fin { background: #000; color: #fff; }
+        .btn-cancelar { background: #fff; color: #ff4d4d; border: 1px solid #ff4d4d; margin-top: 15px; font-size: 12px; }
     </style>
 </head>
 <body onload="cargar()">
-
-    <div id="aviso-permiso" onclick="solicitarPermisos()">
-        ⚠️ TOCA AQUÍ PARA ACTIVAR EL SILBIDO Y ALERTAS
-    </div>
-
     <div class="status-bar">
-        <span id="status-text">Conectando...</span>
+        <span id="status-text">Cargando...</span>
         <label class="switch">
             <input type="checkbox" id="check-status" onchange="toggleConexion(this)">
             <span class="slider"></span>
@@ -47,124 +44,151 @@
             <div><small style="color:#888;">GANANCIA</small><div id="txt-ventas" class="monto">B/. 0.00</div></div>
             <div><small style="color:#888;">CUOTA</small><div id="txt-deuda" class="monto" style="color:#ff4d4d;">B/. 0.00</div></div>
         </div>
+        <a href="reportes.html" style="color: #ffc107; font-size: 12px; text-decoration: none; display: block; margin-top: 15px;">VER REPORTES</a>
     </div>
 
     <div id="lista-viajes"></div>
 
 <script>
+    // 1. CONFIGURACIÓN Y AUDIO
     const firebaseConfig = { apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const miCel = localStorage.getItem('driverCel');
-    const sonidoAlerta = new Audio('https://raw.githubusercontent.com/juan031977/PreetyTaxi/main/silbido.mp3');
+    
+    // Sonido de alerta (Taxi Horn / Beep)
+    const sonidoAlerta = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
     let ultimoViajeId = "";
-
-    function solicitarPermisos() {
-        Notification.requestPermission().then(perm => {
-            if(perm === 'granted') document.getElementById('aviso-permiso').style.display = 'none';
-        });
-    }
 
     function cargar() {
         if(!miCel) return window.location.href="login.html";
         document.getElementById('lbl-cel').innerText = "CHOFER: " + miCel;
-
-        // Mostrar aviso solo si no hay permiso, pero no bloquear la carga
-        if (Notification.permission !== "granted") {
-            document.getElementById('aviso-permiso').style.display = 'block';
-        }
-
-        // Registro silencioso del Service Worker
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').catch(e => console.log("SW Error"));
-        }
         
-        // Carga de datos de Firebase (Esto es lo que se quedaba pegado)
+        // Listener de datos del conductor
         db.ref('conductores/' + miCel).on('value', s => {
             const d = s.val() || {};
             document.getElementById('txt-ventas').innerText = "B/. " + (parseFloat(d.totalGeneradoHoy) || 0).toFixed(2);
             document.getElementById('txt-deuda').innerText = "B/. " + (parseFloat(d.deuda) || 0).toFixed(2);
             document.getElementById('check-status').checked = d.conectado || false;
             
-            actualizarEstadoUI(d.conectado);
+            const statusTxt = document.getElementById('status-text');
+            statusTxt.innerText = d.conectado ? "ESTÁS ACTIVO" : "DESCONECTADO";
+            statusTxt.style.color = d.conectado ? "#25d366" : "#ff4d4d";
 
             if(d.conectado) escucharViajes();
             else {
-                document.getElementById('lista-viajes').innerHTML = '<p style="text-align:center; color:#444;">Desconectado</p>';
-                db.ref('viajes').off();
+                document.getElementById('lista-viajes').innerHTML = '<p style="text-align:center; color:#444;">Ponte en línea para recibir pedidos</p>';
+                db.ref('viajes').off(); // Detener escucha si está desconectado
             }
-        }, (error) => {
-            document.getElementById('status-text').innerText = "Error de Red";
         });
     }
 
-    function actualizarEstadoUI(conectado) {
-        const statusTxt = document.getElementById('status-text');
-        statusTxt.innerText = conectado ? "ESTÁS ACTIVO" : "DESCONECTADO";
-        statusTxt.style.color = conectado ? "#25d366" : "#ff4d4d";
-    }
-
     function toggleConexion(el) {
-        // Truco para desbloquear el audio en Android al tocar el switch
-        sonidoAlerta.play().then(() => { sonidoAlerta.pause(); sonidoAlerta.currentTime = 0; }).catch(e => {});
+        // Truco para activar el sonido en móviles: tocar el switch "despierta" el audio
+        sonidoAlerta.play().then(() => { sonidoAlerta.pause(); sonidoAlerta.currentTime = 0; });
         
         db.ref('conductores/' + miCel).update({ conectado: el.checked });
-        actualizarEstadoUI(el.checked);
+        if(!el.checked) {
+            // Forzar recarga limpia si se desconecta para asegurar que no haya procesos fantasma
+            setTimeout(() => { location.reload(); }, 500);
+        }
     }
 
     function escucharViajes() {
         db.ref('viajes').on('value', snap => {
             const lista = document.getElementById('lista-viajes');
-            let html = ""; let hay = false;
+            let html = ""; 
+            let hay = false;
 
             snap.forEach(child => {
                 const v = child.val();
                 if(v.estado === "buscando") {
                     hay = true;
+                    // SI ES UN VIAJE NUEVO, SONAR
                     if(ultimoViajeId !== child.key) {
-                        sonidoAlerta.play().catch(e => {});
-                        if ('setAppBadge' in navigator) navigator.setAppBadge(1).catch(e => {});
+                        sonidoAlerta.play().catch(e => console.log("Esperando interacción"));
                         ultimoViajeId = child.key;
+                        // Vibración si el celular lo permite
+                        if(navigator.vibrate) navigator.vibrate([200, 100, 200]);
                     }
+
                     html += `<div class="viaje-card">
-                        <div style="display:flex; justify-content:space-between"><span>📍 NUEVO PEDIDO</span><b>B/. ${v.precio}</b></div>
+                        <div style="display:flex; justify-content:space-between"><span>📍 NUEVO PEDIDO</span><b style="color:#ffc107;">B/. ${v.precio}</b></div>
                         <div style="font-size:14px; margin: 10px 0;">${v.origen} ➔ ${v.destino}</div>
                         <button class="btn-aceptar" onclick="aceptar('${child.key}')">ACEPTAR VIAJE</button>
                     </div>`;
                 } else if(v.estado === "en curso" && v.conductorCel === miCel) {
                     hay = true;
-                    if ('setAppBadge' in navigator) navigator.clearAppBadge().catch(e => {});
-                    html += `<div class="viaje-activo" style="background:#fff; color:#000; padding:20px; border-radius:20px;">
-                        <h2>${v.cliente}</h2>
-                        <p>${v.origen}</p>
-                        <button class="btn btn-fin" onclick="finalizar('${child.key}')">FINALIZAR</button>
+                    const textoChat = `Hola *${v.cliente}*, soy tu conductor de PreetyTaxi. Ya voy en camino por ti.`;
+                    html = `<div class="viaje-activo">
+                        <small>CLIENTE</small>
+                        <h2 style="margin:0;">${v.cliente}</h2>
+                        <p>📍 ${v.origen}</p>
+                        <div style="font-size:30px; font-weight:bold; margin:10px 0;">B/. ${v.precio}</div>
+                        <a href="https://wa.me/507${v.telefono}?text=${encodeURIComponent(textoChat)}" class="btn btn-ws"><i class="fab fa-whatsapp"></i> CHATEAR</a>
+                        <button class="btn btn-fin" onclick="finalizar('${child.key}')">FINALIZAR VIAJE</button>
+                        <button class="btn btn-cancelar" onclick="cancelarPorChofer('${child.key}')">CANCELAR</button>
                     </div>`;
                 }
             });
-            if(!hay) {
-                ultimoViajeId = "";
-                lista.innerHTML = '<p style="text-align:center; color:#333;">Esperando viajes...</p>';
-            } else {
-                lista.innerHTML = html;
-            }
+            
+            if(!hay) ultimoViajeId = ""; // Resetear si no hay viajes
+            lista.innerHTML = hay ? html : '<p style="text-align:center; color:#333;">Esperando viajes...</p>';
         });
     }
 
     function aceptar(id) {
-        db.ref('viajes/' + id).update({ estado: 'en curso', conductorCel: miCel });
+        db.ref('conductores/' + miCel).once('value', s => {
+            const d = s.val() || {};
+            db.ref('viajes/' + id).update({ 
+                estado: 'en curso', 
+                conductorCel: miCel, 
+                conductorNombre: d.nombre || "Chofer", 
+                conductorPlaca: d.placa || "S/P" 
+            });
+        });
     }
 
     function finalizar(id) {
-        if(confirm("¿Finalizar viaje?")) db.ref('viajes/' + id).update({ estado: 'completado' });
+        if(!confirm("¿Deseas finalizar y cobrar este viaje?")) return;
+        db.ref('viajes/' + id).once('value', snap => {
+            const v = snap.val();
+            const precioTotal = parseFloat(v.precio);
+            // Lógica de cuota: B/. 1.50 es el mínimo
+            const cuotaApp = precioTotal <= 3.25 ? 0.25 : (precioTotal <= 6.50 ? 0.50 : 1.00);
+            const gananciaChofer = precioTotal - cuotaApp;
+            const hoy = obtenerFechaHoy();
+
+            const updates = {};
+            updates['viajes/' + id + '/estado'] = 'completado';
+            updates['reportes_diarios/' + miCel + '/' + hoy + '/' + id] = {
+                cliente: v.cliente, ganancia: gananciaChofer.toFixed(2), cuota: cuotaApp.toFixed(2), hora: new Date().toLocaleTimeString()
+            };
+
+            db.ref().update(updates).then(() => {
+                db.ref('conductores/' + miCel).once('value', s => {
+                    const dc = s.val() || {};
+                    db.ref('conductores/' + miCel).update({
+                        totalGeneradoHoy: (parseFloat(dc.totalGeneradoHoy || 0) + gananciaChofer).toFixed(2),
+                        deuda: (parseFloat(dc.deuda || 0) + cuotaApp).toFixed(2)
+                    });
+                });
+            });
+        });
     }
 
-    // EL DESPERTADOR (WAKE LOCK) SIGUE AQUÍ, NO SE HA BORRADO
+    function cancelarPorChofer(id) { if(confirm("¿Estás seguro de cancelar el viaje?")) db.ref('viajes/' + id).update({ estado: 'cancelado' }); }
+    function obtenerFechaHoy() { const d = new Date(); return d.getDate() + "-" + (d.getMonth() + 1) + "-" + d.getFullYear(); }
+
+    // EVITAR QUE LA PANTALLA SE APAGUE (Wake Lock)
     if ('wakeLock' in navigator) {
-        let wl = null;
-        const requestWL = async () => {
-            try { wl = await navigator.wakeLock.request('screen'); } catch (e) {}
+        let wakeLock = null;
+        const requestWakeLock = async () => {
+            try {
+                wakeLock = await navigator.wakeLock.request('screen');
+            } catch (err) { console.log(err); }
         };
-        requestWL();
+        requestWakeLock();
     }
 </script>
 </body>

@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Panel de Trabajo - PreetyTaxi</title>
-    <!-- Agregamos versión al script para forzar actualización sin desinstalar -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -12,13 +11,17 @@
         body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; padding: 15px; margin: 0; }
         .billetera { background: linear-gradient(145deg, #1a1a1a, #000); padding: 20px; border-radius: 24px; border: 1px solid #333; margin-bottom: 15px; text-align: center; }
         .monto { color: #ffc107; font-size: 26px; font-weight: bold; }
-        .status-bar { display: flex; align-items: center; justify-content: space-between; background: #1a1a1a; padding: 12px 20px; border-radius: 50px; border: 1px solid #333; margin-bottom: 20px; }
+        .status-bar { display: flex; align-items: center; justify-content: space-between; background: #1a1a1a; padding: 12px 20px; border-radius: 50px; border: 1px solid #333; margin-bottom: 5px; }
         .switch { position: relative; display: inline-block; width: 54px; height: 28px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .4s; border-radius: 34px; }
         .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: #25d366; }
         input:checked + .slider:before { transform: translateX(26px); }
+        
+        /* ESTILO DEL MENSAJE DE AVISO */
+        .msg-permiso { color: #ffc107; font-size: 11px; text-align: center; margin-bottom: 20px; display: block; font-weight: bold; }
+        
         .viaje-card { background: #111; padding: 18px; border-radius: 20px; margin-bottom: 12px; border: 1px solid #222; animation: notify 0.5s infinite alternate; }
         @keyframes notify { from { border-color: #222; } to { border-color: #ffc107; } }
         .btn-aceptar { background: #ffc107; color: #000; padding: 14px; width: 100%; border-radius: 14px; font-weight: bold; border: none; margin-top: 10px; font-size: 16px; }
@@ -38,6 +41,9 @@
         </label>
     </div>
 
+    <!-- EL MENSAJE DE AVISO -->
+    <small id="msg-propiedades" class="msg-permiso">⚠️ Activa sonido y notificaciones en propiedades de la app</small>
+
     <div class="billetera">
         <div id="lbl-cel" style="font-size: 10px; opacity: 0.5; margin-bottom: 8px;">---</div>
         <div style="display:flex; justify-content: space-around;">
@@ -50,21 +56,22 @@
     <div id="lista-viajes"></div>
 
 <script>
-    // 1. CONFIGURACIÓN Y AUDIO (ACTUALIZADO A TU GITHUB)
     const firebaseConfig = { apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const miCel = localStorage.getItem('driverCel');
     
-    // Sonido de alerta (Silbido MP3 desde GitHub)
-    const sonidoAlerta = new Audio('https://raw.githubusercontent.com/juan031977/PreetyTaxi/main/silbido.mp3');
+    // EL SILBIDO RENOMBRADO
+    const silbido = new Audio('https://raw.githubusercontent.com/juan031977/PreetyTaxi/main/silbido.mp3');
     let ultimoViajeId = "";
 
     function cargar() {
         if(!miCel) return window.location.href="login.html";
         document.getElementById('lbl-cel').innerText = "CHOFER: " + miCel;
         
-        // Listener de datos del conductor
+        // 1. FORZAMOS DESCONEXIÓN AL INICIAR PARA QUE EL CHOFER TENGA QUE TOCAR LA PANTALLA
+        db.ref('conductores/' + miCel).update({ conectado: false });
+
         db.ref('conductores/' + miCel).on('value', s => {
             const d = s.val() || {};
             document.getElementById('txt-ventas').innerText = "B/. " + (parseFloat(d.totalGeneradoHoy) || 0).toFixed(2);
@@ -72,28 +79,34 @@
             document.getElementById('check-status').checked = d.conectado || false;
             
             const statusTxt = document.getElementById('status-text');
-            statusTxt.innerText = d.conectado ? "ESTÁS ACTIVO" : "DESCONECTADO";
-            statusTxt.style.color = d.conectado ? "#25d366" : "#ff4d4d";
+            const msg = document.getElementById('msg-propiedades');
 
-            if(d.conectado) escucharViajes();
-            else {
+            if(d.conectado) {
+                statusTxt.innerText = "ESTÁS ACTIVO";
+                statusTxt.style.color = "#25d366";
+                msg.style.display = "none"; // Se esconde al conectar
+                escucharViajes();
+            } else {
+                statusTxt.innerText = "DESCONECTADO";
+                statusTxt.style.color = "#ff4d4d";
+                msg.style.display = "block"; // Se muestra al estar desconectado
+                db.ref('viajes').off();
                 document.getElementById('lista-viajes').innerHTML = '<p style="text-align:center; color:#444;">Ponte en línea para recibir pedidos</p>';
-                db.ref('viajes').off(); // Detener escucha si está desconectado
             }
         });
     }
 
     function toggleConexion(el) {
-        // REFUERZO: Activar el permiso de sonido al tocar el switch
-        sonidoAlerta.play().then(() => { 
-            sonidoAlerta.pause(); 
-            sonidoAlerta.currentTime = 0; 
-        }).catch(e => console.log("Permiso de audio solicitado"));
+        // TRUCO: Reproducir y pausar el silbido para ganar el permiso del navegador
+        silbido.play().then(() => { 
+            silbido.pause(); 
+            silbido.currentTime = 0; 
+        }).catch(e => console.log("Audio desbloqueado"));
         
         db.ref('conductores/' + miCel).update({ conectado: el.checked });
-        if(!el.checked) {
-            // Forzar recarga limpia si se desconecta para asegurar que no haya procesos fantasma
-            setTimeout(() => { location.reload(); }, 500);
+        
+        if(el.checked && 'wakeLock' in navigator) {
+            navigator.wakeLock.request('screen').catch(e => {});
         }
     }
 
@@ -107,12 +120,11 @@
                 const v = child.val();
                 if(v.estado === "buscando") {
                     hay = true;
-                    // SI ES UN VIAJE NUEVO, SONAR EL SILBIDO
                     if(ultimoViajeId !== child.key) {
-                        sonidoAlerta.play().catch(e => console.log("Esperando interacción"));
+                        // AQUÍ SUENA EL SILBIDO
+                        silbido.play().catch(e => console.log("Error de reproducción"));
                         ultimoViajeId = child.key;
-                        // Vibración si el celular lo permite
-                        if(navigator.vibrate) navigator.vibrate([200, 100, 200]);
+                        if(navigator.vibrate) navigator.vibrate([300, 100, 300]);
                     }
 
                     html += `<div class="viaje-card">
@@ -135,7 +147,7 @@
                 }
             });
             
-            if(!hay) ultimoViajeId = ""; // Resetear si no hay viajes
+            if(!hay) ultimoViajeId = ""; 
             lista.innerHTML = hay ? html : '<p style="text-align:center; color:#333;">Esperando viajes...</p>';
         });
     }
@@ -157,7 +169,6 @@
         db.ref('viajes/' + id).once('value', snap => {
             const v = snap.val();
             const precioTotal = parseFloat(v.precio);
-            // Lógica de cuota: B/. 1.50 es el mínimo
             const cuotaApp = precioTotal <= 3.25 ? 0.25 : (precioTotal <= 6.50 ? 0.50 : 1.00);
             const gananciaChofer = precioTotal - cuotaApp;
             const hoy = obtenerFechaHoy();
@@ -183,13 +194,10 @@
     function cancelarPorChofer(id) { if(confirm("¿Estás seguro de cancelar el viaje?")) db.ref('viajes/' + id).update({ estado: 'cancelado' }); }
     function obtenerFechaHoy() { const d = new Date(); return d.getDate() + "-" + (d.getMonth() + 1) + "-" + d.getFullYear(); }
 
-    // EVITAR QUE LA PANTALLA SE APAGUE (Wake Lock)
     if ('wakeLock' in navigator) {
         let wakeLock = null;
         const requestWakeLock = async () => {
-            try {
-                wakeLock = await navigator.wakeLock.request('screen');
-            } catch (err) { console.log(err); }
+            try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
         };
         requestWakeLock();
     }

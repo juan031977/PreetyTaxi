@@ -8,16 +8,20 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg&libraries=places"></script>
     <style>
-        /* BLOQUEO DE REFRESCO Y SCROLL EXTERNO */
+        /* BLOQUEO TOTAL DE GESTOS DEL NAVEGADOR (PULL-TO-REFRESH) */
         html, body { 
             margin: 0; 
             padding: 0; 
             height: 100%; 
             width: 100%; 
             font-family: 'Segoe UI', sans-serif; 
-            overflow: hidden; /* Evita scroll de la página */
-            position: fixed; /* Fija la pantalla para evitar pull-to-refresh */
-            overscroll-behavior-y: none; /* Bloquea la flecha de recarga en Chrome/Android */
+            overflow: hidden !important; 
+            position: fixed; 
+            /* Mata la flecha en Chrome y Safari */
+            overscroll-behavior-y: none !important; 
+            overscroll-behavior: none !important;
+            -webkit-overflow-scrolling: auto;
+            touch-action: none; 
         }
 
         #map { 
@@ -27,7 +31,8 @@
             top: 0; 
             left: 0; 
             z-index: 1; 
-            touch-action: pan-x pan-y; /* Permite mover el mapa pero no la página */
+            /* Permite mover el mapa pero bloquea el gesto de la página */
+            touch-action: pan-x pan-y !important; 
         }
 
         .ui-panel { 
@@ -38,7 +43,7 @@
             width: 92%; 
             max-width: 420px; 
             z-index: 10; 
-            touch-action: auto; /* Permite tocar botones e inputs */
+            touch-action: pan-y; 
         }
 
         .box { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 -8px 25px rgba(0,0,0,0.25); border-top: 4px solid #ffc107; }
@@ -84,12 +89,19 @@
         </div>
     </div>
 <script>
-    // BLOQUEO DE GESTOS DE RECARGA (Excepto en inputs)
-    document.addEventListener('touchmove', function(e) { 
-        if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
-            e.preventDefault(); 
+    // --- ESCUDO ANTI-FLECHA (JAVASCRIPT) ---
+    let yStart = 0;
+    window.addEventListener('touchstart', (e) => { yStart = e.touches[0].pageY; }, {passive: false});
+    window.addEventListener('touchmove', (e) => {
+        const yMove = e.touches[0].pageY;
+        // Si intenta deslizar hacia abajo estando en el tope, bloqueamos
+        if (window.scrollY <= 1 && yMove > yStart) {
+            if (e.cancelable) e.preventDefault();
         }
     }, {passive: false});
+
+    // Forzar que el mapa capture el toque y no lo pase al navegador
+    document.getElementById('map').addEventListener('touchmove', (e) => { e.stopPropagation(); }, {passive: false});
 
     const firebaseConfig = { apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
@@ -103,7 +115,7 @@
             center: {lat: 9.0415, lng: -79.4411}, 
             zoom: 14, 
             disableDefaultUI: true,
-            gestureHandling: 'greedy' // Hace que el mapa responda rápido al toque
+            gestureHandling: 'greedy' // <--- Obliga al mapa a comerse el toque
         });
         ds = new google.maps.DirectionsService();
         dr = new google.maps.DirectionsRenderer({ map: map, suppressMarkers: true, preserveViewport: true, polylineOptions: { strokeColor: "#ffc107", strokeWeight: 6 } });
@@ -121,23 +133,16 @@
             if (stat === 'OK') {
                 dr.setDirections(res);
                 const km = res.routes[0].legs[0].distance.value / 1000;
-                
-                // LÓGICA DE PRECIOS ORIGINAL
                 let brutoChofer = 0.50 + (km * 0.60);
                 pagoNetoChofer = Math.round(brutoChofer * 4) / 4;
                 if (pagoNetoChofer < 1.50) pagoNetoChofer = 1.50;
-                
                 if (pagoNetoChofer <= 3.00) miComision = 0.25;
                 else if (pagoNetoChofer <= 6.00) miComision = 0.50;
                 else miComision = 1.00;
-                
                 let totalCliente = pagoNetoChofer + miComision;
                 if (totalCliente < 1.75) totalCliente = 1.75;
-                
                 document.getElementById('precio-txt').innerText = "B/. " + totalCliente.toFixed(2);
                 document.getElementById('info-viaje').style.display = "block";
-                
-                // Ajustar mapa para ver ambos puntos
                 const bounds = new google.maps.LatLngBounds();
                 bounds.extend(posA);
                 bounds.extend(posB);
@@ -150,21 +155,11 @@
         const tel = localStorage.getItem('userCel');
         const nombre = localStorage.getItem('userName') || "Cliente";
         const precioTotal = document.getElementById('precio-txt').innerText.replace("B/. ", "");
-        
         if(!tel) return alert("Inicia sesión primero");
-        
         const ref = db.ref('viajes').push({
-            cliente: nombre, 
-            telefono: tel, 
-            precio: precioTotal, 
-            precioChofer: pagoNetoChofer.toFixed(2), 
-            comisionApp: miComision.toFixed(2),
-            estado: "buscando", 
-            origen: document.getElementById('origen-input').value, 
-            destino: document.getElementById('destino-input').value, 
-            fecha: new Date().toISOString()
+            cliente: nombre, telefono: tel, precio: precioTotal, precioChofer: pagoNetoChofer.toFixed(2), comisionApp: miComision.toFixed(2),
+            estado: "buscando", origen: document.getElementById('origen-input').value, destino: document.getElementById('destino-input').value, fecha: new Date().toISOString()
         });
-        
         viajeID = ref.key;
         document.getElementById('panel-cliente').style.display = "none";
         document.getElementById('panel-espera').style.display = "block";

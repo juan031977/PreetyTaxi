@@ -8,20 +8,27 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg&libraries=places"></script>
     <style>
-        /* BLOQUEO TOTAL DE GESTOS DEL NAVEGADOR (PULL-TO-REFRESH) */
-        html, body { 
+        /* BLOQUEO MAESTRO ANTI-REFRESCO */
+        html {
+            overflow: hidden;
+            height: 100%;
+            background-color: #000;
+        }
+
+        body { 
             margin: 0; 
             padding: 0; 
-            height: 100%; 
+            /* El truco: 101% de altura para que el navegador crea que hay scroll */
+            height: 101%; 
             width: 100%; 
             font-family: 'Segoe UI', sans-serif; 
             overflow: hidden !important; 
             position: fixed; 
-            /* Mata la flecha en Chrome y Safari */
+            /* Desactiva el comportamiento de rebote en Chrome y Safari */
             overscroll-behavior-y: none !important; 
             overscroll-behavior: none !important;
-            -webkit-overflow-scrolling: auto;
             touch-action: none; 
+            -webkit-user-select: none;
         }
 
         #map { 
@@ -31,13 +38,12 @@
             top: 0; 
             left: 0; 
             z-index: 1; 
-            /* Permite mover el mapa pero bloquea el gesto de la página */
             touch-action: pan-x pan-y !important; 
         }
 
         .ui-panel { 
             position: fixed; 
-            bottom: 20px; 
+            bottom: 25px; 
             left: 50%; 
             transform: translateX(-50%); 
             width: 92%; 
@@ -47,7 +53,7 @@
         }
 
         .box { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 -8px 25px rgba(0,0,0,0.25); border-top: 4px solid #ffc107; }
-        input { width: 100%; padding: 12px; margin: 6px 0; border-radius: 10px; border: 1px solid #eee; box-sizing: border-box; font-size: 16px; background: #f9f9f9; }
+        input { width: 100%; padding: 12px; margin: 6px 0; border-radius: 10px; border: 1px solid #eee; box-sizing: border-box; font-size: 16px; background: #f9f9f9; touch-action: auto; }
         .btn { width: 100%; padding: 15px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 16px; display: flex; align-items: center; justify-content: center; text-decoration: none; }
         .btn-yellow { background: #ffc107; color: #000; }
         .btn-whatsapp { background: #25d366; color: white; display: none; }
@@ -89,19 +95,24 @@
         </div>
     </div>
 <script>
-    // --- ESCUDO ANTI-FLECHA (JAVASCRIPT) ---
-    let yStart = 0;
-    window.addEventListener('touchstart', (e) => { yStart = e.touches[0].pageY; }, {passive: false});
-    window.addEventListener('touchmove', (e) => {
-        const yMove = e.touches[0].pageY;
-        // Si intenta deslizar hacia abajo estando en el tope, bloqueamos
-        if (window.scrollY <= 1 && yMove > yStart) {
-            if (e.cancelable) e.preventDefault();
-        }
-    }, {passive: false});
+    // --- ESCUDO TOTAL (SOLUCIÓN DEL PÍXEL) ---
+    // Forzamos un scroll de 1px al cargar para que nunca esté en el tope real
+    window.addEventListener('load', () => { window.scrollTo(0, 1); });
 
-    // Forzar que el mapa capture el toque y no lo pase al navegador
-    document.getElementById('map').addEventListener('touchmove', (e) => { e.stopPropagation(); }, {passive: false});
+    // Si el usuario intenta llegar a 0, lo devolvemos a 1 de inmediato
+    window.addEventListener('scroll', () => {
+        if (window.scrollY < 1) window.scrollTo(0, 1);
+    });
+
+    // Bloqueo manual de gestos que no sean en inputs
+    document.addEventListener('touchmove', (e) => {
+        if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA' && !e.target.closest('.ui-panel')) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+
+    // El mapa se encarga de sus propios toques
+    document.getElementById('map').addEventListener('touchmove', (e) => { e.stopPropagation(); }, { passive: false });
 
     const firebaseConfig = { apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
@@ -115,7 +126,7 @@
             center: {lat: 9.0415, lng: -79.4411}, 
             zoom: 14, 
             disableDefaultUI: true,
-            gestureHandling: 'greedy' // <--- Obliga al mapa a comerse el toque
+            gestureHandling: 'greedy' 
         });
         ds = new google.maps.DirectionsService();
         dr = new google.maps.DirectionsRenderer({ map: map, suppressMarkers: true, preserveViewport: true, polylineOptions: { strokeColor: "#ffc107", strokeWeight: 6 } });

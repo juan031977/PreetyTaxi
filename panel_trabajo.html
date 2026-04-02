@@ -2,25 +2,55 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Panel de Trabajo - PreetyTaxi</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; padding: 15px; margin: 0; }
-        .viaje-card { background: #fff; color: #000; padding: 18px; border-radius: 20px; margin-bottom: 12px; border-left: 10px solid #ffc107; }
-        .btn { width: 100%; padding: 14px; border: none; border-radius: 14px; font-weight: bold; cursor: pointer; margin-top: 8px; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; }
-        .btn-mapa { background: #4285F4; color: white; } /* AZUL GOOGLE */
+        .billetera { background: linear-gradient(145deg, #1a1a1a, #000); padding: 20px; border-radius: 24px; border: 1px solid #333; margin-bottom: 15px; text-align: center; }
+        .monto { color: #ffc107; font-size: 26px; font-weight: bold; }
+        .status-bar { display: flex; align-items: center; justify-content: space-between; background: #1a1a1a; padding: 12px 20px; border-radius: 50px; border: 1px solid #333; margin-bottom: 5px; }
+        .switch { position: relative; display: inline-block; width: 54px; height: 28px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #25d366; }
+        input:checked + .slider:before { transform: translateX(26px); }
+        
+        /* ESTILO DEL MENSAJE DE AVISO */
+        .msg-permiso { color: #ffc107; font-size: 11px; text-align: center; margin-bottom: 20px; display: block; font-weight: bold; }
+        
+        .viaje-card { background: #111; padding: 18px; border-radius: 20px; margin-bottom: 12px; border: 1px solid #222; animation: notify 0.5s infinite alternate; }
+        @keyframes notify { from { border-color: #222; } to { border-color: #ffc107; } }
+        .btn-aceptar { background: #ffc107; color: #000; padding: 14px; width: 100%; border-radius: 14px; font-weight: bold; border: none; margin-top: 10px; font-size: 16px; }
+        .viaje-activo { background: #fff; color: #000; padding: 25px; border-radius: 28px; border-left: 10px solid #ffc107; }
+        .btn { width: 100%; padding: 16px; border: none; border-radius: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; text-decoration: none; }
         .btn-ws { background: #25d366; color: white; }
-        .btn-aceptar { background: #ffc107; color: #000; font-size: 18px; margin-top: 15px; }
-        .status-bar { display: flex; align-items: center; justify-content: space-between; background: #1a1a1a; padding: 12px 20px; border-radius: 50px; border: 1px solid #333; margin-bottom: 15px; }
+        .btn-fin { background: #000; color: #fff; }
+        .btn-cancelar { background: #fff; color: #ff4d4d; border: 1px solid #ff4d4d; margin-top: 15px; font-size: 12px; }
     </style>
 </head>
 <body onload="cargar()">
     <div class="status-bar">
         <span id="status-text">Cargando...</span>
-        <div id="lbl-cel" style="font-size: 10px; opacity: 0.5;">---</div>
+        <label class="switch">
+            <input type="checkbox" id="check-status" onchange="toggleConexion(this)">
+            <span class="slider"></span>
+        </label>
+    </div>
+
+    <!-- EL MENSAJE DE AVISO -->
+    <small id="msg-propiedades" class="msg-permiso">⚠️ Activa sonido y notificaciones en propiedades de la app</small>
+
+    <div class="billetera">
+        <div id="lbl-cel" style="font-size: 10px; opacity: 0.5; margin-bottom: 8px;">---</div>
+        <div style="display:flex; justify-content: space-around;">
+            <div><small style="color:#888;">GANANCIA</small><div id="txt-ventas" class="monto">B/. 0.00</div></div>
+            <div><small style="color:#888;">CUOTA</small><div id="txt-deuda" class="monto" style="color:#ff4d4d;">B/. 0.00</div></div>
+        </div>
+        <a href="reportes.html" style="color: #ffc107; font-size: 12px; text-decoration: none; display: block; margin-top: 15px;">VER REPORTES</a>
     </div>
 
     <div id="lista-viajes"></div>
@@ -30,56 +60,146 @@
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     const miCel = localStorage.getItem('driverCel');
+    
+    // EL SILBIDO RENOMBRADO
+    const silbido = new Audio('https://raw.githubusercontent.com/juan031977/PreetyTaxi/main/silbido.mp3');
+    let ultimoViajeId = "";
 
     function cargar() {
         if(!miCel) return window.location.href="login.html";
-        document.getElementById('lbl-cel').innerText = miCel;
-        escucharViajes();
+        document.getElementById('lbl-cel').innerText = "CHOFER: " + miCel;
+        
+        // 1. FORZAMOS DESCONEXIÓN AL INICIAR PARA QUE EL CHOFER TENGA QUE TOCAR LA PANTALLA
+        db.ref('conductores/' + miCel).update({ conectado: false });
+
+        db.ref('conductores/' + miCel).on('value', s => {
+            const d = s.val() || {};
+            document.getElementById('txt-ventas').innerText = "B/. " + (parseFloat(d.totalGeneradoHoy) || 0).toFixed(2);
+            document.getElementById('txt-deuda').innerText = "B/. " + (parseFloat(d.deuda) || 0).toFixed(2);
+            document.getElementById('check-status').checked = d.conectado || false;
+            
+            const statusTxt = document.getElementById('status-text');
+            const msg = document.getElementById('msg-propiedades');
+
+            if(d.conectado) {
+                statusTxt.innerText = "ESTÁS ACTIVO";
+                statusTxt.style.color = "#25d366";
+                msg.style.display = "none"; // Se esconde al conectar
+                escucharViajes();
+            } else {
+                statusTxt.innerText = "DESCONECTADO";
+                statusTxt.style.color = "#ff4d4d";
+                msg.style.display = "block"; // Se muestra al estar desconectado
+                db.ref('viajes').off();
+                document.getElementById('lista-viajes').innerHTML = '<p style="text-align:center; color:#444;">Ponte en línea para recibir pedidos</p>';
+            }
+        });
+    }
+
+    function toggleConexion(el) {
+        // TRUCO: Reproducir y pausar el silbido para ganar el permiso del navegador
+        silbido.play().then(() => { 
+            silbido.pause(); 
+            silbido.currentTime = 0; 
+        }).catch(e => console.log("Audio desbloqueado"));
+        
+        db.ref('conductores/' + miCel).update({ conectado: el.checked });
+        
+        if(el.checked && 'wakeLock' in navigator) {
+            navigator.wakeLock.request('screen').catch(e => {});
+        }
     }
 
     function escucharViajes() {
         db.ref('viajes').on('value', snap => {
             const lista = document.getElementById('lista-viajes');
-            let html = ""; let hay = false;
+            let html = ""; 
+            let hay = false;
 
             snap.forEach(child => {
                 const v = child.val();
                 if(v.estado === "buscando") {
                     hay = true;
-                    
-                    // ESTA ES LA MAGIA PARA EL MÓVIL:
-                    // Google Maps "Intent" que abre la App instalada en el Android
-                    const linkRutaMovil = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(v.origen + ", Panama")}&destination=${encodeURIComponent(v.destino + ", Panama")}&travelmode=driving`;
-                    
-                    const textoChat = `Hola ${v.cliente}, soy de PreetyTaxi. ¿Sigue disponible el viaje?`;
+                    if(ultimoViajeId !== child.key) {
+                        // AQUÍ SUENA EL SILBIDO
+                        silbido.play().catch(e => console.log("Error de reproducción"));
+                        ultimoViajeId = child.key;
+                        if(navigator.vibrate) navigator.vibrate([300, 100, 300]);
+                    }
 
                     html += `<div class="viaje-card">
-                        <div style="display:flex; justify-content:space-between"><b>NUEVO PEDIDO</b> <b style="font-size:18px;">B/. ${v.precio}</b></div>
-                        <h3 style="margin:5px 0;">${v.cliente}</h3>
-                        <p style="font-size:13px; margin:2px 0;">📍 <b>Origen:</b> ${v.origen}</p>
-                        <p style="font-size:13px; margin:2px 0;">🏁 <b>Destino:</b> ${v.destino}</p>
-                        
-                        <a href="${linkRutaMovil}" target="_blank" class="btn btn-mapa">
-                            <i class="fas fa-directions"></i> VER RECORRIDO (ABRIR MAPS)
-                        </a>
-
-                        <a href="https://wa.me/507${v.telefono}?text=${encodeURIComponent(textoChat)}" class="btn btn-ws">
-                            <i class="fab fa-whatsapp"></i> PREGUNTAR POR WHATSAPP
-                        </a>
-                        
-                        <button class="btn btn-aceptar" onclick="aceptar('${child.key}')">ACEPTAR VIAJE</button>
+                        <div style="display:flex; justify-content:space-between"><span>📍 NUEVO PEDIDO</span><b style="color:#ffc107;">B/. ${v.precio}</b></div>
+                        <div style="font-size:14px; margin: 10px 0;">${v.origen} ➔ ${v.destino}</div>
+                        <button class="btn-aceptar" onclick="aceptar('${child.key}')">ACEPTAR VIAJE</button>
+                    </div>`;
+                } else if(v.estado === "en curso" && v.conductorCel === miCel) {
+                    hay = true;
+                    const textoChat = `Hola *${v.cliente}*, soy tu conductor de PreetyTaxi. Ya voy en camino por ti.`;
+                    html = `<div class="viaje-activo">
+                        <small>CLIENTE</small>
+                        <h2 style="margin:0;">${v.cliente}</h2>
+                        <p>📍 ${v.origen}</p>
+                        <div style="font-size:30px; font-weight:bold; margin:10px 0;">B/. ${v.precio}</div>
+                        <a href="https://wa.me/507${v.telefono}?text=${encodeURIComponent(textoChat)}" class="btn btn-ws"><i class="fab fa-whatsapp"></i> CHATEAR</a>
+                        <button class="btn btn-fin" onclick="finalizar('${child.key}')">FINALIZAR VIAJE</button>
+                        <button class="btn btn-cancelar" onclick="cancelarPorChofer('${child.key}')">CANCELAR</button>
                     </div>`;
                 }
             });
-            lista.innerHTML = hay ? html : '<p style="text-align:center; color:#444;">Esperando viajes...</p>';
+            
+            if(!hay) ultimoViajeId = ""; 
+            lista.innerHTML = hay ? html : '<p style="text-align:center; color:#333;">Esperando viajes...</p>';
         });
     }
 
     function aceptar(id) {
         db.ref('conductores/' + miCel).once('value', s => {
             const d = s.val() || {};
-            db.ref('viajes/' + id).update({ estado: 'en curso', conductorCel: miCel, conductorNombre: d.nombre, conductorPlaca: d.placa });
+            db.ref('viajes/' + id).update({ 
+                estado: 'en curso', 
+                conductorCel: miCel, 
+                conductorNombre: d.nombre || "Chofer", 
+                conductorPlaca: d.placa || "S/P" 
+            });
         });
+    }
+
+    function finalizar(id) {
+        if(!confirm("¿Deseas finalizar y cobrar este viaje?")) return;
+        db.ref('viajes/' + id).once('value', snap => {
+            const v = snap.val();
+            const precioTotal = parseFloat(v.precio);
+            const cuotaApp = precioTotal <= 3.25 ? 0.25 : (precioTotal <= 6.50 ? 0.50 : 1.00);
+            const gananciaChofer = precioTotal - cuotaApp;
+            const hoy = obtenerFechaHoy();
+
+            const updates = {};
+            updates['viajes/' + id + '/estado'] = 'completado';
+            updates['reportes_diarios/' + miCel + '/' + hoy + '/' + id] = {
+                cliente: v.cliente, ganancia: gananciaChofer.toFixed(2), cuota: cuotaApp.toFixed(2), hora: new Date().toLocaleTimeString()
+            };
+
+            db.ref().update(updates).then(() => {
+                db.ref('conductores/' + miCel).once('value', s => {
+                    const dc = s.val() || {};
+                    db.ref('conductores/' + miCel).update({
+                        totalGeneradoHoy: (parseFloat(dc.totalGeneradoHoy || 0) + gananciaChofer).toFixed(2),
+                        deuda: (parseFloat(dc.deuda || 0) + cuotaApp).toFixed(2)
+                    });
+                });
+            });
+        });
+    }
+
+    function cancelarPorChofer(id) { if(confirm("¿Estás seguro de cancelar el viaje?")) db.ref('viajes/' + id).update({ estado: 'cancelado' }); }
+    function obtenerFechaHoy() { const d = new Date(); return d.getDate() + "-" + (d.getMonth() + 1) + "-" + d.getFullYear(); }
+
+    if ('wakeLock' in navigator) {
+        let wakeLock = null;
+        const requestWakeLock = async () => {
+            try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
+        };
+        requestWakeLock();
     }
 </script>
 </body>

@@ -94,17 +94,17 @@
                     hay = true;
                     if(ultimoViajeId !== child.key) { silbido.play(); ultimoViajeId = child.key; }
 
-                    // LINK DE RUTA QUE SÍ FUNCIONA (Abre la App de Maps)
-                    const urlRuta = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(v.origen)}&destination=${encodeURIComponent(v.destino)}&travelmode=driving`;
+                    // SOLUCIÓN FINAL: Link universal que abre la App de Google Maps con la ruta trazada
+                    const urlRuta = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(v.origen + ", Panama")}&destination=${encodeURIComponent(v.destino + ", Panama")}&travelmode=driving`;
                     const textoChat = `Hola ${v.cliente}, soy de PreetyTaxi. ¿Sigue disponible el viaje de ${v.origen}?`;
 
                     html += `<div class="viaje-card">
                         <div style="display:flex; justify-content:space-between"><b>NUEVO PEDIDO</b> <b style="font-size:18px;">B/. ${v.precio}</b></div>
                         <h3 style="margin:5px 0;">${v.cliente}</h3>
-                        <p style="font-size:13px; margin:2px 0;">📍 <b>De:</b> ${v.origen}</p>
-                        <p style="font-size:13px; margin:2px 0;">🏁 <b>A:</b> ${v.destino}</p>
+                        <p style="font-size:13px; margin:2px 0;">📍 <b>Origen:</b> ${v.origen}</p>
+                        <p style="font-size:13px; margin:2px 0;">🏁 <b>Destino:</b> ${v.destino}</p>
                         
-                        <a href="${urlRuta}" target="_blank" class="btn btn-mapa"><i class="fas fa-map-marked-alt"></i> VER RECORRIDO COMPLETO</a>
+                        <a href="${urlRuta}" target="_blank" class="btn btn-mapa"><i class="fas fa-map-marked-alt"></i> VER RECORRIDO EN GOOGLE MAPS</a>
                         <a href="https://wa.me/507${v.telefono}?text=${encodeURIComponent(textoChat)}" class="btn btn-ws"><i class="fab fa-whatsapp"></i> CHATEAR CON CLIENTE</a>
                         
                         <button class="btn btn-aceptar" onclick="aceptar('${child.key}')">ACEPTAR VIAJE</button>

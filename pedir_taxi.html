@@ -3,54 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    
     <title>PreetyTaxi - Pedir Viaje</title>
-    
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg&libraries=places"></script>
-    
     <style>
-        /* BLOQUEO 2: ESCUDO CSS ANTI-REFRESCO */
-        html, body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
+        /* BLOQUEO MAESTRO ANTI-REFRESCO */
+        html {
+            overflow: hidden;
             height: 100%;
-            /* Esto mata la flecha de Google Chrome de raíz */
-            overscroll-behavior-y: none !important;
-            overscroll-behavior: none !important;
-            /* Fija la pantalla al cristal del celular */
-            position: fixed;
-            overflow: hidden !important;
             background-color: #000;
-            font-family: 'Segoe UI', sans-serif;
-            touch-action: none;
+        }
+
+        body { 
+            margin: 0; 
+            padding: 0; 
+            /* El truco: 101% de altura para que el navegador crea que hay scroll */
+            height: 101%; 
+            width: 100%; 
+            font-family: 'Segoe UI', sans-serif; 
+            overflow: hidden !important; 
+            position: fixed; 
+            /* Desactiva el comportamiento de rebote en Chrome y Safari */
+            overscroll-behavior-y: none !important; 
+            overscroll-behavior: none !important;
+            touch-action: none; 
             -webkit-user-select: none;
         }
 
-        /* Permitimos toques solo en elementos necesarios */
-        #map, .ui-panel, input, button, .viaje-card, .box {
-            touch-action: pan-x pan-y !important;
+        #map { 
+            height: 100%; 
+            width: 100%; 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            z-index: 1; 
+            touch-action: pan-x pan-y !important; 
         }
 
-        #map { height: 100%; width: 100%; position: absolute; top: 0; left: 0; z-index: 1; }
-
         .ui-panel { 
-            position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); 
-            width: 92%; max-width: 420px; z-index: 10; 
+            position: fixed; 
+            bottom: 25px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            width: 92%; 
+            max-width: 420px; 
+            z-index: 10; 
+            touch-action: pan-y; 
         }
 
         .box { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 -8px 25px rgba(0,0,0,0.25); border-top: 4px solid #ffc107; }
-        input { width: 100%; padding: 12px; margin: 6px 0; border-radius: 10px; border: 1px solid #eee; box-sizing: border-box; font-size: 16px; background: #f9f9f9; }
+        input { width: 100%; padding: 12px; margin: 6px 0; border-radius: 10px; border: 1px solid #eee; box-sizing: border-box; font-size: 16px; background: #f9f9f9; touch-action: auto; }
         .btn { width: 100%; padding: 15px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 16px; display: flex; align-items: center; justify-content: center; text-decoration: none; }
         .btn-yellow { background: #ffc107; color: #000; }
+        .btn-whatsapp { background: #25d366; color: white; display: none; }
         .price-tag { font-size: 38px; font-weight: 900; color: #1a1a1a; text-align: center; margin: 5px 0; }
+        .trust-badge { background: #fff3cd; border: 1px solid #ffeeba; padding: 12px; border-radius: 15px; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+        .trust-badge b { color: #856404; font-size: 14px; display: block; text-align: left; }
+        .trust-badge small { color: #666; font-size: 11px; line-height: 1.2; text-align: left; display: block; }
         .panel-espera { background: #1a1a1a; color: white; padding: 20px; border-radius: 20px; display: none; text-align: center; }
+        #datos-conductor { margin-top: 15px; padding: 15px; background: #222; border-radius: 15px; display: none; border: 1px solid #ffc107; }
     </style>
 </head>
 <body>
@@ -60,49 +72,64 @@
             <input id="origen-input" type="text" placeholder="📍 ¿Dónde te buscamos?">
             <input id="destino-input" type="text" placeholder="🏁 ¿A dónde vas?">
             <div id="info-viaje" style="display:none; margin-top: 15px;">
+                <div class="trust-badge">
+                    <span style="font-size: 24px;">🛡️</span>
+                    <div>
+                        <b>¡Paga lo justo con PreetyTaxi!</b>
+                        <small>Tarifa fija calculada por GPS. No aceptes cobros extra por tranque o lluvia.</small>
+                    </div>
+                </div>
                 <div class="price-tag" id="precio-txt">B/. 1.75</div>
                 <button class="btn btn-yellow" onclick="confirmarPedido()">PEDIR TAXI AHORA</button>
             </div>
         </div>
         <div id="panel-espera" class="panel-espera">
             <h3 id="status-label" style="color:#ffc107;">Buscando conductor...</h3>
+            <div id="datos-conductor">
+                <small style="color:#888">TU CONDUCTOR ASIGNADO:</small>
+                <div id="nombre-ch" style="font-size:20px; font-weight:bold; color:#ffc107;">---</div>
+                <div id="placa-ch" style="font-size:16px; margin-top:5px; color:#fff; background:#444; display:inline-block; padding:2px 10px; border-radius:5px;">PLACA: ---</div>
+            </div>
+            <a id="btn-ws-cliente" href="#" target="_blank" class="btn btn-whatsapp">📱 CHATEAR POR WHATSAPP</a>
             <button class="btn" style="background:transparent; color:#ff4d4d; font-size:13px;" onclick="cancelarViaje()">Cancelar Viaje</button>
         </div>
     </div>
-
 <script>
-    // BLOQUEO 3: SCRIPT MATA-GESTOS (EL "GUARDAESPALDAS")
-    let touchStart = 0;
-    document.addEventListener('touchstart', (e) => {
-        touchStart = e.touches[0].pageY;
-    }, {passive: false});
-
-    document.addEventListener('touchmove', (e) => {
-        let touchMove = e.touches[0].pageY;
-        // Si intenta jalar hacia abajo estando en el tope
-        if (touchMove > touchStart && window.scrollY <= 1) {
-            // No permitimos el refresco a menos que sea un input
-            if (e.target.tagName !== 'INPUT') {
-                e.preventDefault();
-            }
-        }
-    }, {passive: false});
-
-    // Forzar el micro-scroll de seguridad
+    // --- ESCUDO TOTAL (SOLUCIÓN DEL PÍXEL) ---
+    // Forzamos un scroll de 1px al cargar para que nunca esté en el tope real
     window.addEventListener('load', () => { window.scrollTo(0, 1); });
+
+    // Si el usuario intenta llegar a 0, lo devolvemos a 1 de inmediato
+    window.addEventListener('scroll', () => {
+        if (window.scrollY < 1) window.scrollTo(0, 1);
+    });
+
+    // Bloqueo manual de gestos que no sean en inputs
+    document.addEventListener('touchmove', (e) => {
+        if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA' && !e.target.closest('.ui-panel')) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+
+    // El mapa se encarga de sus propios toques
+    document.getElementById('map').addEventListener('touchmove', (e) => { e.stopPropagation(); }, { passive: false });
 
     const firebaseConfig = { apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     
     let map, ds, dr, viajeID, posA, posB;
+    let pagoNetoChofer = 0, miComision = 0;
 
     function initMap() {
         map = new google.maps.Map(document.getElementById("map"), { 
-            center: {lat: 9.0415, lng: -79.4411}, zoom: 14, disableDefaultUI: true, gestureHandling: 'greedy' 
+            center: {lat: 9.0415, lng: -79.4411}, 
+            zoom: 14, 
+            disableDefaultUI: true,
+            gestureHandling: 'greedy' 
         });
         ds = new google.maps.DirectionsService();
-        dr = new google.maps.DirectionsRenderer({ map: map, suppressMarkers: false, polylineOptions: { strokeColor: "#ffc107", strokeWeight: 6 } });
+        dr = new google.maps.DirectionsRenderer({ map: map, suppressMarkers: true, preserveViewport: true, polylineOptions: { strokeColor: "#ffc107", strokeWeight: 6 } });
         
         const acOri = new google.maps.places.Autocomplete(document.getElementById('origen-input'), { componentRestrictions: { country: "pa" } });
         const acDes = new google.maps.places.Autocomplete(document.getElementById('destino-input'), { componentRestrictions: { country: "pa" } });
@@ -117,33 +144,63 @@
             if (stat === 'OK') {
                 dr.setDirections(res);
                 const km = res.routes[0].legs[0].distance.value / 1000;
-                // Tu tarifa de B/. 1.50 mínimo
-                let precio = 1.50 + (km * 0.60);
-                if (precio < 1.75) precio = 1.75; 
-                document.getElementById('precio-txt').innerText = "B/. " + precio.toFixed(2);
+                let brutoChofer = 0.50 + (km * 0.60);
+                pagoNetoChofer = Math.round(brutoChofer * 4) / 4;
+                if (pagoNetoChofer < 1.50) pagoNetoChofer = 1.50;
+                if (pagoNetoChofer <= 3.00) miComision = 0.25;
+                else if (pagoNetoChofer <= 6.00) miComision = 0.50;
+                else miComision = 1.00;
+                let totalCliente = pagoNetoChofer + miComision;
+                if (totalCliente < 1.75) totalCliente = 1.75;
+                document.getElementById('precio-txt').innerText = "B/. " + totalCliente.toFixed(2);
                 document.getElementById('info-viaje').style.display = "block";
+                const bounds = new google.maps.LatLngBounds();
+                bounds.extend(posA);
+                bounds.extend(posB);
+                map.fitBounds(bounds, 80);
             }
         });
     }
 
     function confirmarPedido() {
         const tel = localStorage.getItem('userCel');
-        if(!tel) return alert("Inicia sesión");
+        const nombre = localStorage.getItem('userName') || "Cliente";
+        const precioTotal = document.getElementById('precio-txt').innerText.replace("B/. ", "");
+        if(!tel) return alert("Inicia sesión primero");
         const ref = db.ref('viajes').push({
-            cliente: localStorage.getItem('userName') || "Cliente",
-            telefono: tel,
-            precio: document.getElementById('precio-txt').innerText.replace("B/. ", ""),
-            estado: "buscando",
-            origen: document.getElementById('origen-input').value,
-            destino: document.getElementById('destino-input').value
+            cliente: nombre, telefono: tel, precio: precioTotal, precioChofer: pagoNetoChofer.toFixed(2), comisionApp: miComision.toFixed(2),
+            estado: "buscando", origen: document.getElementById('origen-input').value, destino: document.getElementById('destino-input').value, fecha: new Date().toISOString()
         });
         viajeID = ref.key;
         document.getElementById('panel-cliente').style.display = "none";
         document.getElementById('panel-espera').style.display = "block";
+        escuchar();
     }
 
-    function cancelarViaje() { location.reload(); }
+    function cancelarViaje() {
+        if (viajeID) {
+            db.ref('viajes/' + viajeID).update({ estado: 'cancelado' }).then(() => { location.reload(); });
+        } else { location.reload(); }
+    }
 
+    function escuchar() {
+        db.ref('viajes/' + viajeID).on('value', snap => {
+            const v = snap.val();
+            if(!v) return;
+            if(v.estado === "en curso") {
+                document.getElementById('status-label').innerText = "🚕 ¡CHOFER EN CAMINO!";
+                document.getElementById('datos-conductor').style.display = "block";
+                document.getElementById('nombre-ch').innerText = v.conductorNombre;
+                document.getElementById('placa-ch').innerText = "PLACA: " + v.conductorPlaca;
+                document.getElementById('btn-ws-cliente').style.display = "flex";
+                document.getElementById('btn-ws-cliente').href = `https://wa.me/507${v.conductorCel}?text=Hola, te espero en ${v.origen}`;
+            }
+            if(v.estado === "completado" || v.estado === "cancelado") {
+                if(v.estado === "cancelado") alert("El viaje fue cancelado");
+                location.reload();
+            }
+        });
+    }
     window.onload = initMap;
 </script>
 </body>

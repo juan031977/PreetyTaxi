@@ -3,24 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Descargar PreetyTaxi</title>
+    <title>Descargar PreetyTaxi - Conductor</title>
     <style>
-        body { background: #0b0b0b; color: white; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .box { background: #1a1a1a; padding: 30px; border-radius: 20px; border: 1px solid #333; text-align: center; width: 85%; max-width: 350px; }
-        .btn { background: #28a745; color: white; padding: 20px; border-radius: 12px; text-decoration: none; font-weight: bold; display: block; margin-top: 20px; font-size: 18px; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+            text-align: center;
+        }
+        .header {
+            background-color: #000;
+            padding: 30px;
+            color: #ffc107;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+        .container {
+            max-width: 500px;
+            margin: -20px auto 40px;
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .btn-descarga {
+            display: inline-block;
+            background-color: #ffc107;
+            color: #000;
+            padding: 18px 30px;
+            text-decoration: none;
+            font-weight: bold;
+            border-radius: 50px;
+            font-size: 18px;
+            margin: 20px 0;
+            box-shadow: 0 4px 15px rgba(255,193,7,0.4);
+        }
+        .instrucciones {
+            text-align: left;
+            margin-top: 30px;
+            padding: 15px;
+            background: #fff9e6;
+            border-radius: 15px;
+            border-left: 5px solid #ffc107;
+        }
+        .paso {
+            margin-bottom: 15px;
+        }
+        .paso b {
+            color: #000;
+            display: block;
+            margin-bottom: 5px;
+        }
+        .aviso {
+            font-size: 13px;
+            color: #666;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
-    <div class="box">
-        <h1 style="color: #ffc107; margin-bottom: 10px;">PreetyTaxi 🚕</h1>
-        <p>Listo para instalar en Panamá</p>
-        
-        <a href="https://github.com/juan031977/PreetyTaxi/raw/refs/heads/main/app-release.apk" class="btn">
-            DESCARGAR AHORA
-        </a>
-        
-        <p style="color: #555; font-size: 11px; margin-top: 20px;">Si el botón falla, verifica que el archivo se llame PreetyTaxi.apk en tu GitHub principal.</p>
-    </div>
-</body>
 
+    <div class="header">
+        <div class="logo">PREETY TAXI 🚖</div>
+        <p>Panel del Conductor - Panamá</p>
+    </div>
+
+    <div class="container">
+        <h2>Instalar Aplicación</h2>
+        <p>Descarga el archivo oficial para empezar a recibir viajes.</p>
+        
+        <a href="https://drive.google.com/file/d/1M9pXH4Nj04SlssGeSWTqxO0oX20frDom/view?usp=sharing" class="btn-descarga" target="_blank">
+            📥 DESCARGAR APK
+        </a>
+
+        <div class="instrucciones">
+            <h3>📖 Pasos para la instalación:</h3>
+            
+            <div class="paso">
+                <b>1. Descarga el archivo</b>
+                Si Google Drive dice "No se puede analizar en busca de virus", toca en <b>"Descargar de todos modos"</b>.
+            </div>
+
+            <div class="paso">
+                <b>2. Abrir el instalador</b>
+                Una vez descargado, toca el archivo desde las notificaciones o tu carpeta de Descargas.
+            </div>
+
+            <div class="paso">
+                <b>3. Permisos de Origen Desconocido</b>
+                Si tu celular bloquea la instalación, ve a <b>Ajustes</b> y activa "Permitir desde esta fuente" para Chrome o Drive.
+            </div>
+
+            <div class="paso">
+                <b>4. Aviso de Play Protect</b>
+                Si sale un cuadro de Google Play Protect, toca en <b>"Más detalles"</b> y luego en <b>"Instalar de todas formas"</b>.
+            </div>
+        </div>
+
+        <p class="aviso">Versión optimizada para conductores en Panamá. <br> Tarifa base configurada: B/. 1.50</p>
+    </div>
+
+</body>
 </html>

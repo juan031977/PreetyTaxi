@@ -19,7 +19,6 @@
         input:checked + .slider { background-color: #25d366; }
         input:checked + .slider:before { transform: translateX(26px); }
         
-        /* ESTILO DEL MENSAJE DE AVISO */
         .msg-permiso { color: #ffc107; font-size: 11px; text-align: center; margin-bottom: 20px; display: block; font-weight: bold; }
         
         .viaje-card { background: #111; padding: 18px; border-radius: 20px; margin-bottom: 12px; border: 1px solid #222; animation: notify 0.5s infinite alternate; }
@@ -60,15 +59,12 @@
     const db = firebase.database();
     const miCel = localStorage.getItem('driverCel');
     
-    // EL SILBIDO RENOMBRADO
     const silbido = new Audio('https://raw.githubusercontent.com/juan031977/PreetyTaxi/main/silbido.mp3');
     let ultimoViajeId = "";
 
     function cargar() {
         if(!miCel) return window.location.href="login.html";
         document.getElementById('lbl-cel').innerText = "CHOFER: " + miCel;
-        
-        // 1. FORZAMOS DESCONEXIÓN AL INICIAR PARA QUE EL CHOFER TENGA QUE TOCAR LA PANTALLA
         db.ref('conductores/' + miCel).update({ conectado: false });
 
         db.ref('conductores/' + miCel).on('value', s => {
@@ -83,12 +79,12 @@
             if(d.conectado) {
                 statusTxt.innerText = "ESTÁS ACTIVO";
                 statusTxt.style.color = "#25d366";
-                msg.style.display = "none"; // Se esconde al conectar
+                msg.style.display = "none";
                 escucharViajes();
             } else {
                 statusTxt.innerText = "DESCONECTADO";
                 statusTxt.style.color = "#ff4d4d";
-                msg.style.display = "block"; // Se muestra al estar desconectado
+                msg.style.display = "block";
                 db.ref('viajes').off();
                 document.getElementById('lista-viajes').innerHTML = '<p style="text-align:center; color:#444;">Ponte en línea para recibir pedidos</p>';
             }
@@ -96,7 +92,6 @@
     }
 
     function toggleConexion(el) {
-        // TRUCO: Reproducir y pausar el silbido para ganar el permiso del navegador
         silbido.play().then(() => { 
             silbido.pause(); 
             silbido.currentTime = 0; 
@@ -120,22 +115,37 @@
                 if(v.estado === "buscando") {
                     hay = true;
                     if(ultimoViajeId !== child.key) {
-                        // AQUÍ SUENA EL SILBIDO
                         silbido.play().catch(e => console.log("Error de reproducción"));
                         ultimoViajeId = child.key;
                         if(navigator.vibrate) navigator.vibrate([300, 100, 300]);
                     }
 
-                    html += `<div class="viaje-card">
-                        <div style="display:flex; justify-content:space-between"><span>📍 NUEVO PEDIDO</span><b style="color:#ffc107;">B/. ${v.precio}</b></div>
-                        <div style="font-size:14px; margin: 10px 0;">${v.origen} ➔ ${v.destino}</div>
-                        <button class="btn-aceptar" onclick="aceptar('${child.key}')">ACEPTAR VIAJE</button>
+                    // MODIFICADO: Ahora muestra toda la info ANTES de aceptar
+                    const textoChatPre = `Hola *${v.cliente}*, soy conductor de PreetyTaxi. Vi tu pedido de ${v.origen} a ${v.destino}. ¿Sigue disponible?`;
+                    
+                    html += `<div class="viaje-card" style="background: #fff; color: #000; border-left: 10px solid #ffc107;">
+                        <div style="display:flex; justify-content:space-between; color: #000;">
+                            <small>NUEVO PEDIDO DISPONIBLE</small>
+                            <b style="font-size: 20px;">B/. ${v.precio}</b>
+                        </div>
+                        <h2 style="margin:5px 0;">${v.cliente}</h2>
+                        <p style="margin:5px 0;"><b>De:</b> ${v.origen}</p>
+                        <p style="margin:5px 0;"><b>A:</b> ${v.destino}</p>
+                        <p style="margin:5px 0; font-size: 13px; color: #666;"><i class="fas fa-phone"></i> Tel: ${v.telefono}</p>
+                        
+                        <a href="https://wa.me/507${v.telefono}?text=${encodeURIComponent(textoChatPre)}" class="btn btn-ws" style="margin-bottom:10px;">
+                            <i class="fab fa-whatsapp"></i> CONSULTAR POR WHATSAPP
+                        </a>
+                        
+                        <button class="btn-aceptar" onclick="aceptar('${child.key}')" style="font-size: 18px; letter-spacing: 1px;">
+                            ACEPTAR VIAJE AHORA
+                        </button>
                     </div>`;
                 } else if(v.estado === "en curso" && v.conductorCel === miCel) {
                     hay = true;
                     const textoChat = `Hola *${v.cliente}*, soy tu conductor de PreetyTaxi. Ya voy en camino por ti.`;
                     html = `<div class="viaje-activo">
-                        <small>CLIENTE</small>
+                        <small>VIAJE EN CURSO</small>
                         <h2 style="margin:0;">${v.cliente}</h2>
                         <p>📍 ${v.origen}</p>
                         <div style="font-size:30px; font-weight:bold; margin:10px 0;">B/. ${v.precio}</div>

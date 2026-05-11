@@ -2,31 +2,22 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Panel de Trabajo - PreetyTaxi</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Trabajo - Conductor</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; padding: 15px; margin: 0; }
-        .billetera { background: #1a1a1a; padding: 20px; border-radius: 20px; border: 1px solid #333; margin-bottom: 15px; text-align: center; }
-        .monto { color: #ffc107; font-size: 26px; font-weight: bold; }
-        .viaje-card { background: #222; border: 2px solid #ffc107; border-radius: 15px; padding: 15px; margin-bottom: 15px; }
-        .btn-aceptar { background: #ffc107; color: #000; width: 100%; padding: 15px; border-radius: 10px; font-weight: bold; border: none; font-size: 16px; }
-        .vacio { text-align: center; color: #666; margin-top: 50px; }
+        body { background: #000; color: white; font-family: sans-serif; padding: 20px; }
+        .viaje-card { border: 2px solid #ffc107; padding: 15px; border-radius: 10px; margin-bottom: 15px; background: #111; }
+        .btn-aceptar { background: #ffc107; color: #000; border: none; width: 100%; padding: 12px; font-weight: bold; border-radius: 5px; cursor: pointer; }
+        .vacio { color: #666; text-align: center; margin-top: 50px; }
     </style>
 </head>
 <body>
 
-    <div class="billetera">
-        <small>MI DEUDA ACUMULADA</small>
-        <div id="mi-deuda" class="monto">B/. 0.00</div>
-    </div>
-
-    <h3 style="color: #ffc107; border-bottom: 1px solid #333; padding-bottom: 10px;">VIAJES DISPONIBLES</h3>
-    
+    <h3>🚖 VIAJES DISPONIBLES</h3>
     <div id="lista-viajes">
-        <p class="vacio">Buscando viajes activos...</p>
+        <p class="vacio">Buscando servicios...</p>
     </div>
 
     <script>
@@ -37,62 +28,50 @@
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        const miCel = localStorage.getItem('driverCel');
-
-        // 1. Escuchar datos del conductor (Deuda)
-        if(miCel) {
-            db.ref('conductores/' + miCel).on('value', snap => {
-                const d = snap.val();
-                if(d) {
-                    document.getElementById('mi-deuda').innerText = "B/. " + (parseFloat(d.deuda) || 0).toFixed(2);
-                }
-            });
-        }
-
-        // 2. Escuchar Viajes (La parte que estaba fallando)
         function escucharViajes() {
-            db.ref('viajes').on('value', snapshot => {
+            // Escucha activa de la rama 'viajes'
+            db.ref('viajes').on('value', (snapshot) => {
                 const contenedor = document.getElementById('lista-viajes');
                 contenedor.innerHTML = "";
                 let hayViajes = false;
 
-                snapshot.forEach(child => {
+                snapshot.forEach((child) => {
                     const v = child.val();
                     const idViaje = child.key;
 
-                    // IMPORTANTE: El estado debe ser exactamente "pendiente"
+                    // IMPORTANTE: Solo muestra si el estado es exactamente 'pendiente'
                     if (v.estado === "pendiente") {
                         hayViajes = true;
                         contenedor.innerHTML += `
                             <div class="viaje-card">
-                                <p>📍 <b>DE:</b> ${v.origen}</p>
-                                <p>🏁 <b>A:</b> ${v.destino}</p>
-                                <p>💰 <b>TARIFA:</b> B/. ${v.precio}</p>
+                                <p>📍 <b>ORIGEN:</b> ${v.origen}</p>
+                                <p>🏁 <b>DESTINO:</b> ${v.destino}</p>
+                                <p>💰 <b>PAGO:</b> B/. ${v.precio}</p>
                                 <p>👤 <b>CLIENTE:</b> ${v.cliente}</p>
-                                <button class="btn-aceptar" onclick="aceptarViaje('${idViaje}')">
-                                    ACEPTAR VIAJE
-                                </button>
+                                <button class="btn-aceptar" onclick="aceptarViaje('${idViaje}')">ACEPTAR SERVICIO</button>
                             </div>
                         `;
                     }
                 });
 
                 if (!hayViajes) {
-                    contenedor.innerHTML = '<p class="vacio">No hay viajes pendientes en este momento.</p>';
+                    contenedor.innerHTML = '<p class="vacio">No hay viajes disponibles por ahora.</p>';
                 }
             });
         }
 
         function aceptarViaje(id) {
-            // Actualizamos el estado para que desaparezca de los demás paneles
+            const miCel = localStorage.getItem('driverCel') || "SinID";
+            // Cambia estado para que desaparezca de otros conductores
             db.ref('viajes/' + id).update({
                 estado: "en curso",
-                conductorCel: miCel
+                conductor: miCel
             }).then(() => {
-                alert("¡Viaje aceptado! Contacta al cliente.");
+                alert("Viaje aceptado. ¡En marcha!");
             });
         }
 
+        // Iniciar la escucha al cargar la página
         escucharViajes();
     </script>
 </body>

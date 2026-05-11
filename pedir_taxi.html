@@ -2,192 +2,162 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>PreetyTaxi - Pedir Viaje</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg&libraries=places"></script>
     <style>
         :root { --gold: #ffc107; --dark: #000; --card: #1a1a1a; }
-        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--dark); color: white; overflow-x: hidden; }
+        body { margin: 0; background: var(--dark); color: white; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; }
         
-        #map { height: 40vh; width: 100%; }
+        /* Contenedor de la imagen del mapa */
+        .map-header {
+            width: 100%;
+            height: 200px;
+            background-image: url('https://images.unsplash.com/photo-1593351415075-3bac9f45c877?auto=format&fit=crop&q=80&w=800'); /* Imagen de Taxi */
+            background-size: cover;
+            background-position: center;
+            position: relative;
+            border-bottom: 3px solid var(--gold);
+        }
 
-        .container { padding: 20px; border-radius: 25px 25px 0 0; background: var(--dark); margin-top: -20px; position: relative; z-index: 10; }
+        .map-overlay {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+        }
+
+        .container { width: 90%; max-width: 400px; margin-top: -30px; position: relative; z-index: 10; }
         
-        h2 { font-size: 18px; color: var(--gold); margin-bottom: 15px; }
+        .card { background: var(--card); padding: 20px; border-radius: 20px; border: 1px solid #333; box-shadow: 0 10px 25px rgba(0,0,0,0.8); }
+        
+        .logo-section { text-align: center; margin-bottom: 20px; }
+        .taxi-icon { font-size: 40px; margin-bottom: 5px; }
+        .logo-text { color: var(--gold); font-size: 24px; font-weight: bold; margin: 0; }
 
-        label { display: block; font-size: 12px; color: #888; margin-bottom: 5px; margin-left: 5px; }
+        label { display: block; margin-top: 15px; color: #aaa; font-size: 13px; font-weight: bold; }
+        select, input { width: 100%; padding: 15px; margin-top: 5px; border-radius: 12px; border: 1px solid #444; background: #222; color: white; font-size: 16px; box-sizing: border-box; }
+        
+        .price-display { background: #222; padding: 15px; border-radius: 12px; margin-top: 20px; text-align: center; border: 1px dashed var(--gold); }
+        .price-display span { font-size: 30px; font-weight: bold; color: var(--gold); }
 
-        select, input {
-            width: 100%; padding: 15px; border-radius: 12px; border: 1px solid #333;
-            background: #222; color: white; font-size: 15px; margin-bottom: 15px; box-sizing: border-box;
-        }
-
-        .price-box {
-            background: linear-gradient(145deg, #1a1a1a, #000);
-            padding: 20px; border-radius: 15px; border: 1px solid var(--gold);
-            text-align: center; margin-bottom: 20px;
-        }
-        .price-box span { font-size: 28px; font-weight: bold; color: var(--gold); }
-
-        .btn-order {
-            background: var(--gold); color: black; width: 100%; padding: 18px;
-            border: none; border-radius: 15px; font-weight: bold; font-size: 16px; cursor: pointer;
-        }
-
-        /* Estilos para el panel de espera */
-        #panel-espera { display: none; text-align: center; padding: 40px 20px; }
-        .loader { border: 4px solid #333; border-top: 4px solid var(--gold); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
+        .btn-pedir { background: var(--gold); color: black; width: 100%; padding: 20px; border: none; border-radius: 15px; font-weight: bold; font-size: 18px; margin-top: 20px; cursor: pointer; box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3); }
+        
+        #panel-espera { display: none; text-align: center; padding: 30px; }
+        .loader { border: 4px solid #333; border-top: 4px solid var(--gold); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
-<div id="map"></div>
-
-<div class="container" id="panel-cliente">
-    <h2>🚕 ¿A dónde vamos hoy?</h2>
-
-    <label>PUNTO DE RECOGIDA</label>
-    <input type="text" id="origen" placeholder="¿Dónde te buscamos?" value="Brisas del Golf, Plaza del Golf">
-
-    <label>SELECCIONA TU DESTINO (TARIFARIO)</label>
-    <select id="select-destino" onchange="actualizarTarifa()">
-        <option value="0" data-price="0">-- Selecciona una ruta --</option>
-        
-        <optgroup label="ZONAS INTERNAS (Brisas del Golf)">
-            <option value="Angel Rubio / Bonlac / Puma" data-price="1.25">Angel Rubio / Bonlac / Puma / PriceSmart - B/. 1.25</option>
-            <option value="AIP / Las Trancas / Arboleda" data-price="1.50">AIP / Las Trancas / Arboleda - B/. 1.50</option>
-            <option value="Brisas del Golf (Hasta Calle 36)" data-price="1.50">Brisas del Golf (Hasta Calle 36) - B/. 1.50</option>
-            <option value="Brisas del Golf (Después Calle 36)" data-price="1.75">Brisas del Golf (Después Calle 36) - B/. 1.75</option>
-            <option value="Alpes / Everest (Garita)" data-price="2.00">Alpes / Everest (Garita) - B/. 2.00</option>
-            <option value="Alpes / Everest (Adentro)" data-price="2.50">Alpes / Everest (Adentro) - B/. 2.50</option>
-            <option value="Brisas Norte / Peninsula (Garita)" data-price="2.00">Brisas Norte / Peninsula (Garita) - B/. 2.00</option>
-            <option value="Lomas / Navona / Tiber (Garita)" data-price="1.50">Lomas / Navona / Tiber (Garita) - B/. 1.50</option>
-            <option value="Lomas / Navona / Tiber (Adentro)" data-price="2.00">Lomas / Navona / Tiber (Adentro) - B/. 2.00</option>
-        </optgroup>
-
-        <optgroup label="FUERA DE BRISAS">
-            <option value="Metromall / Los Pueblos" data-price="3.00">Metromall / Los Pueblos - B/. 3.00</option>
-            <option value="San Antonio / Cerro Viento" data-price="3.00">San Antonio / Cerro Viento - B/. 3.00</option>
-            <option value="Plaza Tocumen / Don Bosco" data-price="4.00">Plaza Tocumen / Don Bosco - B/. 4.00</option>
-            <option value="Versalles" data-price="5.00">Versalles - B/. 5.00</option>
-            <option value="Villa Lucre / San Miguelito" data-price="6.00">Villa Lucre / San Miguelito - B/. 6.00</option>
-            <option value="Costa del Este" data-price="7.50">Costa del Este - B/. 7.50</option>
-            <option value="Paitilla / Multiplaza" data-price="10.00">Paitilla / Multiplaza - B/. 10.00</option>
-            <option value="Aeropuerto Tocumen / 24 Dic" data-price="15.00">Aeropuerto / 24 de Diciembre - B/. 15.00</option>
-            <option value="Albrook Mall" data-price="15.00">Albrook Mall - B/. 15.00</option>
-        </optgroup>
-
-        <option value="otro" data-price="0">🔍 OTRO DESTINO (Calcular por KM)</option>
-    </select>
-
-    <div id="div-otro-destino" style="display:none;">
-        <label>ESCRIBE EL DESTINO</label>
-        <input type="text" id="destino-manual" placeholder="Buscar lugar en el mapa...">
-    </div>
-
-    <div class="price-box">
-        <label>ESTIMADO A PAGAR</label>
-        <span id="txt-precio">B/. 0.00</span>
-    </div>
-
-    <button class="btn-order" onclick="pedirTaxi()">PEDIR TAXI AHORA</button>
+<div class="map-header">
+    <div class="map-overlay">📍 Cobertura en Panamá</div>
 </div>
 
-<div id="panel-espera">
-    <div class="loader"></div>
-    <h2 id="status-label">Buscando conductor...</h2>
-    <p>Estamos asignando el taxi más cercano a Plaza del Golf.</p>
-    <button onclick="location.reload()" style="background:none; border:1px solid #444; color:#888; padding:10px; border-radius:10px;">Cancelar</button>
+<div class="container">
+    <div id="panel-cliente" class="card">
+        <div class="logo-section">
+            <div class="taxi-icon">🚕</div>
+            <p class="logo-text">PreetyTaxi</p>
+        </div>
+
+        <label>PUNTO DE RECOGIDA:</label>
+        <input type="text" id="origen" value="Plaza del Golf (Punto 0)">
+
+        <label>DESTINO (Zonas Brisas y Ciudad):</label>
+        <select id="select-destino" onchange="actualizarPrecio()">
+            <option value="0">-- Seleccione su destino --</option>
+            <optgroup label="Zonas Internas">
+                <option value="1.25">Angel Rubio / Pricesmart - B/. 1.25</option>
+                <option value="1.50">Brisas hasta la 36 - B/. 1.50</option>
+                <option value="1.75">Brisas después de la 36 - B/. 1.75</option>
+                <option value="2.50">Alpes / Everest (Adentro) - B/. 2.50</option>
+                <option value="2.00">Brisas Norte / Garita - B/. 2.00</option>
+            </optgroup>
+            <optgroup label="Fuera de Brisas">
+                <option value="3.50">Metromall / Los Pueblos - B/. 3.50</option>
+                <option value="7.50">Costa del Este - B/. 7.50</option>
+                <option value="10.00">Multiplaza / Paitilla - B/. 10.00</option>
+                <option value="15.00">Albrook Mall / Aeropuerto - B/. 15.00</option>
+                <option value="35.00">Chorrera / Arraiján - B/. 35.00</option>
+            </optgroup>
+        </select>
+
+        <div class="price-display">
+            <small style="color:#888">TARIFA ESTIMADA</small><br>
+            <span id="display-precio">B/. 0.00</span>
+        </div>
+
+        <button class="btn-pedir" onclick="pedirTaxi()">SOLICITAR AHORA</button>
+    </div>
+
+    <div id="panel-espera" class="card">
+        <h2 style="color:var(--gold)">Buscando Taxi...</h2>
+        <div class="loader"></div>
+        <p>Tu solicitud ha sido enviada al grupo de conductores.</p>
+        <div id="datos-conductor" style="display:none;">
+            <hr style="border:0; border-top:1px solid #333">
+            <p>Conductor asignado:</p>
+            <h3 id="nombre-ch" style="margin:5px 0;">---</h3>
+            <p id="placa-ch" style="color:#888;">Placa: ---</p>
+            <a id="link-ws" href="#" style="display:block; background:#25d366; color:white; padding:15px; border-radius:10px; text-decoration:none; margin-top:15px; font-weight:bold;">
+                CONTACTAR POR WHATSAPP
+            </a>
+        </div>
+    </div>
 </div>
 
 <script>
-    // Configuración Firebase
     const firebaseConfig = { 
-        apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", 
+        apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg",
         databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" 
     };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    let map, markerOrigen, markerDestino, autocompleteDestino;
-    let tarifaFinal = 0;
-
-    function initMap() {
-        map = new google.maps.Map(document.getElementById('map'), {
-            center: { lat: 9.053, lng: -79.456 }, // Brisas del Golf
-            zoom: 15,
-            styles: [ { "featureType": "all", "elementType": "all", "stylers": [ { "invert_lightness": true }, { "saturation": -100 }, { "lightness": -50 } ] } ]
-        });
-
-        // Autocompletado para cuando eligen "Otro"
-        autocompleteDestino = new google.maps.places.Autocomplete(document.getElementById('destino-manual'));
-        autocompleteDestino.addListener('place_changed', calcularTarifaPorKM);
-    }
-
-    function actualizarTarifa() {
-        const select = document.getElementById('select-destino');
-        const selectedOption = select.options[select.selectedIndex];
-        const precio = parseFloat(selectedOption.getAttribute('data-price'));
-        const divOtro = document.getElementById('div-otro-destino');
-
-        if (select.value === "otro") {
-            divOtro.style.display = "block";
-            tarifaFinal = 0;
-            document.getElementById('txt-precio').innerText = "B/. --";
-        } else {
-            divOtro.style.display = "none";
-            tarifaFinal = precio;
-            document.getElementById('txt-precio').innerText = "B/. " + precio.toFixed(2);
-        }
-    }
-
-    function calcularTarifaPorKM() {
-        const place = autocompleteDestino.getPlace();
-        if (!place.geometry) return;
-
-        // Lógica simple: B/. 1.50 base + 0.60 por km (puedes ajustarlo)
-        // Aquí podrías usar DistanceMatrixService de Google
-        tarifaFinal = 5.00; // Valor ejemplo para destinos manuales
-        document.getElementById('txt-precio').innerText = "B/. " + tarifaFinal.toFixed(2);
+    function actualizarPrecio() {
+        const p = document.getElementById('select-destino').value;
+        document.getElementById('display-precio').innerText = "B/. " + parseFloat(p).toFixed(2);
     }
 
     function pedirTaxi() {
         const origen = document.getElementById('origen').value;
-        const destinoSelect = document.getElementById('select-destino').value;
-        const destinoManual = document.getElementById('destino-manual').value;
-        const destinoFinal = (destinoSelect === "otro") ? destinoManual : destinoSelect;
+        const select = document.getElementById('select-destino');
+        const precio = parseFloat(select.value);
+        const destino = select.options[select.selectedIndex].text;
 
-        if (tarifaFinal <= 0) return alert("Por favor selecciona un destino válido.");
+        if (precio <= 0) return alert("Por favor, selecciona un destino.");
 
         const viaje = {
             cliente: localStorage.getItem('userName') || "Pasajero",
             clienteCel: localStorage.getItem('userCel'),
             origen: origen,
-            destino: destinoFinal,
-            precio: tarifaFinal,
+            destino: destino,
+            precio: precio,
             estado: 'pendiente',
-            fecha: new Date().getTime()
+            timestamp: new Date().getTime()
         };
 
         const ref = db.ref('viajes').push(viaje);
         
         document.getElementById('panel-cliente').style.display = "none";
         document.getElementById('panel-espera').style.display = "block";
-        
-        // Escuchar si alguien acepta
+
+        // Escuchar respuesta del chofer
         ref.on('value', snap => {
             const v = snap.val();
-            if(v.estado === 'en curso') {
-                alert("¡Taxi aceptado por " + v.conductorNombre + "!");
-                window.location.href = "https://wa.me/507" + v.conductorCel;
+            if(v && v.estado === "en curso") {
+                document.getElementById('datos-conductor').style.display = "block";
+                document.getElementById('nombre-ch').innerText = v.conductorNombre;
+                document.getElementById('placa-ch').innerText = "PLACA: " + v.conductorPlaca;
+                document.getElementById('link-ws').href = `https://wa.me/507${v.conductorCel}?text=Hola! Soy tu pasajero de PreetyTaxi. Te espero en ${v.origen}`;
             }
         });
     }
-
-    window.onload = initMap;
 </script>
 </body>
 </html>

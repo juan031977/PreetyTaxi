@@ -3,87 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>PreetyTaxi - Tarifas Oficiales</title>
+    <title>PreetyTaxi - Pedir</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
         body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #000; color: #fff; }
-        .panel-pedido { padding: 20px; background: #1a1a1a; border-radius: 20px 20px 0 0; position: fixed; bottom: 0; width: 100%; box-sizing: border-box; }
+        .panel-pedido, .panel-espera { padding: 20px; background: #1a1a1a; border-radius: 20px 20px 0 0; position: fixed; bottom: 0; width: 100%; box-sizing: border-box; }
         select, input { width: 100%; padding: 15px; margin: 10px 0; border-radius: 10px; border: none; background: #333; color: #fff; font-size: 16px; }
         .precio-tag { text-align: center; color: #ffc107; font-size: 28px; font-weight: bold; margin: 10px 0; }
-        .btn-pedir { width: 100%; padding: 18px; background: #ffc107; border: none; border-radius: 12px; font-weight: bold; font-size: 18px; cursor: pointer; }
+        .btn { width: 100%; padding: 18px; border: none; border-radius: 12px; font-weight: bold; font-size: 18px; cursor: pointer; margin-top: 10px; }
+        .btn-pedir { background: #ffc107; color: #000; }
+        .btn-cancelar { background: #ff4444; color: #fff; }
+        .btn-whatsapp { background: #25d366; color: #fff; text-decoration: none; display: flex; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
 
-    <div id="map" style="height: 50vh; background: #222; display: flex; align-items: center; justify-content: center;">
+    <div id="map" style="height: 40vh; background: #222; display: flex; align-items: center; justify-content: center;">
         <p style="color: #555;">[ Mapa de Panamá ]</p>
     </div>
 
-    <div class="panel-pedido">
+    <div id="panel-pedido" class="panel-pedido">
         <label>¿A dónde vas?</label>
         <select id="destino-select" onchange="actualizarPrecio()">
             <option value="0" data-precio="0">Selecciona un destino...</option>
             <optgroup label="Zonas Brisas">
                 <option value="Brisas hasta la 36" data-precio="1.50">Brisas del Golf (hasta la 36)</option>
-                <option value="Brisas después de la 36" data-precio="1.75">Brisas del Golf (después de la 36)</option>
                 <option value="Brisas Norte / Alpes" data-precio="2.50">Brisas Norte / Alpes / Everest</option>
-                <option value="Lomas del Golf" data-precio="1.50">Lomas del Golf / Villa Navona</option>
             </optgroup>
             <optgroup label="Fuera de Brisas">
                 <option value="El Crisol" data-precio="3.65">El Crisol</option>
-                <option value="Los Pueblos / Metromall" data-precio="3.50">Los Pueblos / Metromall</option>
-                <option value="San Antonio" data-precio="3.50">San Antonio</option>
-                <option value="Cerro Viento" data-precio="3.50">Cerro Viento</option>
+                <option value="Los Pueblos" data-precio="3.50">Los Pueblos / Metromall</option>
                 <option value="Paitilla" data-precio="10.00">Paitilla</option>
-                <option value="Costa del Este" data-precio="7.50">Costa del Este</option>
-                <option value="Aeropuerto Tocumen" data-precio="15.00">Aeropuerto Tocumen</option>
-                <option value="Versalles" data-precio="5.00">Versalles</option>
-                <option value="Don Bosco" data-precio="4.00">Don Bosco</option>
             </optgroup>
         </select>
-
         <div class="precio-tag" id="display-precio">B/. 0.00</div>
-        
-        <button class="btn-pedir" onclick="enviarPedido()">SOLICITAR TAXI 🚕</button>
+        <button class="btn btn-pedir" onclick="enviarPedido()">SOLICITAR TAXI 🚕</button>
+    </div>
+
+    <div id="panel-espera" class="panel-espera" style="display:none;">
+        <h3 id="status-label" style="text-align:center;">Buscando conductor...</h3>
+        <div id="datos-conductor" style="display:none; background:#333; padding:15px; border-radius:10px; margin-bottom:10px;">
+            <p>🚖 <b>Conductor:</b> <span id="nombre-ch">---</span></p>
+            <p>🆔 <b>Placa:</b> <span id="placa-ch">---</span></p>
+            <a id="btn-ws-cliente" class="btn btn-whatsapp" target="_blank">Chat con Conductor</a>
+        </div>
+        <button class="btn btn-cancelar" onclick="cancelarViaje()">CANCELAR VIAJE</button>
     </div>
 
     <script>
         const firebaseConfig = { apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+        let viajeID = null;
 
         function actualizarPrecio() {
             const select = document.getElementById('destino-select');
             const precio = select.options[select.selectedIndex].getAttribute('data-precio');
-            
-            // Aplicar recargos del PDF (Ejemplo: Nocturno o Feriado)
-            let precioFinal = parseFloat(precio);
-            const hora = new Date().getHours();
-            
-            if (hora >= 22 || hora < 5) {
-                precioFinal += 0.25; // Recargo nocturno según PDF
-            }
-
-            document.getElementById('display-precio').innerText = "B/. " + precioFinal.toFixed(2);
+            document.getElementById('display-precio').innerText = "B/. " + parseFloat(precio).toFixed(2);
         }
 
         function enviarPedido() {
             const destino = document.getElementById('destino-select').value;
-            const precio = document.getElementById('display-precio').innerText;
+            const precio = document.getElementById('display-precio').innerText.replace("B/. ", "");
+            if (destino === "0") return alert("Selecciona destino");
 
-            if (destino === "0") return alert("Por favor selecciona un destino");
-
-            db.ref('viajes').push({
+            const ref = db.ref('viajes').push({
                 cliente: localStorage.getItem('userName') || "Pasajero",
+                celular: localStorage.getItem('userCel'),
                 origen: "Plaza del Golf",
                 destino: destino,
-                precio: precio.replace("B/. ", ""),
+                precio: precio,
                 estado: "pendiente",
                 timestamp: Date.now()
             });
+            viajeID = ref.key;
+            document.getElementById('panel-pedido').style.display = "none";
+            document.getElementById('panel-espera').style.display = "block";
+            escucharEstado();
+        }
 
-            alert("Pedido enviado con tarifa oficial de Servi Taxi");
+        function escucharEstado() {
+            db.ref('viajes/' + viajeID).on('value', snap => {
+                const v = snap.val();
+                if(!v) return;
+                if(v.estado === "en curso") {
+                    document.getElementById('status-label').innerText = "🚕 ¡CONDUCTOR EN CAMINO!";
+                    document.getElementById('datos-conductor').style.display = "block";
+                    document.getElementById('nombre-ch').innerText = v.conductorNombre;
+                    document.getElementById('placa-ch').innerText = v.conductorPlaca;
+                    document.getElementById('btn-ws-cliente').href = `https://wa.me/507${v.conductorCel}?text=Hola, te espero para el viaje a ${v.destino}`;
+                }
+                if(v.estado === "completado" || v.estado === "cancelado") {
+                    alert("Viaje " + v.estado);
+                    location.reload();
+                }
+            });
+        }
+
+        function cancelarViaje() {
+            if(confirm("¿Cancelar pedido?")) {
+                db.ref('viajes/' + viajeID).update({ estado: 'cancelado' }).then(() => location.reload());
+            }
         }
     </script>
 </body>

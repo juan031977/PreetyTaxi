@@ -2,149 +2,121 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Admin PreetyTaxi - Control Maestro</title>
+    <title>Admin PreetyTaxi - Control</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { font-family: sans-serif; background: #f4f7f6; padding: 20px; margin: 0; }
-        header { background: #000; color: #ffc107; padding: 20px; text-align: center; border-radius: 0 0 20px 20px; margin-bottom: 20px; }
-        .container { max-width: 1000px; margin: auto; }
+        body { font-family: sans-serif; background: #f4f7f6; padding: 20px; }
         .card { background: white; padding: 20px; border-radius: 12px; text-align: center; border-top: 5px solid #ffc107; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
-        
-        table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        th, td { text-align: left; padding: 15px; border-bottom: 1px solid #eee; }
-        th { background: #f8f9fa; color: #666; text-transform: uppercase; font-size: 12px; }
-        
-        .btn { padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.3s; }
-        .btn-off { background: #ff4444; color: white; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
+        .btn { padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 11px; margin: 2px; }
         .btn-on { background: #28a745; color: white; }
-        .btn-reset { background: #007bff; color: white; }
-        .btn-danger { background: #000; color: #ffc107; width: 100%; margin-top: 10px; }
-        
-        .badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
-        .badge-pendiente { background: #ffeeba; color: #856404; }
-        .badge-activo { background: #d4edda; color: #155724; }
-        .badge-bloqueado { background: #f8d7da; color: #721c24; }
+        .btn-off { background: #dc3545; color: white; }
+        .btn-semanal { background: #000; color: #ffc107; padding: 15px; width: 100%; font-size: 16px; margin-top: 20px; }
+        .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; }
+        .bg-activo { background: #e8f5e9; color: #2e7d32; }
+        .bg-bloqueado { background: #ffebee; color: #c62828; }
     </style>
 </head>
 <body>
 
-<header>
-    <h1>PreetyTaxi Admin 🚕</h1>
-    <p>Panel de Control Servi Taxi Plaza del Golf</p>
-</header>
-
-<div class="container">
-    <div class="stats-grid">
-        <div class="card">
-            <h3 style="margin:0; color:#888;">Comisiones Totales</h3>
-            <h2 id="total-comisiones" style="font-size:32px; color:#28a745;">B/. 0.00</h2>
-        </div>
-        <div class="card">
-            <h3 style="margin:0; color:#888;">Conductores Activos</h3>
-            <h2 id="num-conductores" style="font-size:32px; color:#000;">0</h2>
-        </div>
-    </div>
-
     <div class="card">
-        <h3>Lista de Conductores y Deudas</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>Conductor</th>
-                    <th>Placa</th>
-                    <th>Deuda (Cuotas)</th>
-                    <th>Estatus</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody id="tabla-conductores">
-                </tbody>
-        </table>
-        
-        <button class="btn btn-danger" onclick="cierreSemanal()">
-            <i class="fas fa-sync-alt"></i> EJECUTAR CIERRE SEMANAL (RESET GENERAL)
-        </button>
+        <h2>Panel Administrativo 🚖</h2>
+        <p>Control de Conductores y Comisiones</p>
+        <div style="display:flex; justify-content: space-around; font-size: 20px; font-weight: bold;">
+            <div>Comisión Total: <span id="b-comi" style="color:red">B/. 0.00</span></div>
+        </div>
     </div>
-</div>
 
-<script>
-    const firebaseConfig = { 
-        apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg",
-        databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" 
-    };
-    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    <table>
+        <thead>
+            <tr>
+                <th>Conductor</th>
+                <th>Placa</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody id="lista-conductores">
+            </tbody>
+    </table>
 
-    function cargarDatos() {
-        db.ref('conductores').on('value', snap => {
-            const tbody = document.getElementById('tabla-conductores');
-            tbody.innerHTML = "";
-            let totalComi = 0;
-            let countActivos = 0;
+    <button class="btn btn-semanal" onclick="cierreSemanal()">
+        <i class="fas fa-sync-alt"></i> EJECUTAR CIERRE SEMANAL (RESET)
+    </button>
 
-            snap.forEach(child => {
-                const c = child.val();
-                const id = child.key;
-                const deuda = parseFloat(c.deuda || 0);
-                totalComi += deuda;
-                if(c.estado === "activo") countActivos++;
+    <script>
+        const firebaseConfig = { 
+            apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg",
+            databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" 
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
-                tbody.innerHTML += `
+        function cargarConductores() {
+            db.ref('conductores').on('value', snapshot => {
+                const tbody = document.getElementById('lista-conductores');
+                tbody.innerHTML = "";
+                let tComi = 0;
+
+                snapshot.forEach(child => {
+                    const d = child.val();
+                    const idConductor = child.key;
+                    const esBloqueado = d.estado === 'bloqueado';
+                    tComi += parseFloat(d.deuda || 0);
+
+                    tbody.innerHTML += `
                     <tr>
-                        <td><strong>${c.nombre}</strong><br><small>${c.celular}</small></td>
-                        <td>${c.placa}</td>
-                        <td style="color: ${deuda > 0 ? 'red' : 'green'}; font-weight:bold;">B/. ${deuda.toFixed(2)}</td>
-                        <td><span class="badge badge-${c.estado}">${c.estado.toUpperCase()}</span></td>
                         <td>
-                            <button class="btn ${c.estado === 'bloqueado' ? 'btn-on' : 'btn-off'}" 
-                                onclick="toggleStatus('${id}', '${c.estado}')">
-                                ${c.estado === 'bloqueado' ? 'ACTIVAR' : 'BLOQUEAR'}
+                            <b>${d.nombre}</b><br>
+                            <small>${d.celular}</small>
+                        </td>
+                        <td>${d.placa}</td>
+                        <td>
+                            <span class="status-badge ${esBloqueado ? 'bg-bloqueado' : 'bg-activo'}">
+                                ${d.estado.toUpperCase()}
+                            </span>
+                        </td>
+                        <td>
+                            <button class="btn ${esBloqueado ? 'btn-on' : 'btn-off'}" onclick="toggleConductor('${idConductor}', '${d.estado}')">
+                                ${esBloqueado ? 'ACTIVAR' : 'BLOQUEAR'}
                             </button>
-                            <button class="btn btn-reset" onclick="pagarDeuda('${id}', '${c.nombre}')">
-                                PAGÓ
+                            <button class="btn btn-on" style="background:#007bff" onclick="resetDeuda('${idConductor}', '${d.placa}')">
+                                PAGÓ (RESET)
                             </button>
                         </td>
-                    </tr>
-                `;
-            });
-            document.getElementById('total-comisiones').innerText = "B/. " + totalComi.toFixed(2);
-            document.getElementById('num-conductores').innerText = countActivos;
-        });
-    }
-
-    function toggleStatus(id, est) {
-        const nuevo = (est === 'bloqueado') ? 'activo' : 'bloqueado';
-        db.ref('conductores/' + id).update({ estado: nuevo });
-    }
-
-    function pagarDeuda(id, nombre) {
-        if(confirm(`¿Confirmas que ${nombre} ha pagado su deuda pendiente?`)) {
-            db.ref('conductores/' + id).update({ deuda: 0, totalGeneradoHoy: 0 });
-        }
-    }
-
-    function cierreSemanal() {
-        if(confirm("⚠️ ATENCIÓN: Esto borrará el historial de viajes y pondrá todas las deudas en B/. 0.00.\n\n¿Deseas continuar?")) {
-            // Borrar viajes
-            db.ref('viajes').remove();
-            // Resetear deudas de todos
-            db.ref('conductores').once('value', snap => {
-                snap.forEach(child => {
-                    db.ref('conductores/' + child.key).update({
-                        deuda: 0,
-                        totalGeneradoHoy: 0
-                    });
+                    </tr>`;
                 });
+                document.getElementById('b-comi').innerText = "B/. " + tComi.toFixed(2);
             });
-            alert("✅ Cierre semanal completado con éxito.");
         }
-    }
 
-    window.onload = cargarDatos;
-</script>
+        function toggleConductor(id, est) { 
+            const nuevoEstado = (est === 'bloqueado') ? 'activo' : 'bloqueado';
+            db.ref('conductores/' + id).update({ estado: nuevoEstado }); 
+        }
 
+        function resetDeuda(id, placa) {
+            if(confirm("¿Confirmas que la placa " + placa + " ya pagó su deuda?")) {
+                db.ref('conductores/' + id).update({ deuda: 0, estado: 'activo' });
+            }
+        }
+
+        function cierreSemanal() {
+            if(confirm("⚠️ ATENCIÓN: Esto eliminará el historial de viajes y reseteará deudas.\n¿Deseas continuar?")) {
+                db.ref('viajes').remove();
+                db.ref('conductores').once('value', s => {
+                    s.forEach(c => {
+                        db.ref('conductores/' + c.key).update({ deuda: 0, totalGeneradoHoy: 0 });
+                    });
+                    alert("✅ Cierre semanal completado con éxito.");
+                });
+            }
+        }
+
+        cargarConductores();
+    </script>
 </body>
 </html>

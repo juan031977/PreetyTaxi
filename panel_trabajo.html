@@ -10,97 +10,130 @@
         body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; padding: 15px; margin: 0; }
         .billetera { background: #1a1a1a; padding: 20px; border-radius: 20px; border: 1px solid #333; margin-bottom: 15px; text-align: center; }
         .monto { color: #ffc107; font-size: 26px; font-weight: bold; }
+        .status-bar { display: flex; align-items: center; justify-content: space-between; background: #1a1a1a; padding: 12px 20px; border-radius: 50px; border: 1px solid #333; margin-bottom: 15px; }
+        
+        /* El Switch del código viejo */
+        .switch { position: relative; display: inline-block; width: 54px; height: 28px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #25d366; }
+        input:checked + .slider:before { transform: translateX(26px); }
+
         .viaje-card { background: #222; padding: 15px; border-radius: 15px; margin-bottom: 10px; border-left: 5px solid #ffc107; }
-        .btn { padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; flex: 1; }
+        .btn { padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; width: 100%; font-size: 14px; }
         .btn-ok { background: #ffc107; color: #000; }
-        .btn-cancel { background: #ff4444; color: #fff; }
-        .btn-ws { background: #25d366; color: #fff; text-decoration: none; display: flex; align-items: center; justify-content: center; padding: 12px; border-radius: 8px; font-weight: bold; }
-        #sonido-aviso { background: #444; color: white; width: 100%; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 12px; }
+        .btn-ws { background: #25d366; color: #fff; text-decoration: none; display: flex; align-items: center; justify-content: center; }
+        .btn-cancel { background: transparent; color: #ff4444; border: 1px solid #ff4444; font-size: 11px; }
     </style>
 </head>
-<body>
+<body onload="cargar()">
 
-    <button id="sonido-aviso" onclick="this.style.display='none'">🔔 Toca aquí para activar alertas de sonido</button>
-
-    <div class="billetera">
-        <div>Deuda Actual (Comisión 10%):</div>
-        <div class="monto" id="deuda-valor">B/. 0.00</div>
-        <div style="margin-top: 10px; font-size: 14px; color: #888;">Generado hoy: <span id="hoy-valor">B/. 0.00</span></div>
+    <div class="status-bar">
+        <span id="status-text">DESCONECTADO</span>
+        <label class="switch">
+            <input type="checkbox" id="check-status" onchange="toggleConexion(this)">
+            <span class="slider"></span>
+        </label>
     </div>
 
-    <h3>Viajes Disponibles</h3>
-    <div id="lista-pendientes"></div>
+    <div class="billetera">
+        <div style="display:flex; justify-content: space-around;">
+            <div><small style="color:#888;">GANANCIA HOY</small><div id="hoy-valor" class="monto">B/. 0.00</div></div>
+            <div><small style="color:#888;">DEUDA APP</small><div id="deuda-valor" class="monto" style="color:#ff4444;">B/. 0.00</div></div>
+        </div>
+    </div>
 
-    <h3>Mi Viaje Actual</h3>
-    <div id="viaje-activo"></div>
-
-    <audio id="audio-silbido" src="silbido.mp3" preload="auto"></audio>
+    <div id="lista-viajes"></div>
 
     <script>
         const firebaseConfig = { apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         const miCel = localStorage.getItem('driverCel');
-        const audio = document.getElementById('audio-silbido');
+        
+        // SONIDO Y LOGICA DE NOTIFICACIÓN
+        const silbido = new Audio('https://raw.githubusercontent.com/juan031977/PreetyTaxi/main/silbido.mp3');
+        let ultimoViajeId = "";
 
-        if(!miCel) window.location.href = "login_conductor.html";
+        function cargar() {
+            if(!miCel) window.location.href = "login_conductor.html";
+            
+            // Forzar desconexión al entrar para obligar al toque de pantalla (activar sonido)
+            db.ref('conductores/' + miCel).update({ conectado: false });
 
-        // Escuchar datos del conductor (Deuda y Ganancias)
-        db.ref('conductores/' + miCel).on('value', snap => {
-            const d = snap.val();
-            if(d) {
+            db.ref('conductores/' + miCel).on('value', snap => {
+                const d = snap.val() || {};
                 document.getElementById('deuda-valor').innerText = "B/. " + parseFloat(d.deuda || 0).toFixed(2);
                 document.getElementById('hoy-valor').innerText = "B/. " + parseFloat(d.totalGeneradoHoy || 0).toFixed(2);
-            }
-        });
-
-        // Escuchar viajes
-        db.ref('viajes').on('value', snap => {
-            const viajes = snap.val();
-            const listado = document.getElementById('lista-pendientes');
-            const activo = document.getElementById('viaje-activo');
-            listado.innerHTML = "";
-            activo.innerHTML = "";
-
-            let hayPendientes = false;
-
-            for (let id in viajes) {
-                const v = viajes[id];
-
-                // VIAJES DISPONIBLES (PENDIENTES)
-                if (v.estado === "pendiente") {
-                    hayPendientes = true;
-                    listado.innerHTML += `
-                        <div class="viaje-card">
-                            <p><b>📍 Para:</b> ${v.destino}</p>
-                            <p><b>💰 Tarifa:</b> B/. ${v.precio}</p>
-                            <button class="btn btn-ok" onclick="tomarViaje('${id}')">ACEPTAR VIAJE</button>
-                        </div>
-                    `;
+                document.getElementById('check-status').checked = d.conectado || false;
+                
+                const statusTxt = document.getElementById('status-text');
+                if(d.conectado) {
+                    statusTxt.innerText = "ESTÁS ACTIVO";
+                    statusTxt.style.color = "#25d366";
+                    escucharViajes();
+                } else {
+                    statusTxt.innerText = "DESCONECTADO";
+                    statusTxt.style.color = "#ff4d4d";
+                    document.getElementById('lista-viajes').innerHTML = '<p style="text-align:center; color:#444;">Ponte en línea para recibir pedidos</p>';
                 }
+            });
+        }
 
-                // VIAJE QUE EL CONDUCTOR YA TIENE EN CURSO
-                if (v.estado === "en curso" && v.conductorCel === miCel) {
-                    activo.innerHTML = `
-                        <div class="viaje-card" style="border-color: #25d366;">
-                            <p><b>👤 Cliente:</b> ${v.cliente}</p>
-                            <p><b>📍 Destino:</b> ${v.destino}</p>
-                            <p><b>💰 Cobrar:</b> B/. ${v.precio}</p>
-                            <div style="display:flex; gap:10px;">
-                                <a href="https://wa.me/507${v.celular}?text=Hola, soy tu conductor de PreetyTaxi, voy en camino" class="btn-ws">WhatsApp</a>
-                                <button class="btn btn-ok" onclick="completarViaje('${id}', ${v.precio})">FINALIZAR</button>
-                            </div>
-                            <button class="btn btn-cancel" onclick="cancelarViaje('${id}')">CANCELAR</button>
-                        </div>
-                    `;
-                }
-            }
+        function toggleConexion(el) {
+            // EL TRUCO DEL CÓDIGO VIEJO: Reproducir y pausar para ganar permiso
+            silbido.play().then(() => { 
+                silbido.pause(); 
+                silbido.currentTime = 0; 
+            }).catch(e => console.log("Permiso de audio concedido"));
+            
+            db.ref('conductores/' + miCel).update({ conectado: el.checked });
+        }
 
-            // Lógica de sonido: Si hay viajes nuevos y el audio está listo
-            if(hayPendientes) {
-                audio.play().catch(e => console.log("Sonido bloqueado hasta interacción"));
-            }
-        });
+        function escucharViajes() {
+            db.ref('viajes').on('value', snap => {
+                const lista = document.getElementById('lista-viajes');
+                let html = "";
+                let hayPendientes = false;
+
+                snap.forEach(child => {
+                    const v = child.val();
+                    
+                    // Sonar si es estado "buscando" o "pendiente" (cubrimos ambos)
+                    if (v.estado === "buscando" || v.estado === "pendiente") {
+                        hayPendientes = true;
+                        if(ultimoViajeId !== child.key) {
+                            silbido.play().catch(e => console.log("Sonando..."));
+                            ultimoViajeId = child.key;
+                            if(navigator.vibrate) navigator.vibrate([300, 100, 300]);
+                        }
+
+                        html += `
+                            <div class="viaje-card">
+                                <p><b>📍 Destino:</b> ${v.destino}</p>
+                                <p><b>💰 Tarifa:</b> B/. ${v.precio}</p>
+                                <button class="btn btn-ok" onclick="tomarViaje('${child.key}')">ACEPTAR VIAJE</button>
+                            </div>`;
+                    }
+
+                    if (v.estado === "en curso" && v.conductorCel === miCel) {
+                        html = `
+                            <div class="viaje-card" style="border-left-color: #25d366; background: #fff; color: #000;">
+                                <p><b>👤 Cliente:</b> ${v.cliente}</p>
+                                <p><b>📍 Recoger en:</b> ${v.origen}</p>
+                                <p style="font-size: 20px;"><b>Total: B/. ${v.precio}</b></p>
+                                <a href="https://wa.me/507${v.celular || v.telefono}?text=Hola, voy en camino" class="btn btn-ws">WhatsApp</a>
+                                <button class="btn btn-ok" style="background:#000; color:#fff;" onclick="finalizarViaje('${child.key}', ${v.precio})">FINALIZAR VIAJE</button>
+                                <button class="btn btn-cancel" onclick="cancelarViaje('${child.key}')">CANCELAR</button>
+                            </div>`;
+                    }
+                });
+
+                if(!hayPendientes) ultimoViajeId = "";
+                lista.innerHTML = html || '<p style="text-align:center; color:#333;">Esperando viajes...</p>';
+            });
+        }
 
         function tomarViaje(id) {
             db.ref('conductores/' + miCel).once('value', s => {
@@ -114,25 +147,25 @@
             });
         }
 
-        function completarViaje(id, precioTotal) {
-            const cuotaApp = precioTotal * 0.10; // 10% de comisión
-            const gananciaChofer = precioTotal - cuotaApp;
-
+        function finalizarViaje(id, precio) {
+            if(!confirm("¿Finalizar viaje?")) return;
+            // Comisión lógica del PDF:
+            const p = parseFloat(precio);
+            const cuota = p <= 3.25 ? 0.25 : (p <= 6.50 ? 0.50 : 1.00);
+            
             db.ref('viajes/' + id).update({ estado: 'completado' }).then(() => {
                 db.ref('conductores/' + miCel).once('value', s => {
                     const dc = s.val();
                     db.ref('conductores/' + miCel).update({
-                        totalGeneradoHoy: (parseFloat(dc.totalGeneradoHoy || 0) + gananciaChofer).toFixed(2),
-                        deuda: (parseFloat(dc.deuda || 0) + cuotaApp).toFixed(2)
+                        totalGeneradoHoy: (parseFloat(dc.totalGeneradoHoy || 0) + (p - cuota)).toFixed(2),
+                        deuda: (parseFloat(dc.deuda || 0) + cuota).toFixed(2)
                     });
                 });
             });
         }
 
         function cancelarViaje(id) {
-            if(confirm("¿Seguro que deseas cancelar?")) {
-                db.ref('viajes/' + id).update({ estado: 'cancelado' });
-            }
+            if(confirm("¿Cancelar este viaje?")) db.ref('viajes/' + id).update({ estado: 'cancelado' });
         }
     </script>
 </body>

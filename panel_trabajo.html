@@ -8,199 +8,170 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
+        /* MANTENGO TU DISEÑO ORIGINAL OSCURO */
         body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; padding: 15px; margin: 0; }
         .billetera { background: linear-gradient(145deg, #1a1a1a, #000); padding: 20px; border-radius: 24px; border: 1px solid #333; margin-bottom: 15px; text-align: center; }
         .monto { color: #ffc107; font-size: 26px; font-weight: bold; }
-        .status-bar { display: flex; align-items: center; justify-content: space-between; background: #1a1a1a; padding: 12px 20px; border-radius: 50px; border: 1px solid #333; margin-bottom: 5px; }
-        .switch { position: relative; display: inline-block; width: 54px; height: 28px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .4s; border-radius: 34px; }
-        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: #25d366; }
-        input:checked + .slider:before { transform: translateX(26px); }
+        .status-bar { display: flex; align-items: center; justify-content: space-between; background: #1a1a1a; padding: 10px 20px; border-radius: 50px; margin-bottom: 20px; border: 1px solid #333; }
         
-        /* ESTILO DEL MENSAJE DE AVISO */
-        .msg-permiso { color: #ffc107; font-size: 11px; text-align: center; margin-bottom: 20px; display: block; font-weight: bold; }
+        .viaje-card { background: #1a1a1a; padding: 20px; border-radius: 20px; border-left: 5px solid #ffc107; margin-bottom: 15px; }
+        .btn-accion { width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: bold; margin-top: 10px; cursor: pointer; }
+        .btn-aceptar { background: #ffc107; color: #000; }
+        .btn-finalizar { background: #28a745; color: #fff; }
+        .btn-wsp { background: #25d366; color: #fff; display: flex; align-items: center; justify-content: center; text-decoration: none; font-weight: bold; }
         
-        .viaje-card { background: #111; padding: 18px; border-radius: 20px; margin-bottom: 12px; border: 1px solid #222; animation: notify 0.5s infinite alternate; }
-        @keyframes notify { from { border-color: #222; } to { border-color: #ffc107; } }
-        .btn-aceptar { background: #ffc107; color: #000; padding: 14px; width: 100%; border-radius: 14px; font-weight: bold; border: none; margin-top: 10px; font-size: 16px; }
-        .viaje-activo { background: #fff; color: #000; padding: 25px; border-radius: 28px; border-left: 10px solid #ffc107; }
-        .btn { width: 100%; padding: 16px; border: none; border-radius: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; text-decoration: none; }
-        .btn-ws { background: #25d366; color: white; }
-        .btn-fin { background: #000; color: #fff; }
-        .btn-cancelar { background: #fff; color: #ff4d4d; border: 1px solid #ff4d4d; margin-top: 15px; font-size: 12px; }
+        .toggle-btn { width: 50px; height: 25px; background: #333; border-radius: 25px; position: relative; cursor: pointer; transition: 0.3s; }
+        .toggle-btn.on { background: #28a745; }
+        .toggle-btn::before { content: ''; position: absolute; width: 21px; height: 21px; background: #fff; border-radius: 50%; top: 2px; left: 2px; transition: 0.3s; }
+        .toggle-btn.on::before { left: 27px; }
     </style>
 </head>
-<body onload="cargar()">
-    <div class="status-bar">
-        <span id="status-text">Cargando...</span>
-        <label class="switch">
-            <input type="checkbox" id="check-status" onchange="toggleConexion(this)">
-            <span class="slider"></span>
-        </label>
+<body>
+
+<div class="billetera">
+    <p style="margin:0; color:#888; font-size:14px;">Ganancia de Hoy</p>
+    <div class="monto">B/. <span id="ganancia-hoy">0.00</span></div>
+    <p style="margin:5px 0 0 0; color:#ff4444; font-size:12px;">Cuota Pendiente: B/. <span id="deuda-total">0.00</span></p>
+</div>
+
+<div class="status-bar">
+    <span>Estatus: <strong id="txt-status" style="color:#888;">OFFLINE</strong></span>
+    <div class="toggle-btn" id="btn-status" onclick="toggleOnline()"></div>
+</div>
+
+<div id="contenedor-viajes">
     </div>
-
-    <!-- EL MENSAJE DE AVISO -->
-    <small id="msg-propiedades" class="msg-permiso">⚠️ Activa sonido y notificaciones en propiedades de la app</small>
-
-    <div class="billetera">
-        <div id="lbl-cel" style="font-size: 10px; opacity: 0.5; margin-bottom: 8px;">---</div>
-        <div style="display:flex; justify-content: space-around;">
-            <div><small style="color:#888;">GANANCIA</small><div id="txt-ventas" class="monto">B/. 0.00</div></div>
-            <div><small style="color:#888;">CUOTA</small><div id="txt-deuda" class="monto" style="color:#ff4d4d;">B/. 0.00</div></div>
-        </div>
-        <a href="reportes.html" style="color: #ffc107; font-size: 12px; text-decoration: none; display: block; margin-top: 15px;">VER REPORTES</a>
-    </div>
-
-    <div id="lista-viajes"></div>
 
 <script>
-    const firebaseConfig = { apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
+    const firebaseConfig = { 
+        apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg",
+        databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" 
+    };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+
     const miCel = localStorage.getItem('driverCel');
-    
-    // EL SILBIDO RENOMBRADO
-    const silbido = new Audio('https://raw.githubusercontent.com/juan031977/PreetyTaxi/main/silbido.mp3');
-    let ultimoViajeId = "";
+    let miInfo = null;
+    let esOnline = false;
 
-    function cargar() {
-        if(!miCel) return window.location.href="login.html";
-        document.getElementById('lbl-cel').innerText = "CHOFER: " + miCel;
-        
-        // 1. FORZAMOS DESCONEXIÓN AL INICIAR PARA QUE EL CHOFER TENGA QUE TOCAR LA PANTALLA
-        db.ref('conductores/' + miCel).update({ conectado: false });
-
-        db.ref('conductores/' + miCel).on('value', s => {
-            const d = s.val() || {};
-            document.getElementById('txt-ventas').innerText = "B/. " + (parseFloat(d.totalGeneradoHoy) || 0).toFixed(2);
-            document.getElementById('txt-deuda').innerText = "B/. " + (parseFloat(d.deuda) || 0).toFixed(2);
-            document.getElementById('check-status').checked = d.conectado || false;
+    // Obtener info del chofer y su deuda
+    db.ref('conductores/' + miCel).on('value', snap => {
+        miInfo = snap.val();
+        if(miInfo) {
+            document.getElementById('ganancia-hoy').innerText = parseFloat(miInfo.totalGeneradoHoy || 0).toFixed(2);
+            document.getElementById('deuda-total').innerText = parseFloat(miInfo.deuda || 0).toFixed(2);
             
-            const statusTxt = document.getElementById('status-text');
-            const msg = document.getElementById('msg-propiedades');
-
-            if(d.conectado) {
-                statusTxt.innerText = "ESTÁS ACTIVO";
-                statusTxt.style.color = "#25d366";
-                msg.style.display = "none"; // Se esconde al conectar
-                escucharViajes();
-            } else {
-                statusTxt.innerText = "DESCONECTADO";
-                statusTxt.style.color = "#ff4d4d";
-                msg.style.display = "block"; // Se muestra al estar desconectado
-                db.ref('viajes').off();
-                document.getElementById('lista-viajes').innerHTML = '<p style="text-align:center; color:#444;">Ponte en línea para recibir pedidos</p>';
+            // Si el admin lo bloqueó, lo sacamos de línea
+            if(miInfo.estado === "bloqueado") {
+                esOnline = false;
+                actualizarUIStatus();
             }
-        });
+        }
+    });
+
+    function toggleOnline() {
+        if(miInfo && miInfo.estado === "bloqueado") return alert("❌ Acceso bloqueado. Contacta al Admin para pagar tu cuota.");
+        esOnline = !esOnline;
+        actualizarUIStatus();
     }
 
-    function toggleConexion(el) {
-        // TRUCO: Reproducir y pausar el silbido para ganar el permiso del navegador
-        silbido.play().then(() => { 
-            silbido.pause(); 
-            silbido.currentTime = 0; 
-        }).catch(e => console.log("Audio desbloqueado"));
-        
-        db.ref('conductores/' + miCel).update({ conectado: el.checked });
-        
-        if(el.checked && 'wakeLock' in navigator) {
-            navigator.wakeLock.request('screen').catch(e => {});
+    function actualizarUIStatus() {
+        const btn = document.getElementById('btn-status');
+        const txt = document.getElementById('txt-status');
+        if(esOnline) {
+            btn.classList.add('on');
+            txt.innerText = "ONLINE";
+            txt.style.color = "#28a745";
+            escucharViajes();
+        } else {
+            btn.classList.remove('on');
+            txt.innerText = "OFFLINE";
+            txt.style.color = "#888";
+            document.getElementById('contenedor-viajes').innerHTML = "";
+            db.ref('viajes').off();
         }
     }
 
     function escucharViajes() {
         db.ref('viajes').on('value', snap => {
-            const lista = document.getElementById('lista-viajes');
-            let html = ""; 
-            let hay = false;
-
+            if(!esOnline) return;
+            const container = document.getElementById('contenedor-viajes');
+            container.innerHTML = "";
+            
             snap.forEach(child => {
                 const v = child.val();
-                if(v.estado === "buscando") {
-                    hay = true;
-                    if(ultimoViajeId !== child.key) {
-                        // AQUÍ SUENA EL SILBIDO
-                        silbido.play().catch(e => console.log("Error de reproducción"));
-                        ultimoViajeId = child.key;
-                        if(navigator.vibrate) navigator.vibrate([300, 100, 300]);
-                    }
-
-                    html += `<div class="viaje-card">
-                        <div style="display:flex; justify-content:space-between"><span>📍 NUEVO PEDIDO</span><b style="color:#ffc107;">B/. ${v.precio}</b></div>
-                        <div style="font-size:14px; margin: 10px 0;">${v.origen} ➔ ${v.destino}</div>
-                        <button class="btn-aceptar" onclick="aceptar('${child.key}')">ACEPTAR VIAJE</button>
-                    </div>`;
-                } else if(v.estado === "en curso" && v.conductorCel === miCel) {
-                    hay = true;
-                    const textoChat = `Hola *${v.cliente}*, soy tu conductor de PreetyTaxi. Ya voy en camino por ti.`;
-                    html = `<div class="viaje-activo">
-                        <small>CLIENTE</small>
-                        <h2 style="margin:0;">${v.cliente}</h2>
-                        <p>📍 ${v.origen}</p>
-                        <div style="font-size:30px; font-weight:bold; margin:10px 0;">B/. ${v.precio}</div>
-                        <a href="https://wa.me/507${v.telefono}?text=${encodeURIComponent(textoChat)}" class="btn btn-ws"><i class="fab fa-whatsapp"></i> CHATEAR</a>
-                        <button class="btn btn-fin" onclick="finalizar('${child.key}')">FINALIZAR VIAJE</button>
-                        <button class="btn btn-cancelar" onclick="cancelarPorChofer('${child.key}')">CANCELAR</button>
-                    </div>`;
+                if(v.estado === "esperando" || (v.estado === "en curso" && v.conductorCel === miCel)) {
+                    const card = document.createElement('div');
+                    card.className = "viaje-card";
+                    card.innerHTML = `
+                        <div style="display:flex; justify-content:space-between;">
+                            <strong>📍 ORIGEN:</strong> <span>GPS</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-top:5px;">
+                            <strong>🏁 DESTINO:</strong> <span>${v.destino}</span>
+                        </div>
+                        <div style="margin-top:15px; border-top:1px solid #333; padding-top:10px; display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-size:20px; font-weight:bold; color:#ffc107;">B/. ${v.monto}</span>
+                            ${v.estado === "esperando" ? 
+                                `<button class="btn-accion btn-aceptar" onclick="aceptarViaje('${child.key}')">ACEPTAR VIAJE</button>` : 
+                                `<div>
+                                    <a href="https://wa.me/507${v.celular}?text=Hola ${v.cliente}, soy tu conductor de PreetyTaxi. Voy en camino." class="btn-accion btn-wsp"><i class="fab fa-whatsapp"></i> &nbsp; CHATEAR</a>
+                                    <button class="btn-accion btn-finalizar" onclick="finalizarViaje('${child.key}', ${v.monto})">FINALIZAR VIAJE</button>
+                                 </div>`
+                            }
+                        `;
+                    container.appendChild(card);
                 }
             });
-            
-            if(!hay) ultimoViajeId = ""; 
-            lista.innerHTML = hay ? html : '<p style="text-align:center; color:#333;">Esperando viajes...</p>';
         });
     }
 
-    function aceptar(id) {
-        db.ref('conductores/' + miCel).once('value', s => {
-            const d = s.val() || {};
-            db.ref('viajes/' + id).update({ 
-                estado: 'en curso', 
-                conductorCel: miCel, 
-                conductorNombre: d.nombre || "Chofer", 
-                conductorPlaca: d.placa || "S/P" 
-            });
+    function aceptarViaje(id) {
+        db.ref('viajes/' + id).update({
+            estado: "en curso",
+            conductorNombre: miInfo.nombre,
+            conductorCel: miCel,
+            conductorPlaca: miInfo.placa
         });
     }
 
-    function finalizar(id) {
-        if(!confirm("¿Deseas finalizar y cobrar este viaje?")) return;
-        db.ref('viajes/' + id).once('value', snap => {
-            const v = snap.val();
-            const precioTotal = parseFloat(v.precio);
-            const cuotaApp = precioTotal <= 3.25 ? 0.25 : (precioTotal <= 6.50 ? 0.50 : 1.00);
-            const gananciaChofer = precioTotal - cuotaApp;
-            const hoy = obtenerFechaHoy();
+    function finalizarViaje(id, montoTotal) {
+        // LÓGICA DE CUOTA: Ajusta el 0.50 si tu comisión es distinta
+        const cuotaApp = 0.50; 
+        const gananciaLimpia = montoTotal - cuotaApp;
+        const fecha = new Date();
+        const hoy = fecha.getDate() + "-" + (fecha.getMonth() + 1) + "-" + fecha.getFullYear();
 
-            const updates = {};
-            updates['viajes/' + id + '/estado'] = 'completado';
-            updates['reportes_diarios/' + miCel + '/' + hoy + '/' + id] = {
-                cliente: v.cliente, ganancia: gananciaChofer.toFixed(2), cuota: cuotaApp.toFixed(2), hora: new Date().toLocaleTimeString()
-            };
+        const updates = {};
+        updates['viajes/' + id + '/estado'] = 'completado';
+        
+        // Reporte para el admin
+        updates['reportes_diarios/' + miCel + '/' + hoy + '/' + id] = {
+            cliente: "Pasajero",
+            monto: montoTotal.toFixed(2),
+            ganancia: gananciaLimpia.toFixed(2),
+            cuota: cuotaApp.toFixed(2),
+            hora: fecha.toLocaleTimeString()
+        };
 
-            db.ref().update(updates).then(() => {
-                db.ref('conductores/' + miCel).once('value', s => {
-                    const dc = s.val() || {};
-                    db.ref('conductores/' + miCel).update({
-                        totalGeneradoHoy: (parseFloat(dc.totalGeneradoHoy || 0) + gananciaChofer).toFixed(2),
-                        deuda: (parseFloat(dc.deuda || 0) + cuotaApp).toFixed(2)
-                    });
+        db.ref().update(updates).then(() => {
+            // Actualizar billetera del chofer
+            db.ref('conductores/' + miCel).once('value', s => {
+                const d = s.val();
+                db.ref('conductores/' + miCel).update({
+                    totalGeneradoHoy: (parseFloat(d.totalGeneradoHoy || 0) + gananciaLimpia).toFixed(2),
+                    deuda: (parseFloat(d.deuda || 0) + cuotaApp).toFixed(2)
                 });
             });
+            alert("¡Viaje completado! Se ha descontado la cuota de B/. " + cuotaApp.toFixed(2));
         });
     }
 
-    function cancelarPorChofer(id) { if(confirm("¿Estás seguro de cancelar el viaje?")) db.ref('viajes/' + id).update({ estado: 'cancelado' }); }
-    function obtenerFechaHoy() { const d = new Date(); return d.getDate() + "-" + (d.getMonth() + 1) + "-" + d.getFullYear(); }
-
+    // Mantener pantalla encendida
     if ('wakeLock' in navigator) {
-        let wakeLock = null;
-        const requestWakeLock = async () => {
-            try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
-        };
-        requestWakeLock();
+        navigator.wakeLock.request('screen').catch(() => {});
     }
 </script>
+
 </body>
 </html>

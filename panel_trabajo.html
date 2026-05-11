@@ -8,17 +8,18 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        /* MANTENGO TU DISEÑO ORIGINAL OSCURO */
         body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; padding: 15px; margin: 0; }
         .billetera { background: linear-gradient(145deg, #1a1a1a, #000); padding: 20px; border-radius: 24px; border: 1px solid #333; margin-bottom: 15px; text-align: center; }
         .monto { color: #ffc107; font-size: 26px; font-weight: bold; }
         .status-bar { display: flex; align-items: center; justify-content: space-between; background: #1a1a1a; padding: 10px 20px; border-radius: 50px; margin-bottom: 20px; border: 1px solid #333; }
         
-        .viaje-card { background: #1a1a1a; padding: 20px; border-radius: 20px; border-left: 5px solid #ffc107; margin-bottom: 15px; }
-        .btn-accion { width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: bold; margin-top: 10px; cursor: pointer; }
+        /* CARD DE VIAJE MEJORADA */
+        .viaje-card { background: #1a1a1a; padding: 20px; border-radius: 20px; border-left: 5px solid #ffc107; margin-bottom: 15px; animation: glow 1.5s infinite alternate; }
+        @keyframes glow { from { box-shadow: 0 0 5px #ffc107; } to { box-shadow: 0 0 20px #ffc107; } }
+        
+        .btn-accion { width: 100%; padding: 15px; border-radius: 12px; border: none; font-weight: bold; margin-top: 10px; cursor: pointer; font-size: 16px; }
         .btn-aceptar { background: #ffc107; color: #000; }
         .btn-finalizar { background: #28a745; color: #fff; }
-        .btn-wsp { background: #25d366; color: #fff; display: flex; align-items: center; justify-content: center; text-decoration: none; font-weight: bold; }
         
         .toggle-btn { width: 50px; height: 25px; background: #333; border-radius: 25px; position: relative; cursor: pointer; transition: 0.3s; }
         .toggle-btn.on { background: #28a745; }
@@ -27,6 +28,8 @@
     </style>
 </head>
 <body>
+
+<audio id="audioSilbido" src="https://www.soundjay.com/communication/sounds/whistle-01.mp3" preload="auto"></audio>
 
 <div class="billetera">
     <p style="margin:0; color:#888; font-size:14px;">Ganancia de Hoy</p>
@@ -53,24 +56,18 @@
     const miCel = localStorage.getItem('driverCel');
     let miInfo = null;
     let esOnline = false;
+    let viajesVistos = new Set();
 
-    // Obtener info del chofer y su deuda
     db.ref('conductores/' + miCel).on('value', snap => {
         miInfo = snap.val();
         if(miInfo) {
             document.getElementById('ganancia-hoy').innerText = parseFloat(miInfo.totalGeneradoHoy || 0).toFixed(2);
             document.getElementById('deuda-total').innerText = parseFloat(miInfo.deuda || 0).toFixed(2);
-            
-            // Si el admin lo bloqueó, lo sacamos de línea
-            if(miInfo.estado === "bloqueado") {
-                esOnline = false;
-                actualizarUIStatus();
-            }
         }
     });
 
     function toggleOnline() {
-        if(miInfo && miInfo.estado === "bloqueado") return alert("❌ Acceso bloqueado. Contacta al Admin para pagar tu cuota.");
+        if(miInfo && miInfo.estado === "bloqueado") return alert("❌ Acceso bloqueado. Contacta al Admin.");
         esOnline = !esOnline;
         actualizarUIStatus();
     }
@@ -100,26 +97,30 @@
             
             snap.forEach(child => {
                 const v = child.val();
+                
+                // --- LÓGICA DEL SILBIDO ---
+                if(v.estado === "esperando" && !viajesVistos.has(child.key)) {
+                    document.getElementById('audioSilbido').play().catch(e => console.log("Esperando interacción para audio"));
+                    viajesVistos.add(child.key);
+                }
+
                 if(v.estado === "esperando" || (v.estado === "en curso" && v.conductorCel === miCel)) {
                     const card = document.createElement('div');
                     card.className = "viaje-card";
                     card.innerHTML = `
-                        <div style="display:flex; justify-content:space-between;">
-                            <strong>📍 ORIGEN:</strong> <span>GPS</span>
+                        <div style="margin-bottom:10px;">
+                            <span style="color:#ffc107; font-size:12px; font-weight:bold;">NUEVO PEDIDO</span>
+                            <h2 style="margin:5px 0; font-size:22px;">🏁 ${v.destino}</h2>
                         </div>
-                        <div style="display:flex; justify-content:space-between; margin-top:5px;">
-                            <strong>🏁 DESTINO:</strong> <span>${v.destino}</span>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-size:24px; font-weight:bold; color:#fff;">B/. ${parseFloat(v.monto).toFixed(2)}</span>
+                            <span style="color:#888;">Distancia: Tarifario</span>
                         </div>
-                        <div style="margin-top:15px; border-top:1px solid #333; padding-top:10px; display:flex; justify-content:space-between; align-items:center;">
-                            <span style="font-size:20px; font-weight:bold; color:#ffc107;">B/. ${v.monto}</span>
-                            ${v.estado === "esperando" ? 
-                                `<button class="btn-accion btn-aceptar" onclick="aceptarViaje('${child.key}')">ACEPTAR VIAJE</button>` : 
-                                `<div>
-                                    <a href="https://wa.me/507${v.celular}?text=Hola ${v.cliente}, soy tu conductor de PreetyTaxi. Voy en camino." class="btn-accion btn-wsp"><i class="fab fa-whatsapp"></i> &nbsp; CHATEAR</a>
-                                    <button class="btn-accion btn-finalizar" onclick="finalizarViaje('${child.key}', ${v.monto})">FINALIZAR VIAJE</button>
-                                 </div>`
-                            }
-                        `;
+                        ${v.estado === "esperando" ? 
+                            `<button class="btn-accion btn-aceptar" onclick="aceptarViaje('${child.key}')">ACEPTAR CARRERA</button>` : 
+                            `<button class="btn-accion btn-finalizar" onclick="finalizarViaje('${child.key}', ${v.monto})">FINALIZAR Y COBRAR</button>`
+                        }
+                    `;
                     container.appendChild(card);
                 }
             });
@@ -136,7 +137,6 @@
     }
 
     function finalizarViaje(id, montoTotal) {
-        // LÓGICA DE CUOTA: Ajusta el 0.50 si tu comisión es distinta
         const cuotaApp = 0.50; 
         const gananciaLimpia = montoTotal - cuotaApp;
         const fecha = new Date();
@@ -144,18 +144,14 @@
 
         const updates = {};
         updates['viajes/' + id + '/estado'] = 'completado';
-        
-        // Reporte para el admin
         updates['reportes_diarios/' + miCel + '/' + hoy + '/' + id] = {
-            cliente: "Pasajero",
-            monto: montoTotal.toFixed(2),
-            ganancia: gananciaLimpia.toFixed(2),
-            cuota: cuotaApp.toFixed(2),
-            hora: fecha.toLocaleTimeString()
+            monto: montoTotal,
+            cuota: cuotaApp,
+            hora: fecha.toLocaleTimeString(),
+            destino: "Tarifario"
         };
 
         db.ref().update(updates).then(() => {
-            // Actualizar billetera del chofer
             db.ref('conductores/' + miCel).once('value', s => {
                 const d = s.val();
                 db.ref('conductores/' + miCel).update({
@@ -163,15 +159,9 @@
                     deuda: (parseFloat(d.deuda || 0) + cuotaApp).toFixed(2)
                 });
             });
-            alert("¡Viaje completado! Se ha descontado la cuota de B/. " + cuotaApp.toFixed(2));
+            alert("¡Viaje completado!");
         });
     }
-
-    // Mantener pantalla encendida
-    if ('wakeLock' in navigator) {
-        navigator.wakeLock.request('screen').catch(() => {});
-    }
 </script>
-
 </body>
 </html>

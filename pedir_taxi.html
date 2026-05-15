@@ -10,11 +10,10 @@
         :root { --gold: #ffc107; --dark: #000; --card: #1a1a1a; }
         body { margin: 0; background: var(--dark); color: white; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; }
         
-        /* Contenedor de la imagen del mapa */
         .map-header {
             width: 100%;
             height: 200px;
-            background-image: url('https://images.unsplash.com/photo-1593351415075-3bac9f45c877?auto=format&fit=crop&q=80&w=800'); /* Imagen de Taxi */
+            background-image: url('https://images.unsplash.com/photo-1593351415075-3bac9f45c877?auto=format&fit=crop&q=80&w=800'); 
             background-size: cover;
             background-position: center;
             position: relative;
@@ -32,9 +31,7 @@
         }
 
         .container { width: 90%; max-width: 400px; margin-top: -30px; position: relative; z-index: 10; }
-        
         .card { background: var(--card); padding: 20px; border-radius: 20px; border: 1px solid #333; box-shadow: 0 10px 25px rgba(0,0,0,0.8); }
-        
         .logo-section { text-align: center; margin-bottom: 20px; }
         .taxi-icon { font-size: 40px; margin-bottom: 5px; }
         .logo-text { color: var(--gold); font-size: 24px; font-weight: bold; margin: 0; }
@@ -46,7 +43,6 @@
         .price-display span { font-size: 30px; font-weight: bold; color: var(--gold); }
 
         .btn-pedir { background: var(--gold); color: black; width: 100%; padding: 20px; border: none; border-radius: 15px; font-weight: bold; font-size: 18px; margin-top: 20px; cursor: pointer; box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3); }
-        
         #panel-espera { display: none; text-align: center; padding: 30px; }
         .loader { border: 4px solid #333; border-top: 4px solid var(--gold); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -68,7 +64,7 @@
         <label>PUNTO DE RECOGIDA:</label>
         <input type="text" id="origen" value="Plaza del Golf (Punto 0)">
 
-        <label>DESTINO (Zonas Brisas y Ciudad):</label>
+        <label>DESTINO:</label>
         <select id="select-destino" onchange="actualizarPrecio()">
             <option value="0">-- Seleccione su destino --</option>
             <optgroup label="Zonas Internas">
@@ -96,15 +92,21 @@
     </div>
 
     <div id="panel-espera" class="card">
-        <h2 style="color:var(--gold)">Buscando Taxi...</h2>
-        <div class="loader"></div>
-        <p>Tu solicitud ha sido enviada al grupo de conductores.</p>
+        <div id="buscando-ui">
+            <h2 style="color:var(--gold)">Buscando Taxi...</h2>
+            <div class="loader"></div>
+            <p>Tu solicitud ha sido enviada al grupo de conductores.</p>
+        </div>
+
         <div id="datos-conductor" style="display:none;">
+            <h2 style="color:var(--gold)">¡Taxi Asignado!</h2>
+            <div class="taxi-icon">🚕</div>
             <hr style="border:0; border-top:1px solid #333">
-            <p>Conductor asignado:</p>
-            <h3 id="nombre-ch" style="margin:5px 0;">---</h3>
-            <p id="placa-ch" style="color:#888;">Placa: ---</p>
-            <a id="link-ws" href="#" style="display:block; background:#25d366; color:white; padding:15px; border-radius:10px; text-decoration:none; margin-top:15px; font-weight:bold;">
+            <p>Conductor en camino:</p>
+            <h3 id="nombre-ch" style="margin:5px 0; font-size: 24px;">---</h3>
+            <p id="placa-ch" style="color:var(--gold); font-weight: bold; font-size: 18px;">Placa: ---</p>
+            
+            <a id="link-ws" href="#" target="_blank" style="display:block; background:#25d366; color:white; padding:15px; border-radius:10px; text-decoration:none; margin-top:15px; font-weight:bold;">
                 CONTACTAR POR WHATSAPP
             </a>
         </div>
@@ -130,11 +132,17 @@
         const precio = parseFloat(select.value);
         const destino = select.options[select.selectedIndex].text;
 
+        // 1. OBTENER Y LIMPIAR EL CELULAR DEL PASAJERO
+        let telRaw = localStorage.getItem('userCel') || "";
+        let telLimpio = telRaw.replace(/\D/g, ''); // Quita todo lo que no sea número
+        if (telLimpio.length === 8) telLimpio = "507" + telLimpio;
+
         if (precio <= 0) return alert("Por favor, selecciona un destino.");
+        if (telLimpio === "") return alert("Error: Registra tu celular en la pantalla de inicio.");
 
         const viaje = {
             cliente: localStorage.getItem('userName') || "Pasajero",
-            clienteCel: localStorage.getItem('userCel'),
+            clienteCel: telLimpio,
             origen: origen,
             destino: destino,
             precio: precio,
@@ -147,14 +155,28 @@
         document.getElementById('panel-cliente').style.display = "none";
         document.getElementById('panel-espera').style.display = "block";
 
-        // Escuchar respuesta del chofer
         ref.on('value', snap => {
             const v = snap.val();
-            if(v && v.estado === "en curso") {
+            if(!v) return;
+
+            if(v.estado === "en curso") {
+                document.getElementById('buscando-ui').style.display = "none";
                 document.getElementById('datos-conductor').style.display = "block";
                 document.getElementById('nombre-ch').innerText = v.conductorNombre;
                 document.getElementById('placa-ch').innerText = "PLACA: " + v.conductorPlaca;
-                document.getElementById('link-ws').href = `https://wa.me/507${v.conductorCel}?text=Hola! Soy tu pasajero de PreetyTaxi. Te espero en ${v.origen}`;
+
+                // 2. CORRECCIÓN DEL ENLACE DE WHATSAPP (AQUÍ ESTABA EL ERROR)
+                const numChofer = v.conductorCel.replace(/\D/g, ''); // Limpia número chofer
+                const prefijo = numChofer.startsWith('507') ? '' : '507';
+                const msg = encodeURIComponent(`¡Hola! Soy tu pasajero en ${v.origen}. Ya veo que vienes en camino.`);
+                
+                // Formato correcto: https://wa.me/numero?text=mensaje
+                document.getElementById('link-ws').href = `https://wa.me/${prefijo}${numChofer}?text=${msg}`;
+            }
+
+            if(v.estado === "completado") {
+                alert("¡Viaje finalizado!");
+                location.reload();
             }
         });
     }

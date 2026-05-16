@@ -53,7 +53,6 @@
                     const d = child.val();
                     const cel = child.key;
                     
-                    // Determinar el botón según el estado actual
                     let btnEstado = "";
                     if (d.estado === "pendiente") {
                         btnEstado = `<button class="btn btn-active" onclick="cambiarEstado('${cel}', 'activo')">ACEPTAR</button>`;
@@ -69,7 +68,7 @@
                             <td>${cel}</td>
                             <td>${d.placa}</td>
                             <td><strong>${d.estado.toUpperCase()}</strong></td>
-                            <td style="color:red; font-weight:bold;">B/. ${d.deuda || 0}</td>
+                            <td style="color:red; font-weight:bold;">B/. ${parseFloat(d.deuda || 0).toFixed(2)}</td>
                             <td>
                                 ${btnEstado}
                                 <button class="btn btn-reset" onclick="pagarDeuda('${cel}')">PAGÓ</button>
@@ -85,7 +84,6 @@
 
         function pagarDeuda(cel) {
             if(confirm("¿Confirmar que este conductor pagó su deuda? Se pondrá en 0 y se ACTIVARÁ al instante.")) {
-                // Al presionar PAGÓ, limpia la deuda y lo activa automáticamente en un solo click
                 db.ref('conductores/' + cel).update({ 
                     deuda: 0,
                     estado: 'activo'

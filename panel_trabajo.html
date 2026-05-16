@@ -53,27 +53,53 @@
         
         const silbido = new Audio('https://raw.githubusercontent.com/juan031977/PreetyTaxi/main/silbido.mp3');
         let ultimoViajeId = "";
+        
+        // Variables globales de control en tiempo real
+        let miEstado = "activo";
+        let miConectado = false;
+        let viajesSnapshot = null;
 
         function cargar() {
             if(!miCel) window.location.href = "login_conductor.html";
-            db.ref('conductores/' + miCel).update({ conectado: false });
 
+            // 1. Escuchar los datos del conductor en tiempo real
             db.ref('conductores/' + miCel).on('value', snap => {
                 const d = snap.val() || {};
+                miEstado = d.estado || "activo";
+                miConectado = d.conectado || false;
+
+                // Mostrar deuda y ganancias actualizadas al instante
                 document.getElementById('deuda-valor').innerText = "B/. " + parseFloat(d.deuda || 0).toFixed(2);
                 document.getElementById('hoy-valor').innerText = "B/. " + parseFloat(d.totalGeneradoHoy || 0).toFixed(2);
-                document.getElementById('check-status').checked = d.conectado || false;
                 
                 const statusTxt = document.getElementById('status-text');
-                if(d.conectado) {
-                    statusTxt.innerText = "ESTÁS ACTIVO";
-                    statusTxt.style.color = "#25d366";
-                    escucharViajes();
+                const checkStatus = document.getElementById('check-status');
+                
+                // Si el admin lo bloquea
+                if(miEstado === "bloqueado") {
+                    statusTxt.innerText = "BLOQUEADO (PAGA TU DEUDA)";
+                    statusTxt.style.color = "#ff4444";
+                    checkStatus.checked = false;
+                    checkStatus.disabled = true; // Desactivar el switch para que no pueda apagarlo/encenderlo
                 } else {
-                    statusTxt.innerText = "DESCONECTADO";
-                    statusTxt.style.color = "#ff4d4d";
-                    document.getElementById('lista-viajes').innerHTML = '<p style="text-align:center; color:#444;">Ponte en línea para recibir pedidos</p>';
+                    checkStatus.disabled = false;
+                    checkStatus.checked = miConectado;
+                    if(miConectado) {
+                        statusTxt.innerText = "ESTÁS ACTIVO";
+                        statusTxt.style.color = "#25d366";
+                    } else {
+                        statusTxt.innerText = "DESCONECTADO";
+                        statusTxt.style.color = "#ff4d4d";
+                    }
                 }
+                // Refrescar visualización de la lista cada vez que cambie el estado del perfil
+                renderizarViajes();
+            });
+
+            // 2. Escuchar los viajes globales de manera limpia (Una sola vez)
+            db.ref('viajes').on('value', snap => {
+                viajesSnapshot = snap;
+                renderizarViajes();
             });
         }
 
@@ -82,54 +108,75 @@
             db.ref('conductores/' + miCel).update({ conectado: el.checked });
         }
 
-        function escucharViajes() {
-            db.ref('viajes').on('value', snap => {
-                const lista = document.getElementById('lista-viajes');
-                let html = "";
-                let hayPendientes = false;
+        function renderizarViajes() {
+            const lista = document.getElementById('lista-viajes');
+            
+            // Si está desconectado y NO está bloqueado, ocultar viajes
+            if (!miConectado && miEstado !== "bloqueado") {
+                lista.innerHTML = '<p style="text-align:center; color:#444;">Ponte en línea para recibir pedidos</p>';
+                return;
+            }
 
-                snap.forEach(child => {
-                    const v = child.val();
-                    
-                    if (v.estado === "pendiente") {
-                        hayPendientes = true;
-                        if(ultimoViajeId !== child.key) {
-                            silbido.play().catch(e => {});
-                            ultimoViajeId = child.key;
-                        }
+            if (!viajesSnapshot) {
+                lista.innerHTML = '<p style="text-align:center; color:#333;">Esperando viajes...</p>';
+                return;
+            }
 
-                        html += `
-                            <div class="viaje-card">
-                                <p><b>📍 Recoger en:</b> ${v.origen}</p>
-                                <p><b>🏁 Destino:</b> ${v.destino}</p>
-                                <p><b>💰 Tarifa:</b> B/. ${parseFloat(v.precio).toFixed(2)}</p>
-                                <button class="btn btn-ok" onclick="tomarViaje('${child.key}')">ACEPTAR VIAJE</button>
-                            </div>`;
+            let html = "";
+            let hayPendientes = false;
+
+            viajesSnapshot.forEach(child => {
+                const v = child.val();
+                
+                if (v.estado === "pendiente") {
+                    hayPendientes = true;
+                    if(ultimoViajeId !== child.key) {
+                        silbido.play().catch(e => {}); // Suena de todas formas para tentarlo
+                        ultimoViajeId = child.key;
                     }
 
-                    if (v.estado === "en curso" && v.conductorCel === miCel) {
-                        // AQUÍ LA CORRECCIÓN CLAVE: Usamos v.clienteCel que es como lo guarda el pasajero
-                        let celPasajero = String(v.clienteCel || "").replace(/\D/g, '');
-                        if(celPasajero.length === 8) celPasajero = "507" + celPasajero;
-
-                        html = `
-                            <div class="viaje-card" style="border-left-color: #25d366; background: #fff; color: #000;">
-                                <p><b>👤 Cliente:</b> ${v.cliente}</p>
-                                <p><b>📍 Recoger en:</b> ${v.origen}</p>
-                                <p style="font-size: 20px;"><b>Total: B/. ${v.precio}</b></p>
-                                <a href="https://wa.me/${celPasajero}?text=Hola%20${v.cliente},%20soy%20tu%20conductor%20de%20PreetyTaxi%20estoy%20en%20camino" class="btn btn-ws" target="_blank">HABLAR POR WHATSAPP</a>
-                                <button class="btn btn-ok" style="background:#000; color:#fff;" onclick="finalizarViaje('${child.key}', ${v.precio})">FINALIZAR VIAJE</button>
-                                <button class="btn btn-cancel" onclick="cancelarViaje('${child.key}')">CANCELAR</button>
-                            </div>`;
+                    // Determinar botón según estado de cuenta
+                    let botonViaje = "";
+                    if (miEstado === "bloqueado") {
+                        botonViaje = `<button class="btn" style="background:#444; color:#888; cursor:not-allowed;" disabled>❌ BLOQUEADO POR DEUDA</button>`;
+                    } else {
+                        botonViaje = `<button class="btn btn-ok" onclick="tomarViaje('${child.key}')">ACEPTAR VIAJE</button>`;
                     }
-                });
 
-                if(!hayPendientes) ultimoViajeId = "";
-                lista.innerHTML = html || '<p style="text-align:center; color:#333;">Esperando viajes...</p>';
+                    html += `
+                        <div class="viaje-card">
+                            <p><b>📍 Recoger en:</b> ${v.origen}</p>
+                            <p><b>🏁 Destino:</b> ${v.destino}</p>
+                            <p><b>💰 Tarifa:</b> B/. ${parseFloat(v.precio).toFixed(2)}</p>
+                            ${botonViaje}
+                        </div>`;
+                }
+
+                if (v.estado === "en curso" && v.conductorCel === miCel) {
+                    let celPasajero = String(v.clienteCel || "").replace(/\D/g, '');
+                    if(celPasajero.length === 8) celPasajero = "507" + celPasajero;
+
+                    html = `
+                        <div class="viaje-card" style="border-left-color: #25d366; background: #fff; color: #000;">
+                            <p><b>👤 Cliente:</b> ${v.cliente}</p>
+                            <p><b>📍 Recoger en:</b> ${v.origen}</p>
+                            <p style="font-size: 20px;"><b>Total: B/. ${v.precio}</b></p>
+                            <a href="https://wa.me/${celPasajero}?text=Hola%20${v.cliente},%20soy%20tu%20conductor%20de%20PreetyTaxi%20estoy%20en%20camino" class="btn btn-ws" target="_blank">HABLAR POR WHATSAPP</a>
+                            <button class="btn btn-ok" style="background:#000; color:#fff;" onclick="finalizarViaje('${child.key}', ${v.precio})">FINALIZAR VIAJE</button>
+                            <button class="btn btn-cancel" onclick="cancelarViaje('${child.key}')">CANCELAR</button>
+                        </div>`;
+                }
             });
+
+            if(!hayPendientes) ultimoViajeId = "";
+            lista.innerHTML = html || '<p style="text-align:center; color:#333;">Esperando viajes...</p>';
         }
 
         function tomarViaje(id) {
+            if(miEstado === "bloqueado") {
+                alert("🔒 Tu cuenta está bloqueada por deuda. Salda tu cuenta para tomar carreras.");
+                return;
+            }
             db.ref('conductores/' + miCel).once('value', s => {
                 const d = s.val();
                 db.ref('viajes/' + id).update({

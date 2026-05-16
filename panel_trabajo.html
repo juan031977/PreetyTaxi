@@ -54,7 +54,6 @@
         const silbido = new Audio('https://raw.githubusercontent.com/juan031977/PreetyTaxi/main/silbido.mp3');
         let ultimoViajeId = "";
         
-        // Variables globales de control en tiempo real
         let miEstado = "activo";
         let miConectado = false;
         let viajesSnapshot = null;
@@ -65,22 +64,59 @@
             // 1. Escuchar los datos del conductor en tiempo real
             db.ref('conductores/' + miCel).on('value', snap => {
                 const d = snap.val() || {};
+
+                // === NUEVO MOTOR AUTOMÁTICO DE RESET DE MEDIANOCHE Y DEUDA DIARIA ACUMULATIVA ===
+                const hoy = new Date();
+                const hoyStr = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-' + String(hoy.getDate()).padStart(2, '0');
+                
+                if (d.ultimaFechaAcceso !== hoyStr) {
+                    if (d.ultimaFechaAcceso) {
+                        const fechaAnt = new Date(d.ultimaFechaAcceso + "T00:00:00");
+                        const fechaHoy = new Date(hoyStr + "T00:00:00");
+                        const diffTiempo = Math.abs(fechaHoy - fechaAnt);
+                        const diasPasados = Math.floor(diffTiempo / (1000 * 60 * 60 * 24));
+                        
+                        if (diasPasados >= 1) {
+                            // Suma $1.00 por cada día de calendario que haya transcurrido
+                            let nuevaDeuda = parseFloat(d.deuda || 0) + (diasPasados * 1.00);
+                            
+                            // Límite estricto: máximo 5 días acumulables ($5.00)
+                            if (nuevaDeuda > 5.00) nuevaDeuda = 5.00;
+                            
+                            let nuevoEstado = d.estado || "activo";
+                            if (nuevaDeuda > 0) nuevoEstado = "bloqueado"; // Bloqueo automático si debe algo
+                            
+                            db.ref('conductores/' + miCel).update({
+                                totalGeneradoHoy: 0, // Reset a las 00:00 de lo que ganó en el día anterior
+                                deuda: nuevaDeuda.toFixed(2),
+                                estado: nuevoEstado,
+                                ultimaFechaAcceso: hoyStr
+                            });
+                            return; // Interrumpe y espera el refresco con los datos actualizados
+                        }
+                    } else {
+                        // Si es la primera vez que entra, le marcamos el día de hoy
+                        db.ref('conductores/' + miCel).update({ ultimaFechaAcceso: hoyStr });
+                        return;
+                    }
+                }
+                // ==============================================================================
+
                 miEstado = d.estado || "activo";
                 miConectado = d.conectado || false;
 
-                // Mostrar deuda y ganancias actualizadas al instante
+                // Mostrar deuda y ganancias actualizadas en vivo
                 document.getElementById('deuda-valor').innerText = "B/. " + parseFloat(d.deuda || 0).toFixed(2);
                 document.getElementById('hoy-valor').innerText = "B/. " + parseFloat(d.totalGeneradoHoy || 0).toFixed(2);
                 
                 const statusTxt = document.getElementById('status-text');
                 const checkStatus = document.getElementById('check-status');
                 
-                // Si el admin lo bloquea
                 if(miEstado === "bloqueado") {
                     statusTxt.innerText = "BLOQUEADO (PAGA TU DEUDA)";
                     statusTxt.style.color = "#ff4444";
                     checkStatus.checked = false;
-                    checkStatus.disabled = true; // Desactivar el switch para que no pueda apagarlo/encenderlo
+                    checkStatus.disabled = true; // No lo deja ponerse activo hasta pagar
                 } else {
                     checkStatus.disabled = false;
                     checkStatus.checked = miConectado;
@@ -92,11 +128,10 @@
                         statusTxt.style.color = "#ff4d4d";
                     }
                 }
-                // Refrescar visualización de la lista cada vez que cambie el estado del perfil
                 renderizarViajes();
             });
 
-            // 2. Escuchar los viajes globales de manera limpia (Una sola vez)
+            // 2. Escuchar los viajes globales en tiempo real
             db.ref('viajes').on('value', snap => {
                 viajesSnapshot = snap;
                 renderizarViajes();
@@ -111,7 +146,6 @@
         function renderizarViajes() {
             const lista = document.getElementById('lista-viajes');
             
-            // Si está desconectado y NO está bloqueado, ocultar viajes
             if (!miConectado && miEstado !== "bloqueado") {
                 lista.innerHTML = '<p style="text-align:center; color:#444;">Ponte en línea para recibir pedidos</p>';
                 return;
@@ -131,11 +165,10 @@
                 if (v.estado === "pendiente") {
                     hayPendientes = true;
                     if(ultimoViajeId !== child.key) {
-                        silbido.play().catch(e => {}); // Suena de todas formas para tentarlo
+                        silbido.play().catch(e => {}); // El silbido suena para tentarlo aunque esté bloqueado
                         ultimoViajeId = child.key;
                     }
 
-                    // Determinar botón según estado de cuenta
                     let botonViaje = "";
                     if (miEstado === "bloqueado") {
                         botonViaje = `<button class="btn" style="background:#444; color:#888; cursor:not-allowed;" disabled>❌ BLOQUEADO POR DEUDA</button>`;
@@ -191,14 +224,13 @@
         function finalizarViaje(id, precio) {
             if(!confirm("¿Finalizar viaje?")) return;
             const p = parseFloat(precio);
-            const cuota = p <= 3.25 ? 0.25 : (p <= 6.50 ? 0.50 : 1.00);
             
             db.ref('viajes/' + id).update({ estado: 'completado' }).then(() => {
                 db.ref('conductores/' + miCel).once('value', s => {
                     const dc = s.val();
+                    // Ahora se le acumula el 100% bruto de la tarifa a sus ganancias sin descontarle comisión por viaje
                     db.ref('conductores/' + miCel).update({
-                        totalGeneradoHoy: (parseFloat(dc.totalGeneradoHoy || 0) + (p - cuota)).toFixed(2),
-                        deuda: (parseFloat(dc.deuda || 0) + cuota).toFixed(2)
+                        totalGeneradoHoy: (parseFloat(dc.totalGeneradoHoy || 0) + p).toFixed(2)
                     });
                 });
             });

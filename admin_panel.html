@@ -69,7 +69,7 @@
                             <td>${cel}</td>
                             <td>${d.placa}</td>
                             <td><strong>${d.estado.toUpperCase()}</strong></td>
-                            <td style="color:red">B/. ${d.deuda || 0}</td>
+                            <td style="color:red; font-weight:bold;">B/. ${d.deuda || 0}</td>
                             <td>
                                 ${btnEstado}
                                 <button class="btn btn-reset" onclick="pagarDeuda('${cel}')">PAGÓ</button>
@@ -84,8 +84,12 @@
         }
 
         function pagarDeuda(cel) {
-            if(confirm("¿Confirmar que este conductor pagó su deuda?")) {
-                db.ref('conductores/' + cel).update({ deuda: 0 });
+            if(confirm("¿Confirmar que este conductor pagó su deuda? Se pondrá en 0 y se ACTIVARÁ al instante.")) {
+                // Al presionar PAGÓ, limpia la deuda y lo activa automáticamente en un solo click
+                db.ref('conductores/' + cel).update({ 
+                    deuda: 0,
+                    estado: 'activo'
+                });
             }
         }
 

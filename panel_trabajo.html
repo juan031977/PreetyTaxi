@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Panel de Trabajo - PreetyTaxi</title>
+    <title>Panel de Trabajo - ClickGoTaxi</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
@@ -194,7 +194,7 @@
                             <p><b>👤 Cliente:</b> ${v.cliente}</p>
                             <p><b>📍 Recoger en:</b> ${v.origen}</p>
                             <p style="font-size: 20px;"><b>Total: B/. ${v.precio}</b></p>
-                            <a href="https://wa.me/${celPasajero}?text=Hola%20${v.cliente},%20soy%20tu%20conductor%20de%20PreetyTaxi%20estoy%20en%20camino" class="btn btn-ws" target="_blank">HABLAR POR WHATSAPP</a>
+                            <a href="https://wa.me/${celPasajero}?text=Hola%20${v.cliente},%20soy%20tu%20conductor%20de%20ClickGoTaxi%20estoy%20en%20camino" class="btn btn-ws" target="_blank">HABLAR POR WHATSAPP</a>
                             <button class="btn btn-ok" style="background:#000; color:#fff;" onclick="finalizarViaje('${child.key}', ${v.precio})">FINALIZAR VIAJE</button>
                             <button class="btn btn-cancel" onclick="cancelarViaje('${child.key}')">CANCELAR</button>
                         </div>`;

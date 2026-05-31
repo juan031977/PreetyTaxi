@@ -8,14 +8,31 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #0f0f0f; color: white; text-align: center; padding: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
-        .box { background: #1a1a1a; padding: 30px; border-radius: 20px; border: 1px solid #333; width: 90%; max-width: 350px; }
+        .box { background: #1a1a1a; padding: 30px; border-radius: 20px; border: 1px solid #333; width: 90%; max-width: 350px; position: relative; }
         h2 { color: #ffc107; margin-bottom: 20px; }
         input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #222; color: white; box-sizing: border-box; font-size: 16px; }
         button { background: #ffc107; width: 100%; padding: 15px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 16px; }
+
+        /* Flecha de retroceso */
+        .back-btn { 
+            position: absolute; 
+            top: 20px; 
+            left: 20px; 
+            color: #ffc107; 
+            text-decoration: none; 
+            font-size: 22px; 
+            font-weight: bold; 
+            line-height: 1;
+            transition: transform 0.2s ease;
+        }
+        .back-btn:active { transform: scale(0.85); }
     </style>
 </head>
 <body>
     <div class="box">
+        <!-- BOTÓN DE RETROCESO -->
+        <a href="index.html" class="back-btn">←</a>
+
         <h2>Crear Cuenta Pasajero 👤</h2>
         <input type="text" id="nom" placeholder="Nombre Completo">
         <input type="tel" id="tel" placeholder="Número Celular">

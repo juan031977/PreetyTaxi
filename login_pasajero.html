@@ -8,14 +8,32 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #0b0b0b; color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .login-box { background: #1a1a1a; padding: 30px; border-radius: 20px; width: 90%; max-width: 350px; border: 1px solid #333; text-align: center; }
-        h2 { color: #ffc107; }
+        .login-box { background: #1a1a1a; padding: 30px; border-radius: 20px; width: 90%; max-width: 350px; border: 1px solid #333; text-align: center; position: relative; }
+        
+        /* Estilo de la flecha de retroceso */
+        .back-btn { 
+            position: absolute; 
+            top: 20px; 
+            left: 20px; 
+            color: #ffc107; 
+            text-decoration: none; 
+            font-size: 22px; 
+            font-weight: bold; 
+            line-height: 1;
+            transition: transform 0.2s ease;
+        }
+        .back-btn:active { transform: scale(0.85); }
+
+        h2 { color: #ffc107; margin-top: 15px; }
         input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #222; color: white; box-sizing: border-box; }
         button { background: #ffc107; width: 100%; padding: 15px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; }
     </style>
 </head>
 <body>
     <div class="login-box">
+        <!-- BOTÓN DE RETROCESO -->
+        <a href="index.html" class="back-btn">←</a>
+
         <h2>Entrar Pasajero</h2>
         <input type="tel" id="tel" placeholder="Número Celular">
         <input type="password" id="pass" placeholder="Tu Contraseña">

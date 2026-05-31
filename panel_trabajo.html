@@ -7,7 +7,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; padding: 15px; margin: 0; }
+        body { background: #000; color: #fff; font-family: 'Segoe UI', sans-serif; padding: 15px; margin: 0; position: relative; }
         .billetera { background: #1a1a1a; padding: 20px; border-radius: 20px; border: 1px solid #333; margin-bottom: 15px; text-align: center; }
         .monto { color: #ffc107; font-size: 26px; font-weight: bold; }
         .status-bar { display: flex; align-items: center; justify-content: space-between; background: #1a1a1a; padding: 12px 20px; border-radius: 50px; border: 1px solid #333; margin-bottom: 15px; }
@@ -24,9 +24,27 @@
         .btn-ok { background: #ffc107; color: #000; }
         .btn-ws { background: #25d366; color: #fff; text-decoration: none; display: flex; align-items: center; justify-content: center; }
         .btn-cancel { background: transparent; color: #ff4444; border: 1px solid #ff4444; font-size: 11px; }
+
+        /* Flecha de retroceso */
+        .back-btn { 
+            position: absolute; 
+            top: 20px; 
+            left: 20px; 
+            color: #ffc107; 
+            text-decoration: none; 
+            font-size: 22px; 
+            font-weight: bold; 
+            line-height: 1;
+            transition: transform 0.2s ease;
+            z-index: 100;
+        }
+        .back-btn:active { transform: scale(0.85); }
     </style>
 </head>
 <body onload="cargar()">
+
+    <!-- BOTÓN DE RETROCESO -->
+    <a href="index.html" class="back-btn">←</a>
 
     <div class="status-bar">
         <span id="status-text">DESCONECTADO</span>
@@ -46,6 +64,7 @@
     <div id="lista-viajes"></div>
 
     <script>
+        // ... (el script se mantiene exactamente igual)
         const firebaseConfig = { apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
@@ -61,11 +80,9 @@
         function cargar() {
             if(!miCel) window.location.href = "login_conductor.html";
 
-            // 1. Escuchar los datos del conductor en tiempo real
             db.ref('conductores/' + miCel).on('value', snap => {
                 const d = snap.val() || {};
 
-                // === NUEVO MOTOR AUTOMÁTICO DE RESET DE MEDIANOCHE Y DEUDA DIARIA ACUMULATIVA ===
                 const hoy = new Date();
                 const hoyStr = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-' + String(hoy.getDate()).padStart(2, '0');
                 
@@ -77,35 +94,28 @@
                         const diasPasados = Math.floor(diffTiempo / (1000 * 60 * 60 * 24));
                         
                         if (diasPasados >= 1) {
-                            // Suma $1.00 por cada día de calendario que haya transcurrido
                             let nuevaDeuda = parseFloat(d.deuda || 0) + (diasPasados * 1.00);
-                            
-                            // Límite estricto: máximo 5 días acumulables ($5.00)
                             if (nuevaDeuda > 5.00) nuevaDeuda = 5.00;
-                            
                             let nuevoEstado = d.estado || "activo";
-                            if (nuevaDeuda > 0) nuevoEstado = "bloqueado"; // Bloqueo automático si debe algo
+                            if (nuevaDeuda > 0) nuevoEstado = "bloqueado";
                             
                             db.ref('conductores/' + miCel).update({
-                                totalGeneradoHoy: 0, // Reset a las 00:00 de lo que ganó en el día anterior
+                                totalGeneradoHoy: 0,
                                 deuda: nuevaDeuda.toFixed(2),
                                 estado: nuevoEstado,
                                 ultimaFechaAcceso: hoyStr
                             });
-                            return; // Interrumpe y espera el refresco con los datos actualizados
+                            return;
                         }
                     } else {
-                        // Si es la primera vez que entra, le marcamos el día de hoy
                         db.ref('conductores/' + miCel).update({ ultimaFechaAcceso: hoyStr });
                         return;
                     }
                 }
-                // ==============================================================================
 
                 miEstado = d.estado || "activo";
                 miConectado = d.conectado || false;
 
-                // Mostrar deuda y ganancias actualizadas en vivo
                 document.getElementById('deuda-valor').innerText = "B/. " + parseFloat(d.deuda || 0).toFixed(2);
                 document.getElementById('hoy-valor').innerText = "B/. " + parseFloat(d.totalGeneradoHoy || 0).toFixed(2);
                 
@@ -116,7 +126,7 @@
                     statusTxt.innerText = "BLOQUEADO (PAGA TU DEUDA)";
                     statusTxt.style.color = "#ff4444";
                     checkStatus.checked = false;
-                    checkStatus.disabled = true; // No lo deja ponerse activo hasta pagar
+                    checkStatus.disabled = true;
                 } else {
                     checkStatus.disabled = false;
                     checkStatus.checked = miConectado;
@@ -131,7 +141,6 @@
                 renderizarViajes();
             });
 
-            // 2. Escuchar los viajes globales en tiempo real
             db.ref('viajes').on('value', snap => {
                 viajesSnapshot = snap;
                 renderizarViajes();
@@ -165,7 +174,7 @@
                 if (v.estado === "pendiente") {
                     hayPendientes = true;
                     if(ultimoViajeId !== child.key) {
-                        silbido.play().catch(e => {}); // El silbido suena para tentarlo aunque esté bloqueado
+                        silbido.play().catch(e => {});
                         ultimoViajeId = child.key;
                     }
 
@@ -228,7 +237,6 @@
             db.ref('viajes/' + id).update({ estado: 'completado' }).then(() => {
                 db.ref('conductores/' + miCel).once('value', s => {
                     const dc = s.val();
-                    // Ahora se le acumula el 100% bruto de la tarifa a sus ganancias sin descontarle comisión por viaje
                     db.ref('conductores/' + miCel).update({
                         totalGeneradoHoy: (parseFloat(dc.totalGeneradoHoy || 0) + p).toFixed(2)
                     });

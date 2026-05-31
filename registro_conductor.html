@@ -8,14 +8,31 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #1a1a1a; color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .reg-box { background: #222; padding: 30px; border-radius: 15px; width: 90%; max-width: 400px; border-top: 5px solid #ffc107; box-shadow: 0 10px 25px rgba(0,0,0,0.5); text-align: center; }
+        .reg-box { background: #222; padding: 30px; border-radius: 15px; width: 90%; max-width: 400px; border-top: 5px solid #ffc107; box-shadow: 0 10px 25px rgba(0,0,0,0.5); text-align: center; position: relative; }
         h2 { color: #ffc107; margin-bottom: 20px; }
         input { width: 100%; padding: 12px; margin: 8px 0; border: none; border-radius: 8px; box-sizing: border-box; background: #333; color: white; font-size: 16px; }
         button { width: 100%; padding: 14px; background: #ffc107; border: none; border-radius: 8px; color: #1a1a1a; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 15px; }
+
+        /* Flecha de retroceso */
+        .back-btn { 
+            position: absolute; 
+            top: 20px; 
+            left: 20px; 
+            color: #ffc107; 
+            text-decoration: none; 
+            font-size: 22px; 
+            font-weight: bold; 
+            line-height: 1;
+            transition: transform 0.2s ease;
+        }
+        .back-btn:active { transform: scale(0.85); }
     </style>
 </head>
 <body>
     <div class="reg-box">
+        <!-- BOTÓN DE RETROCESO -->
+        <a href="index.html" class="back-btn">←</a>
+
         <h2>Registro de Chofer</h2>
         <input type="text" id="nombre" placeholder="Nombre Completo">
         <input type="tel" id="celular" placeholder="Celular (8 dígitos)" maxlength="8">

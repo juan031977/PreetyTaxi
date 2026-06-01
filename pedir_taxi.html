@@ -9,7 +9,7 @@
     <style>
         :root { --gold: #ffc107; --dark: #000; --card: #1a1a1a; }
         body { margin: 0; background: var(--dark); color: white; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; }
-       
+        
         .map-header {
             width: 100%; height: 180px;
             background-image: url('https://images.unsplash.com/photo-1593351415075-3bac9f45c877?auto=format&fit=crop&q=80&w=800');
@@ -18,11 +18,11 @@
         }
         .container { width: 92%; max-width: 400px; margin-top: -30px; position: relative; z-index: 10; padding-bottom: 40px; }
         .card { background: var(--card); padding: 20px; border-radius: 20px; border: 1px solid #333; box-shadow: 0 10px 25px rgba(0,0,0,0.8); }
-       
+        
         .logo-text { color: var(--gold); font-size: 24px; font-weight: bold; text-align: center; margin: 0 0 20px 0; }
         label { display: block; margin-top: 15px; color: #aaa; font-size: 12px; font-weight: bold; text-transform: uppercase; }
         select, input { width: 100%; padding: 14px; margin-top: 5px; border-radius: 12px; border: 1px solid #444; background: #222; color: white; font-size: 16px; box-sizing: border-box; }
-       
+        
         /* Estilo del Buscador */
         .search-box {
             border: 1px solid var(--gold) !important;
@@ -34,7 +34,7 @@
         .price-display span { font-size: 32px; font-weight: bold; color: var(--gold); }
         .btn-pedir { background: var(--gold); color: black; width: 100%; padding: 18px; border: none; border-radius: 15px; font-weight: bold; font-size: 18px; margin-top: 20px; cursor: pointer; }
         .btn-cancelar { background: transparent; color: #ff4444; width: 100%; padding: 12px; border: 1px solid #ff4444; border-radius: 12px; font-weight: bold; margin-top: 15px; cursor: pointer; }
-       
+        
         #panel-espera { display: none; text-align: center; padding: 30px; }
         .loader { border: 4px solid #333; border-top: 4px solid var(--gold); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -52,6 +52,20 @@
             transition: transform 0.2s ease;
         }
         .back-btn:active { transform: scale(0.85); }
+
+        /* === CONTENEDOR NUEVO PARA CONDUCTORES EN VIVO === */
+        .listado-choferes { margin-top: 20px; display: none; }
+        .conductor-tarjeta {
+            background: #222; border: 1px solid var(--gold); padding: 15px; 
+            border-radius: 15px; margin-bottom: 10px; display: flex; 
+            align-items: center; justify-content: space-between;
+        }
+        .conductor-tarjeta img { width: 52px; height: 52px; border-radius: 50%; border: 2px solid var(--gold); margin-right: 12px; object-fit: cover; }
+        .conductor-info { flex: 1; }
+        .conductor-info h4 { margin: 0; font-size: 16px; color: white; }
+        .conductor-info p { margin: 3px 0 0 0; color: #aaa; font-size: 13px; }
+        .distancia-badge { background: var(--gold); color: black; padding: 2px 6px; font-size: 11px; font-weight: bold; border-radius: 5px; display: inline-block; margin-top: 4px; }
+        .btn-elegir-ch { background: #00e676; color: black; border: none; padding: 10px 14px; border-radius: 10px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -59,7 +73,6 @@
 <div class="map-header"></div>
 
 <div class="container">
-    <!-- Flecha de retroceso -->
     <a href="index.html" class="back-btn">←</a>
 
     <div id="panel-cliente" class="card">
@@ -68,7 +81,7 @@
         <input type="text" id="origen" placeholder="Escribe tu ubicación actual...">
         <label>¿A dónde vas? (Busca tu destino abajo)</label>
         <input type="text" id="input-busqueda" class="search-box" placeholder="🔍 Escribe para buscar destino..." onkeyup="filtrarDestinos()">
-       
+        
         <select id="select-destino" size="8" onchange="actualizarPrecio()">
             <optgroup label="ZONAS INTERNAS" id="grupo-interno">
                 <option value="1.50">Angel Rubio, Bonlac, Puma, Pricesmart - B/. 1.50</option>
@@ -221,7 +234,13 @@
             <small style="color:#888">TARIFA ESTIMADA</small><br>
             <span id="display-precio">B/. 0.00</span>
         </div>
-        <button class="btn-pedir" onclick="pedirTaxi()">SOLICITAR TAXI</button>
+        
+        <div id="contenedor-conductores" class="listado-choferes">
+            <label style="color:var(--gold); font-size:13px;">Conductores disponibles a menos de 10 km:</label>
+            <div id="lista-renderizada"></div>
+        </div>
+
+        <button class="btn-pedir" id="btn-principal-solicitar" onclick="procesarUbicacionYBuscar()">SOLICITAR TAXI</button>
     </div>
     <div id="panel-espera" class="card">
         <div id="buscando-ui">
@@ -249,6 +268,11 @@
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     let viajeID = "";
+    
+    // Variables globales para guardar las coordenadas temporales del pasajero
+    let latPasajero = null;
+    let lonPasajero = null;
+
     function filtrarDestinos() {
         const input = document.getElementById('input-busqueda').value.toLowerCase();
         const select = document.getElementById('select-destino');
@@ -262,39 +286,148 @@
         const p = document.getElementById('select-destino').value;
         document.getElementById('display-precio').innerText = "B/. " + parseFloat(p).toFixed(2);
     }
-    function pedirTaxi() {
+
+    // NUEVA FUNCIÓN: Fórmula matemática Haversine para calcular distancia exacta en KM
+    function calcularDistanciaKM(lat1, lon1, lat2, lon2) {
+        const R = 6371; 
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                  Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c; 
+    }
+
+    // NUEVA FUNCIÓN: Obtiene el GPS del pasajero primero antes de listar
+    function procesarUbicacionYBuscar() {
+        const select = document.getElementById('select-destino');
+        const precio = parseFloat(select.value);
+        if (precio <= 0 || isNaN(precio)) return alert("Selecciona un destino de la lista.");
+
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition((position) => {
+                latPasajero = position.coords.latitude;
+                lonPasajero = position.coords.longitude;
+                // Una vez obtenida la ubicación, busca choferes activos
+                buscarConductoresCercanos(latPasajero, lonPasajero);
+            }, (error) => {
+                alert("Para mostrar los conductores más cercanos, activa el GPS de tu celular.");
+                // Respaldo por si rechaza el GPS: simulando coordenadas de Brisas del Golf
+                latPasajero = 9.0436;
+                lonPasajero = -79.4449;
+                buscarConductoresCercanos(latPasajero, lonPasajero);
+            });
+        } else {
+            alert("Tu navegador no soporta geolocalización.");
+        }
+    }
+
+    // NUEVA FUNCIÓN: Descarga de Firebase, filtra a 10km y ordena del más cercano al más lejano
+    function buscarConductoresCercanos(latPas, lonPas) {
+        const contenedor = document.getElementById("contenedor-conductores");
+        const listaDiv = document.getElementById("lista-renderizada");
+        
+        listaDiv.innerHTML = "<p style='color: var(--gold); text-align:center;'>Buscando conductores en el área...</p>";
+        contenedor.style.display = "block";
+
+        db.ref('conductores').once('value', (snapshot) => {
+            let conductoresValidos = [];
+
+            snapshot.forEach((childSnapshot) => {
+                const chofer = childSnapshot.val();
+                
+                // Filtra solo choferes que estén con el estado "activo" y tengan coordenadas registradas
+                if (chofer.estado === "activo" && chofer.lat && chofer.lon) {
+                    const distancia = calcularDistanciaKM(latPas, lonPas, chofer.lat, chofer.lon);
+                    
+                    // REGLA: Radio máximo de 10 kilómetros
+                    if (distancia <= 10) {
+                        conductoresValidos.push({
+                            idCelular: childSnapshot.key,
+                            nombre: chofer.nombre || "Conductor",
+                            placa: chofer.placa || "---",
+                            foto: chofer.foto || "https://cdn-icons-png.flaticon.com/512/1395/1395855.png",
+                            distancia: distancia
+                        });
+                    }
+                }
+            });
+
+            // REGLA: Ordenamiento dinámico automático (De menor distancia a mayor distancia)
+            conductoresValidos.sort((a, b) => a.distancia - b.distancia);
+
+            listaDiv.innerHTML = ""; 
+
+            if (conductoresValidos.length === 0) {
+                listaDiv.innerHTML = "<p style='color: #ff4444; text-align:center; font-size:14px; padding:10px;'>⚠️ No se encontraron conductores activos en un radio de 10 km.</p>";
+                return;
+            }
+
+            // Renderiza las tarjetas de los choferes encontrados ordenados
+            conductoresValidos.forEach((chofer) => {
+                listaDiv.innerHTML += `
+                    <div class="conductor-tarjeta">
+                        <img src="${chofer.foto}">
+                        <div class="conductor-info">
+                            <h4>${chofer.nombre}</h4>
+                            <p>🚗 Placa: ${chofer.placa}</p>
+                            <span class="distancia-badge">A ${chofer.distancia.toFixed(1)} km</span>
+                        </div>
+                        <button class="btn-elegir-ch" onclick="pedirTaxiConChofer('${chofer.idCelular}', '${chofer.nombre}', '${chofer.placa}')">
+                            Elegir 🚕
+                        </button>
+                    </div>
+                `;
+            });
+        });
+    }
+
+    // MODIFICADO: Ahora el pedido se realiza asignando directamente los datos del chofer que seleccionó el usuario
+    function pedirTaxiConChofer(choferCelular, choferNombre, choferPlaca) {
         const origen = document.getElementById('origen').value;
         const select = document.getElementById('select-destino');
         const precio = parseFloat(select.value);
         const destino = select.options[select.selectedIndex].text;
-        if (precio <= 0 || isNaN(precio)) return alert("Selecciona un destino de la lista.");
+        
         const viaje = {
             cliente: localStorage.getItem('userName') || "Pasajero",
             clienteCel: localStorage.getItem('userCel') || "",
             origen: origen,
             destino: destino,
             precio: precio,
-            estado: 'pendiente',
+            estado: 'en curso', // Pasa directamente a "en curso" al ser elegido en vivo
+            conductorCel: choferCelular,
+            conductorNombre: choferNombre,
+            conductorPlaca: choferPlaca,
             timestamp: new Date().getTime()
         };
+        
         const ref = db.ref('viajes').push(viaje);
         viajeID = ref.key;
-       
+        
         document.getElementById('panel-cliente').style.display = "none";
         document.getElementById('panel-espera').style.display = "block";
+        
+        // Muestra de inmediato los datos del conductor seleccionado en la UI de espera
+        document.getElementById('buscando-ui').style.display = "none";
+        document.getElementById('datos-conductor').style.display = "block";
+        document.getElementById('nombre-ch').innerText = choferNombre;
+        document.getElementById('placa-ch').innerText = "PLACA: " + choferPlaca;
+        document.getElementById('link-ws').href = `https://wa.me/${choferCelular}`;
+
         ref.on('value', snap => {
             const v = snap.val();
             if(!v) return;
-            if(v.estado === "en curso") {
-                document.getElementById('buscando-ui').style.display = "none";
-                document.getElementById('datos-conductor').style.display = "block";
-                document.getElementById('nombre-ch').innerText = v.conductorNombre;
-                document.getElementById('placa-ch').innerText = "PLACA: " + v.conductorPlaca;
-                document.getElementById('link-ws').href = `https://wa.me/${v.conductorCel}`;
-            }
             if(v.estado === "cancelado" || v.estado === "completado") location.reload();
         });
     }
+
+    // Mantiene la función anterior idéntica para flujos genéricos heredados si hicieran falta
+    function pedirTaxi() {
+        procesarUbicacionYBuscar();
+    }
+
     function cancelarPedidoTotal() {
         if(viajeID && confirm("¿Cancelar viaje?")) {
             db.ref('viajes/' + viajeID).update({ estado: 'cancelado' }).then(() => location.reload());

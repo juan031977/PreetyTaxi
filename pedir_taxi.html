@@ -25,7 +25,6 @@
         label { display: block; margin-top: 15px; color: #aaa; font-size: 12px; font-weight: bold; text-transform: uppercase; }
         select, input { width: 100%; padding: 14px; margin-top: 5px; border-radius: 12px; border: 1px solid #444; background: #222; color: white; font-size: 16px; box-sizing: border-box; }
         
-        /* Estilo del Buscador */
         .search-box {
             border: 1px solid var(--gold) !important;
             background: #2a2a2a !important;
@@ -208,8 +207,16 @@
             </optgroup>
         </select>
 
+        <label>Pasajeros Adicionales</label>
+        <select id="pasajeros-adicionales" onchange="actualizarPrecio()">
+            <option value="0">Solo yo (Titular)</option>
+            <option value="1">1 Pasajero adicional (Gratis)</option>
+            <option value="2">2 Pasajeros adicionales (+ B/. 0.50)</option>
+            <option value="3">3 Pasajeros adicionales (+ B/. 1.00)</option>
+        </select>
+
         <div class="price-display">
-            <transparent><small style="color:#888">TARIFA ESTIMADA</small><br>
+            <small style="color:#888">TARIFA ESTIMADA</small><br>
             <span id="display-precio">B/. 0.00</span>
         </div>
 
@@ -244,7 +251,7 @@
     const db = firebase.database();
     let viajeID = "";
 
-    // 1. AGREGO LA VARIABLE DEL AUDIO DEL SILBIDO AQUÍ
+    // Objeto de audio del silbido (Desbloqueado para móviles)
     const audioSilbido = new Audio('silbido.mp3');
 
     function filtrarDestinos() {
@@ -258,25 +265,55 @@
         }
     }
 
+    // Calcula el precio base + extras por pasajeros (CORREGIDO)
+    function calcularTotal() {
+        const selectDestino = document.getElementById('select-destino');
+        const precioBase = parseFloat(selectDestino.value);
+        
+        if (isNaN(precioBase) || precioBase <= 0) return 0;
+
+        const cantAdicionales = parseInt(document.getElementById('pasajeros-adicionales').value);
+        let extraPasajeros = 0;
+
+        // Nuevas tarifas asignadas exactamente como pediste
+        if (cantAdicionales === 2) {
+            extraPasajeros = 0.50; // 2 pasajeros adicionales sumergen 50 centavos
+        } else if (cantAdicionales === 3) {
+            extraPasajeros = 1.00; // 3 pasajeros adicionales sumergen 1 dólar
+        }
+
+        return precioBase + extraPasajeros;
+    }
+
     function actualizarPrecio() {
-        const p = document.getElementById('select-destino').value;
-        document.getElementById('display-precio').innerText = "B/. " + parseFloat(p).toFixed(2);
+        const total = calcularTotal();
+        document.getElementById('display-precio').innerText = "B/. " + total.toFixed(2);
     }
 
     function pedirTaxi() {
         const origen = document.getElementById('origen').value;
-        const select = document.getElementById('select-destino');
-        const precio = parseFloat(select.value);
-        const destino = select.options[select.selectedIndex].text;
+        const selectDestino = document.getElementById('select-destino');
+        const precioBase = parseFloat(selectDestino.value);
+        const destinoText = selectDestino.options[selectDestino.selectedIndex].text;
+        const cantAdicionales = parseInt(document.getElementById('pasajeros-adicionales').value);
 
-        if (precio <= 0 || isNaN(precio)) return alert("Selecciona un destino de la lista.");
+        if (precioBase <= 0 || isNaN(precioBase)) return alert("Selecciona un destino de la lista.");
+
+        const precioTotal = calcularTotal();
+
+        // Forzar activación del audio en celulares mediante interacción directa
+        audioSilbido.play().then(() => {
+            audioSilbido.pause();
+            audioSilbido.currentTime = 0;
+        }).catch(e => console.log("Pre-carga de audio:", e));
 
         const viaje = {
             cliente: localStorage.getItem('userName') || "Pasajero",
             clienteCel: localStorage.getItem('userCel') || "",
             origen: origen,
-            destino: destino,
-            precio: precio,
+            destino: destinoText,
+            precio: precioTotal,
+            pasajerosAdicionales: cantAdicionales,
             estado: 'pendiente',
             timestamp: new Date().getTime()
         };
@@ -292,16 +329,24 @@
             if(!v) return;
             
             if(v.estado === "en curso") {
-                // 2. DISPARO EL SILBIDO AQUÍ (Solo si la UI de conductor asignado aún no se muestra)
                 if (document.getElementById('datos-conductor').style.display === "none") {
-                    audioSilbido.play().catch(e => console.log("El navegador bloqueó el audio: ", e));
+                    audioSilbido.play().catch(e => console.log("Error silbido:", e));
                 }
 
                 document.getElementById('buscando-ui').style.display = "none";
                 document.getElementById('datos-conductor').style.display = "block";
                 document.getElementById('nombre-ch').innerText = v.conductorNombre;
                 document.getElementById('placa-ch').innerText = "PLACA: " + v.conductorPlaca;
-                document.getElementById('link-ws').href = `https://wa.me/${v.conductorCel}`;
+
+                // Mensaje con desglose de pasajeros adicionales (CORREGIDO)
+                let infoPasajeros = "Voy solo.";
+                if (v.pasajerosAdicionales === 1) infoPasajeros = "Llevo 1 pasajero adicional (Gratis).";
+                if (v.pasajerosAdicionales === 2) infoPasajeros = "Llevo 2 pasajeros adicionales (+B/. 0.50).";
+                if (v.pasajerosAdicionales === 3) infoPasajeros = "Llevo 3 pasajeros adicionales (+B/. 1.00).";
+
+                const textoSaludo = `Hola ${v.conductorNombre}, soy ${v.cliente}. Ya vi que aceptaste mi viaje en ClickGoTaxi. Te espero en: ${v.origen}. Voy hacia: ${v.destino}. Acompañantes: ${infoPasajeros} Tarifa Total: B/. ${parseFloat(v.precio).toFixed(2)}`;
+                
+                document.getElementById('link-ws').href = `https://wa.me/${v.conductorCel}?text=${encodeURIComponent(textoSaludo)}`;
             }
             if(v.estado === "cancelado" || v.estado === "completado") location.reload();
         });

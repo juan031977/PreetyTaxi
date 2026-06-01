@@ -32,6 +32,27 @@
             font-weight: bold;
         }
 
+        /* Contenedor para los ganchos de recargo manuales */
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            background: #222;
+            padding: 12px;
+            border-radius: 12px;
+            margin-top: 8px;
+            border: 1px solid #444;
+            cursor: pointer;
+        }
+        .checkbox-container input {
+            width: auto;
+            margin: 0 10px 0 0;
+            transform: scale(1.3);
+        }
+        .checkbox-label {
+            font-size: 14px;
+            color: #fff;
+        }
+
         .price-display { background: #111; padding: 15px; border-radius: 12px; margin-top: 20px; text-align: center; border: 1px dashed var(--gold); }
         .price-display span { font-size: 32px; font-weight: bold; color: var(--gold); }
 
@@ -78,7 +99,6 @@
                 <option value="3.00">OXFORD SCHOOL - B/. 3.00</option>
                 <option value="6.00">GREEN CITY - B/. 6.00</option>
             </optgroup>
-
             <optgroup label="FUERA DE BRISAS DEL GOLF" id="grupo-fuera">
                 <option value="15.00">INADEH - B/. 15.00</option>
                 <option value="25.00">ATO HOWARD - B/. 25.00</option>
@@ -207,16 +227,32 @@
             </optgroup>
         </select>
 
-        <label>Pasajeros Adicionales</label>
+        <label>Pasajeros Acompañantes</label>
         <select id="pasajeros-adicionales" onchange="actualizarPrecio()">
-            <option value="0">Solo yo (Titular)</option>
-            <option value="1">1 Pasajero adicional (Gratis)</option>
-            <option value="2">2 Pasajeros adicionales (+ B/. 0.50)</option>
-            <option value="3">3 Pasajeros adicionales (+ B/. 1.00)</option>
+            <option value="0">Voy solo (Sin acompañantes)</option>
+            <option value="1">1 acompañante (+ B/. 0.50)</option>
+            <option value="2">2 acompañantes (+ B/. 1.00)</option>
+            <option value="3">3 acompañantes (+ B/. 1.50)</option>
+            <option value="4">4 acompañantes (+ B/. 2.00)</option>
         </select>
 
+        <div class="checkbox-container" onclick="toggleCheckbox('check-dom-feriado')">
+            <input type="checkbox" id="check-dom-feriado" onchange="actualizarPrecio()">
+            <span class="checkbox-label">📅 Domingos y Feriados (+ B/. 0.50)</span>
+        </div>
+
+        <div class="checkbox-container" onclick="toggleCheckbox('check-nocturno')">
+            <input type="checkbox" id="check-nocturno" onchange="actualizarPrecio()">
+            <span class="checkbox-label">🌙 Horario nocturno (Después de las 10:00 PM) (+ B/. 0.50)</span>
+        </div>
+
+        <div class="checkbox-container" onclick="toggleCheckbox('check-mascota')">
+            <input type="checkbox" id="check-mascota" onchange="actualizarPrecio()">
+            <span class="checkbox-label">🐶 Lleva mascota (+ B/. 5.00)</span>
+        </div>
+
         <div class="price-display">
-            <small style="color:#888">TARIFA ESTIMADA</small><br>
+            <small style="color:#888">TARIFA TOTAL CON RECARGOS</small><br>
             <span id="display-precio">B/. 0.00</span>
         </div>
 
@@ -251,43 +287,51 @@
     const db = firebase.database();
     let viajeID = "";
 
-    // Objeto de audio del silbido (Desbloqueado para móviles)
     const audioSilbido = new Audio('silbido.mp3');
 
     function filtrarDestinos() {
         const input = document.getElementById('input-busqueda').value.toLowerCase();
         const select = document.getElementById('select-destino');
         const opciones = select.getElementsByTagName('option');
-
         for (let i = 0; i < opciones.length; i++) {
             const texto = opciones[i].text.toLowerCase();
             opciones[i].style.display = texto.includes(input) ? "" : "none";
         }
     }
 
-    // Calcula el precio base + extras por pasajeros (CORREGIDO)
-    function calcularTotal() {
+    // Permite marcar las casillas al tocar cualquier parte de su fila
+    function toggleCheckbox(id) {
+        if(event.target.tagName !== 'INPUT') {
+            const chk = document.getElementById(id);
+            chk.checked = !chk.checked;
+            actualizarPrecio();
+        }
+    }
+
+    // Calcula la tarifa sumando únicamente lo que el pasajero seleccionó de forma manual
+    function calcularTarifaDinamica() {
         const selectDestino = document.getElementById('select-destino');
         const precioBase = parseFloat(selectDestino.value);
+        if (isNaN(precioBase) || precioBase <= 0) return { total: 0, desgloses: [] };
+
+        let extraPasajeros = parseInt(document.getElementById('pasajeros-adicionales').value) * 0.50;
+        let extraDomFeriado = document.getElementById('check-dom-feriado').checked ? 0.50 : 0;
+        let extraNocturno = document.getElementById('check-nocturno').checked ? 0.50 : 0;
+        let extraMascota = document.getElementById('check-mascota').checked ? 5.00 : 0;
         
-        if (isNaN(precioBase) || precioBase <= 0) return 0;
+        let desgloses = [];
+        if (extraPasajeros > 0) desgloses.push(`Acompañantes (+B/.${extraPasajeros.toFixed(2)})`);
+        if (extraDomFeriado > 0) desgloses.push("Domingos y Feriados (+B/.0.50)");
+        if (extraNocturno > 0) desgloses.push("Horario nocturno (+B/.0.50)");
+        if (extraMascota > 0) desgloses.push("Lleva mascota (+B/.5.00)");
 
-        const cantAdicionales = parseInt(document.getElementById('pasajeros-adicionales').value);
-        let extraPasajeros = 0;
-
-        // Nuevas tarifas asignadas exactamente como pediste
-        if (cantAdicionales === 2) {
-            extraPasajeros = 0.50; // 2 pasajeros adicionales sumergen 50 centavos
-        } else if (cantAdicionales === 3) {
-            extraPasajeros = 1.00; // 3 pasajeros adicionales sumergen 1 dólar
-        }
-
-        return precioBase + extraPasajeros;
+        let granTotal = precioBase + extraPasajeros + extraDomFeriado + extraNocturno + extraMascota;
+        return { total: granTotal, desgloses: desgloses };
     }
 
     function actualizarPrecio() {
-        const total = calcularTotal();
-        document.getElementById('display-precio').innerText = "B/. " + total.toFixed(2);
+        const calculo = calcularTarifaDinamica();
+        document.getElementById('display-precio').innerText = "B/. " + calculo.total.toFixed(2);
     }
 
     function pedirTaxi() {
@@ -295,25 +339,32 @@
         const selectDestino = document.getElementById('select-destino');
         const precioBase = parseFloat(selectDestino.value);
         const destinoText = selectDestino.options[selectDestino.selectedIndex].text;
+        
         const cantAdicionales = parseInt(document.getElementById('pasajeros-adicionales').value);
+        const esDomFeriado = document.getElementById('check-dom-feriado').checked;
+        const esNocturno = document.getElementById('check-nocturno').checked;
+        const llevaMascota = document.getElementById('check-mascota').checked;
 
         if (precioBase <= 0 || isNaN(precioBase)) return alert("Selecciona un destino de la lista.");
 
-        const precioTotal = calcularTotal();
+        const calculo = calcularTarifaDinamica();
 
-        // Forzar activación del audio en celulares mediante interacción directa
         audioSilbido.play().then(() => {
             audioSilbido.pause();
             audioSilbido.currentTime = 0;
-        }).catch(e => console.log("Pre-carga de audio:", e));
+        }).catch(e => console.log("Pre-carga audio:", e));
 
         const viaje = {
             cliente: localStorage.getItem('userName') || "Pasajero",
             clienteCel: localStorage.getItem('userCel') || "",
             origen: origen,
             destino: destinoText,
-            precio: precioTotal,
+            precio: calculo.total,
             pasajerosAdicionales: cantAdicionales,
+            domingoFeriado: esDomFeriado,
+            horarioNocturno: esNocturno,
+            mascota: llevaMascota,
+            detallesRecargo: calculo.desgloses.join(", ") || "Ninguno",
             estado: 'pendiente',
             timestamp: new Date().getTime()
         };
@@ -338,13 +389,11 @@
                 document.getElementById('nombre-ch').innerText = v.conductorNombre;
                 document.getElementById('placa-ch').innerText = "PLACA: " + v.conductorPlaca;
 
-                // Mensaje con desglose de pasajeros adicionales (CORREGIDO)
-                let infoPasajeros = "Voy solo.";
-                if (v.pasajerosAdicionales === 1) infoPasajeros = "Llevo 1 pasajero adicional (Gratis).";
-                if (v.pasajerosAdicionales === 2) infoPasajeros = "Llevo 2 pasajeros adicionales (+B/. 0.50).";
-                if (v.pasajerosAdicionales === 3) infoPasajeros = "Llevo 3 pasajeros adicionales (+B/. 1.00).";
+                // Armar mensaje desglosado para el WhatsApp del chofer
+                let msgAcompañantes = v.pasajerosAdicionales > 0 ? `${v.pasajerosAdicionales} adicionales` : "Solo el titular";
+                let msgMascota = v.mascota ? "SÍ" : "No";
 
-                const textoSaludo = `Hola ${v.conductorNombre}, soy ${v.cliente}. Ya vi que aceptaste mi viaje en ClickGoTaxi. Te espero en: ${v.origen}. Voy hacia: ${v.destino}. Acompañantes: ${infoPasajeros} Tarifa Total: B/. ${parseFloat(v.precio).toFixed(2)}`;
+                const textoSaludo = `Hola ${v.conductorNombre}, soy ${v.cliente}. Aceptaste mi viaje en ClickGoTaxi. Te espero en: ${v.origen}. Destino: ${v.destino}. Pasajeros: ${msgAcompañantes}. Mascota: ${msgMascota}. Detalles Aplicados: [${v.detallesRecargo}]. Tarifa Total: B/. ${parseFloat(v.precio).toFixed(2)}`;
                 
                 document.getElementById('link-ws').href = `https://wa.me/${v.conductorCel}?text=${encodeURIComponent(textoSaludo)}`;
             }

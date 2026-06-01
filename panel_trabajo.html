@@ -25,6 +25,11 @@
         .btn-ws { background: #25d366; color: #fff; text-decoration: none; display: flex; align-items: center; justify-content: center; }
         .btn-cancel { background: transparent; color: #ff4444; border: 1px solid #ff4444; font-size: 11px; }
 
+        /* Estilos agregados para resaltar los pasajeros y extras */
+        .badge-info { background: #333; color: #ffc107; padding: 8px; border-radius: 8px; font-size: 13px; margin: 8px 0; font-weight: bold; }
+        .badge-mascota { background: #441111; color: #ff4444; padding: 6px; border-radius: 8px; font-size: 12px; font-weight: bold; border: 1px solid #ff4444; text-align: center; margin-top: 5px; }
+        .badge-mascota-activa { background: #ff4444; color: #fff; }
+
         /* Flecha de retroceso */
         .back-btn { 
             position: absolute; 
@@ -43,7 +48,6 @@
 </head>
 <body onload="cargar()">
 
-    <!-- BOTÓN DE RETROCESO -->
     <a href="index.html" class="back-btn">←</a>
 
     <div class="status-bar">
@@ -64,7 +68,6 @@
     <div id="lista-viajes"></div>
 
     <script>
-        // ... (el script se mantiene exactamente igual)
         const firebaseConfig = { apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
@@ -185,11 +188,25 @@
                         botonViaje = `<button class="btn btn-ok" onclick="tomarViaje('${child.key}')">ACEPTAR VIAJE</button>`;
                     }
 
+                    // Calcular la cantidad total de personas que subirán al auto
+                    let ocupantesTotales = 1 + parseInt(v.pasajerosAdicionales || 0);
+                    let textoOcupantes = ocupantesTotales === 1 ? "👤 1 Pasajero (Solo)" : `👥 ${ocupantesTotales} Personas (Titular + ${v.pasajerosAdicionales})`;
+
+                    // Validar etiqueta si viaja con mascota
+                    let htmlMascota = v.mascota ? `<div class="badge-mascota badge-mascota-activa">🐶 LLEVA MASCOTA (+B/. 5.00)</div>` : "";
+
                     html += `
                         <div class="viaje-card">
                             <p><b>📍 Recoger en:</b> ${v.origen}</p>
                             <p><b>🏁 Destino:</b> ${v.destino}</p>
-                            <p><b>💰 Tarifa:</b> B/. ${parseFloat(v.precio).toFixed(2)}</p>
+                            
+                            <div class="badge-info">
+                                ${textoOcupantes}<br>
+                                <small style="color:#aaa;">Recargos: ${v.detallesRecargo || "Ninguno"}</small>
+                            </div>
+                            ${htmlMascota}
+
+                            <p style="margin-top: 10px;"><b>💰 Tarifa Total:</b> B/. ${parseFloat(v.precio).toFixed(2)}</p>
                             ${botonViaje}
                         </div>`;
                 }
@@ -198,11 +215,22 @@
                     let celPasajero = String(v.clienteCel || "").replace(/\D/g, '');
                     if(celPasajero.length === 8) celPasajero = "507" + celPasajero;
 
+                    let ocupantesTotales = 1 + parseInt(v.pasajerosAdicionales || 0);
+                    let alertaMascotaCurso = v.mascota ? `<div class="badge-mascota badge-mascota-activa" style="margin-bottom:10px;">🐶 ATENCIÓN: LLEVA MASCOTA</div>` : "";
+
                     html = `
                         <div class="viaje-card" style="border-left-color: #25d366; background: #fff; color: #000;">
                             <p><b>👤 Cliente:</b> ${v.cliente}</p>
                             <p><b>📍 Recoger en:</b> ${v.origen}</p>
-                            <p style="font-size: 20px;"><b>Total: B/. ${v.precio}</b></p>
+                            
+                            <div class="badge-info" style="background:#f0f0f0; color:#000; border: 1px solid #ccc;">
+                                🧑‍🤝‍🧑 Ocupantes en auto: <b>${ocupantesTotales} persona(s)</b><br>
+                                <small style="color:#555;">Extras aplicados: ${v.detallesRecargo || "Ninguno"}</small>
+                            </div>
+                            ${alertaMascotaCurso}
+
+                            <p style="font-size: 22px; margin: 10px 0;"><b>Total a Cobrar: B/. ${parseFloat(v.precio).toFixed(2)}</b></p>
+                            
                             <a href="https://wa.me/${celPasajero}?text=Hola%20${v.cliente},%20soy%20tu%20conductor%20de%20ClickGoTaxi%20estoy%20en%20camino" class="btn btn-ws" target="_blank">HABLAR POR WHATSAPP</a>
                             <button class="btn btn-ok" style="background:#000; color:#fff;" onclick="finalizarViaje('${child.key}', ${v.precio})">FINALIZAR VIAJE</button>
                             <button class="btn btn-cancel" onclick="cancelarViaje('${child.key}')">CANCELAR</button>

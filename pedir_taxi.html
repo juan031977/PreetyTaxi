@@ -236,7 +236,7 @@
         </div>
         
         <div id="contenedor-conductores" class="listado-choferes">
-            <label style="color:var(--gold); font-size:13px;">Conductores disponibles a menos de 10 km:</label>
+            <label style="color:var(--gold); font-size:13px;">Conductores disponibles a menos de 20 km:</label>
             <div id="lista-renderizada"></div>
         </div>
 
@@ -269,7 +269,6 @@
     const db = firebase.database();
     let viajeID = "";
     
-    // Variables globales para guardar las coordenadas temporales del pasajero
     let latPasajero = null;
     let lonPasajero = null;
 
@@ -287,7 +286,7 @@
         document.getElementById('display-precio').innerText = "B/. " + parseFloat(p).toFixed(2);
     }
 
-    // NUEVA FUNCIÓN: Fórmula matemática Haversine para calcular distancia exacta en KM
+    // Fórmula matemática Haversine para calcular distancia exacta en KM
     function calcularDistanciaKM(lat1, lon1, lat2, lon2) {
         const R = 6371; 
         const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -299,7 +298,7 @@
         return R * c; 
     }
 
-    // NUEVA FUNCIÓN: Obtiene el GPS del pasajero primero antes de listar
+    // Obtiene el GPS del pasajero primero antes de listar
     function procesarUbicacionYBuscar() {
         const select = document.getElementById('select-destino');
         const precio = parseFloat(select.value);
@@ -309,11 +308,9 @@
             navigator.geolocation.getCurrentPosition((position) => {
                 latPasajero = position.coords.latitude;
                 lonPasajero = position.coords.longitude;
-                // Una vez obtenida la ubicación, busca choferes activos
                 buscarConductoresCercanos(latPasajero, lonPasajero);
             }, (error) => {
-                alert("Para mostrar los conductores más cercanos, activa el GPS de tu celular.");
-                // Respaldo por si rechaza el GPS: simulando coordenadas de Brisas del Golf
+                alert("Aviso: El navegador bloqueó el GPS directo. Se usará la ubicación base de Brisas del Golf para el rastreo de 20 km.");
                 latPasajero = 9.0436;
                 lonPasajero = -79.4449;
                 buscarConductoresCercanos(latPasajero, lonPasajero);
@@ -323,7 +320,7 @@
         }
     }
 
-    // NUEVA FUNCIÓN: Descarga de Firebase, filtra a 10km y ordena del más cercano al más lejano
+    // Descarga de Firebase, filtra a un radio de 20km y ordena del más cercano al más lejano
     function buscarConductoresCercanos(latPas, lonPas) {
         const contenedor = document.getElementById("contenedor-conductores");
         const listaDiv = document.getElementById("lista-renderizada");
@@ -334,15 +331,20 @@
         db.ref('conductores').once('value', (snapshot) => {
             let conductoresValidos = [];
 
+            if (!snapshot.exists()) {
+                listaDiv.innerHTML = "<p style='color: #ff4444; text-align:center; font-size:14px; padding:10px;'>⚠️ No hay ningún conductor registrado en la base de datos.</p>";
+                return;
+            }
+
             snapshot.forEach((childSnapshot) => {
                 const chofer = childSnapshot.val();
                 
                 // Filtra solo choferes que estén con el estado "activo" y tengan coordenadas registradas
                 if (chofer.estado === "activo" && chofer.lat && chofer.lon) {
-                    const distancia = calcularDistanciaKM(latPas, lonPas, chofer.lat, chofer.lon);
+                    const distancia = calcularDistanciaKM(latPas, lonPas, parseFloat(chofer.lat), parseFloat(chofer.lon));
                     
-                    // REGLA: Radio máximo de 10 kilómetros
-                    if (distancia <= 10) {
+                    // REGLA NUEVA: Radio máximo ampliado a 20 Kilómetros
+                    if (distancia <= 20) {
                         conductoresValidos.push({
                             idCelular: childSnapshot.key,
                             nombre: chofer.nombre || "Conductor",
@@ -360,11 +362,17 @@
             listaDiv.innerHTML = ""; 
 
             if (conductoresValidos.length === 0) {
-                listaDiv.innerHTML = "<p style='color: #ff4444; text-align:center; font-size:14px; padding:10px;'>⚠️ No se encontraron conductores activos en un radio de 10 km.</p>";
+                listaDiv.innerHTML = `
+                    <div style='color: #ff4444; text-align:center; font-size:14px; padding:15px; background:#222; border-radius:10px; border: 1px dashed red;'>
+                        <p style='margin:0 0 10px 0;'>⚠️ No se encontraron conductores activos a menos de 20 km.</p>
+                        <small style='color:#aaa; display:block;'>Revisa que el conductor tenga en Firebase:</small>
+                        <small style='color:var(--gold); display:block;'>estado: "activo"</small>
+                        <small style='color:var(--gold); display:block;'>lat y lon con coordenadas válidas</small>
+                    </div>`;
                 return;
             }
 
-            // Renderiza las tarjetas de los choferes encontrados ordenados
+            // Renderiza las tarjetas de los choferes encontrados ordenados (El más cercano arriba)
             conductoresValidos.forEach((chofer) => {
                 listaDiv.innerHTML += `
                     <div class="conductor-tarjeta">
@@ -383,7 +391,7 @@
         });
     }
 
-    // MODIFICADO: Ahora el pedido se realiza asignando directamente los datos del chofer que seleccionó el usuario
+    // El pedido se realiza asignando directamente los datos del chofer que seleccionó el usuario
     function pedirTaxiConChofer(choferCelular, choferNombre, choferPlaca) {
         const origen = document.getElementById('origen').value;
         const select = document.getElementById('select-destino');
@@ -396,7 +404,7 @@
             origen: origen,
             destino: destino,
             precio: precio,
-            estado: 'en curso', // Pasa directamente a "en curso" al ser elegido en vivo
+            estado: 'en curso', 
             conductorCel: choferCelular,
             conductorNombre: choferNombre,
             conductorPlaca: choferPlaca,
@@ -409,7 +417,6 @@
         document.getElementById('panel-cliente').style.display = "none";
         document.getElementById('panel-espera').style.display = "block";
         
-        // Muestra de inmediato los datos del conductor seleccionado en la UI de espera
         document.getElementById('buscando-ui').style.display = "none";
         document.getElementById('datos-conductor').style.display = "block";
         document.getElementById('nombre-ch').innerText = choferNombre;
@@ -423,7 +430,6 @@
         });
     }
 
-    // Mantiene la función anterior idéntica para flujos genéricos heredados si hicieran falta
     function pedirTaxi() {
         procesarUbicacionYBuscar();
     }

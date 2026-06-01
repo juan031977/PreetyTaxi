@@ -23,7 +23,6 @@
         label { display: block; margin-top: 15px; color: #aaa; font-size: 12px; font-weight: bold; text-transform: uppercase; }
         select, input { width: 100%; padding: 14px; margin-top: 5px; border-radius: 12px; border: 1px solid #444; background: #222; color: white; font-size: 16px; box-sizing: border-box; }
         
-        /* Estilo del Buscador */
         .search-box {
             border: 1px solid var(--gold) !important;
             background: #2a2a2a !important;
@@ -39,7 +38,6 @@
         .loader { border: 4px solid #333; border-top: 4px solid var(--gold); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* === FLECHA DE RETROCESO === */
         .back-btn { 
             position: absolute; 
             top: 20px; 
@@ -53,7 +51,7 @@
         }
         .back-btn:active { transform: scale(0.85); }
 
-        /* === CONTENEDOR NUEVO PARA CONDUCTORES EN VIVO === */
+        /* === LISTADO DE CHOFERES DIRECTOS === */
         .listado-choferes { margin-top: 20px; display: none; }
         .conductor-tarjeta {
             background: #222; border: 1px solid var(--gold); padding: 15px; 
@@ -64,8 +62,8 @@
         .conductor-info { flex: 1; }
         .conductor-info h4 { margin: 0; font-size: 16px; color: white; }
         .conductor-info p { margin: 3px 0 0 0; color: #aaa; font-size: 13px; }
-        .distancia-badge { background: var(--gold); color: black; padding: 2px 6px; font-size: 11px; font-weight: bold; border-radius: 5px; display: inline-block; margin-top: 4px; }
-        .btn-elegir-ch { background: #00e676; color: black; border: none; padding: 10px 14px; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        .estado-badge { background: #00e676; color: black; padding: 2px 6px; font-size: 11px; font-weight: bold; border-radius: 5px; display: inline-block; margin-top: 4px; }
+        .btn-elegir-ch { background: var(--gold); color: black; border: none; padding: 10px 14px; border-radius: 10px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -236,11 +234,11 @@
         </div>
         
         <div id="contenedor-conductores" class="listado-choferes">
-            <label style="color:var(--gold); font-size:13px;">Conductores disponibles a menos de 20 km:</label>
+            <label style="color:var(--gold); font-size:13px;">Conductores Disponibles de la Flota:</label>
             <div id="lista-renderizada"></div>
         </div>
 
-        <button class="btn-pedir" id="btn-principal-solicitar" onclick="procesarUbicacionYBuscar()">SOLICITAR TAXI</button>
+        <button class="btn-pedir" id="btn-principal-solicitar" onclick="buscarTodosLosConductoresActivos()">VER CONDUCTORES DISPONIBLES</button>
     </div>
     <div id="panel-espera" class="card">
         <div id="buscando-ui">
@@ -268,9 +266,6 @@
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     let viajeID = "";
-    
-    let latPasajero = null;
-    let lonPasajero = null;
 
     function filtrarDestinos() {
         const input = document.getElementById('input-busqueda').value.toLowerCase();
@@ -286,93 +281,56 @@
         document.getElementById('display-precio').innerText = "B/. " + parseFloat(p).toFixed(2);
     }
 
-    // Fórmula matemática Haversine para calcular distancia exacta en KM
-    function calcularDistanciaKM(lat1, lon1, lat2, lon2) {
-        const R = 6371; 
-        const dLat = (lat2 - lat1) * Math.PI / 180;
-        const dLon = (lon2 - lon1) * Math.PI / 180;
-        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                  Math.sin(dLon/2) * Math.sin(dLon/2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        return R * c; 
-    }
-
-    // Obtiene el GPS del pasajero primero antes de listar
-    function procesarUbicacionYBuscar() {
+    // NUEVA LÓGICA DIRECTA: Descarga, salta la geolocalización y lista a todos los que tengan estado "activo"
+    function buscarTodosLosConductoresActivos() {
         const select = document.getElementById('select-destino');
         const precio = parseFloat(select.value);
         if (precio <= 0 || isNaN(precio)) return alert("Selecciona un destino de la lista.");
 
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition((position) => {
-                latPasajero = position.coords.latitude;
-                lonPasajero = position.coords.longitude;
-                buscarConductoresCercanos(latPasajero, lonPasajero);
-            }, (error) => {
-                alert("Aviso: El navegador bloqueó el GPS directo. Se usará la ubicación base de Brisas del Golf para el rastreo de 20 km.");
-                latPasajero = 9.0436;
-                lonPasajero = -79.4449;
-                buscarConductoresCercanos(latPasajero, lonPasajero);
-            });
-        } else {
-            alert("Tu navegador no soporta geolocalización.");
-        }
-    }
-
-    // Descarga de Firebase, filtra a un radio de 20km y ordena del más cercano al más lejano
-    function buscarConductoresCercanos(latPas, lonPas) {
         const contenedor = document.getElementById("contenedor-conductores");
         const listaDiv = document.getElementById("lista-renderizada");
         
-        listaDiv.innerHTML = "<p style='color: var(--gold); text-align:center;'>Buscando conductores en el área...</p>";
+        listaDiv.innerHTML = "<p style='color: var(--gold); text-align:center;'>Conectando con la flota...</p>";
         contenedor.style.display = "block";
 
         db.ref('conductores').once('value', (snapshot) => {
             let conductoresValidos = [];
 
             if (!snapshot.exists()) {
-                listaDiv.innerHTML = "<p style='color: #ff4444; text-align:center; font-size:14px; padding:10px;'>⚠️ No hay ningún conductor registrado en la base de datos.</p>";
+                listaDiv.innerHTML = "<p style='color: #ff4444; text-align:center; font-size:14px; padding:10px;'>⚠️ No hay ningún conductor registrado en el sistema.</p>";
                 return;
             }
 
             snapshot.forEach((childSnapshot) => {
                 const chofer = childSnapshot.val();
                 
-                // Filtra solo choferes que estén con el estado "activo" y tengan coordenadas registradas
-                if (chofer.estado === "activo" && chofer.lat && chofer.lon) {
-                    const distancia = calcularDistanciaKM(latPas, lonPas, parseFloat(chofer.lat), parseFloat(chofer.lon));
-                    
-                    // REGLA NUEVA: Radio máximo ampliado a 20 Kilómetros
-                    if (distancia <= 20) {
-                        conductoresValidos.push({
-                            idCelular: childSnapshot.key,
-                            nombre: chofer.nombre || "Conductor",
-                            placa: chofer.placa || "---",
-                            foto: chofer.foto || "https://cdn-icons-png.flaticon.com/512/1395/1395855.png",
-                            distancia: distancia
-                        });
-                    }
+                // ÚNICO FILTRO: Que el conductor se haya puesto en estado "activo"
+                if (chofer.estado === "activo") {
+                    conductoresValidos.push({
+                        idCelular: childSnapshot.key,
+                        nombre: chofer.nombre || "Conductor",
+                        placa: chofer.placa || "---",
+                        foto: chofer.foto || "https://cdn-icons-png.flaticon.com/512/1395/1395855.png"
+                    });
                 }
             });
 
-            // REGLA: Ordenamiento dinámico automático (De menor distancia a mayor distancia)
-            conductoresValidos.sort((a, b) => a.distancia - b.distancia);
+            // Ordenamiento por orden alfabético sencillo
+            conductoresValidos.sort((a, b) => a.nombre.localeCompare(b.nombre));
 
             listaDiv.innerHTML = ""; 
 
             if (conductoresValidos.length === 0) {
                 listaDiv.innerHTML = `
                     <div style='color: #ff4444; text-align:center; font-size:14px; padding:15px; background:#222; border-radius:10px; border: 1px dashed red;'>
-                        <p style='margin:0 0 10px 0;'>⚠️ No se encontraron conductores activos a menos de 20 km.</p>
-                        <small style='color:#aaa; display:block;'>Revisa que el conductor tenga en Firebase:</small>
+                        <p style='margin:0 0 10px 0;'>⚠️ No hay conductores activos en este momento.</p>
+                        <small style='color:#aaa; display:block;'>Dile a tu amigo que revise que su cuenta tenga:</small>
                         <small style='color:var(--gold); display:block;'>estado: "activo"</small>
-                        <small style='color:var(--gold); display:block;'>lat y lon con coordenadas válidas</small>
                     </div>`;
                 return;
             }
 
-            // Renderiza las tarjetas de los choferes encontrados ordenados (El más cercano arriba)
+            // Renderiza las tarjetas de los choferes listos de forma inmediata
             conductoresValidos.forEach((chofer) => {
                 listaDiv.innerHTML += `
                     <div class="conductor-tarjeta">
@@ -380,7 +338,7 @@
                         <div class="conductor-info">
                             <h4>${chofer.nombre}</h4>
                             <p>🚗 Placa: ${chofer.placa}</p>
-                            <span class="distancia-badge">A ${chofer.distancia.toFixed(1)} km</span>
+                            <span class="estado-badge">En Línea ✨</span>
                         </div>
                         <button class="btn-elegir-ch" onclick="pedirTaxiConChofer('${chofer.idCelular}', '${chofer.nombre}', '${chofer.placa}')">
                             Elegir 🚕
@@ -391,9 +349,8 @@
         });
     }
 
-    // El pedido se realiza asignando directamente los datos del chofer que seleccionó el usuario
     function pedirTaxiConChofer(choferCelular, choferNombre, choferPlaca) {
-        const origen = document.getElementById('origen').value;
+        const origen = document.getElementById('origen').value || "Ubicación Solicitada";
         const select = document.getElementById('select-destino');
         const precio = parseFloat(select.value);
         const destino = select.options[select.selectedIndex].text;
@@ -428,10 +385,6 @@
             if(!v) return;
             if(v.estado === "cancelado" || v.estado === "completado") location.reload();
         });
-    }
-
-    function pedirTaxi() {
-        procesarUbicacionYBuscar();
     }
 
     function cancelarPedidoTotal() {

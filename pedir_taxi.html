@@ -10,15 +10,12 @@
         :root { --gold: #ffc107; --dark: #000; --card: #1a1a1a; }
         body { margin: 0; background: var(--dark); color: white; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; }
         
-        /* Contenedor del Mapa Interactivo */
         .map-header {
             width: 100%; height: 260px;
             position: relative; border-bottom: 3px solid var(--gold);
             background: #222;
         }
-        .map-header iframe {
-            width: 100%; height: 100%; border: none;
-        }
+        .map-header iframe { width: 100%; height: 100%; border: none; }
 
         .container { width: 92%; max-width: 400px; margin-top: -20px; position: relative; z-index: 10; padding-bottom: 40px; }
         .card { background: var(--card); padding: 20px; border-radius: 20px; border: 1px solid #333; box-shadow: 0 10px 25px rgba(0,0,0,0.8); }
@@ -51,9 +48,7 @@
             font-size: 26px; 
             font-weight: bold; 
             z-index: 100;
-            transition: transform 0.2s ease;
         }
-        .back-btn:active { transform: scale(0.85); }
 
         .listado-choferes { margin-top: 20px; display: none; }
         .conductor-tarjeta {
@@ -276,6 +271,9 @@
     const db = firebase.database();
     let viajeID = "";
 
+    // VARIABLE DE AUDIO PARA EL SILBIDO
+    const audioSilbido = new Audio('silbido.mp3');
+
     function filtrarDestinos() {
         const input = document.getElementById('input-busqueda').value.toLowerCase();
         const select = document.getElementById('select-destino');
@@ -291,18 +289,15 @@
         document.getElementById('display-precio').innerText = "B/. " + parseFloat(p).toFixed(2);
     }
 
-    // NUEVA FUNCIÓN: Se ejecuta al cambiar el destino para actualizar precio y trazar el mapa
     function cambioDeDestino() {
         actualizarPrecio();
         trazarRutaMapa();
     }
 
-    // NUEVA FUNCIÓN: Genera la ruta origen -> destino dinámicamente en el mapa
     function trazarRutaMapa() {
         let origenInput = document.getElementById('origen').value.trim();
         const select = document.getElementById('select-destino');
         
-        // Si no han escrito origen, asumimos Brisas del Golf para ubicar el mapa localmente
         if (origenInput === "") {
             origenInput = "Brisas del Golf, Panama";
         } else {
@@ -310,20 +305,17 @@
         }
 
         if (select.selectedIndex !== -1) {
-            // Limpiamos el texto de la opción seleccionada quitando el precio para que Google Maps busque limpio
             let destinoTexto = select.options[select.selectedIndex].text.split(" - ")[0];
             destinoTexto += ", Panama";
-
-            // Estructura el enlace oficial de mapas embebidos en modo dirección (dir)
-            const urlRuta = `https://maps.google.com/maps?saddr=${encodeURIComponent(origenInput)}&daddr=${encodeURIComponent(destinoTexto)}&t=&z=14&ie=UTF8&iwloc=&output=embed`;
+            const urlRuta = `https://maps.google.com/?cid=10211356384942279897&g_mp=CiVnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLkdldFBsYWNl{encodeURIComponent(origenInput)}&daddr=${encodeURIComponent(destinoTexto)}&t=&z=14&ie=UTF8&iwloc=&output=embed`;
             document.getElementById('mapa-google').src = urlRuta;
         } else {
-            // Si solo hay origen, enfoca ese punto en el mapa
-            const urlOrigen = `https://maps.google.com/maps?q=${encodeURIComponent(origenInput)}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
+            const urlOrigen = `https://maps.google.com/maps/contrib/105329948729187420088{encodeURIComponent(origenInput)}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
             document.getElementById('mapa-google').src = urlOrigen;
         }
     }
 
+    // CORRECCIÓN: Filtra estrictamente que el estado sea "activo"
     function buscarTodosLosConductoresActivos() {
         const select = document.getElementById('select-destino');
         const precio = parseFloat(select.value);
@@ -345,6 +337,7 @@
 
             snapshot.forEach((childSnapshot) => {
                 const chofer = childSnapshot.val();
+                // CANDADO DE SEGURIDAD: Solo si el conductor está realmente conectado ("activo")
                 if (chofer.estado === "activo") {
                     conductoresValidos.push({
                         idCelular: childSnapshot.key,
@@ -385,6 +378,9 @@
     }
 
     function pedirTaxiConChofer(choferCelular, choferNombre, choferPlaca) {
+        // CORRECCIÓN: Suena el silbido justo al presionar el botón de elegir
+        audioSilbido.play().catch(e => console.log("El navegador bloqueó el audio hasta interacción: ", e));
+
         const origenInput = document.getElementById('origen').value.trim();
         const origen = origenInput !== "" ? origenInput : "Ubicación Actual";
         

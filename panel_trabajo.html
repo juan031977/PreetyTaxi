@@ -24,24 +24,30 @@
         .btn-ok { background: #ffc107; color: #000; }
         .btn-ws { background: #25d366; color: #fff; text-decoration: none; display: flex; align-items: center; justify-content: center; }
         .btn-cancel { background: transparent; color: #ff4444; border: 1px solid #ff4444; font-size: 11px; }
+        
+        .btn-llegue { background: #007bff; color: #fff; }
 
-        /* Estilos agregados para resaltar los pasajeros y extras */
         .badge-info { background: #333; color: #ffc107; padding: 8px; border-radius: 8px; font-size: 13px; margin: 8px 0; font-weight: bold; }
         .badge-mascota { background: #441111; color: #ff4444; padding: 6px; border-radius: 8px; font-size: 12px; font-weight: bold; border: 1px solid #ff4444; text-align: center; margin-top: 5px; }
         .badge-mascota-activa { background: #ff4444; color: #fff; }
 
-        /* Flecha de retroceso */
-        .back-btn { 
-            position: absolute; 
-            top: 20px; 
-            left: 20px; 
+        .timer-conductor { 
+            background: #000; 
             color: #ffc107; 
-            text-decoration: none; 
-            font-size: 22px; 
+            padding: 12px; 
+            border-radius: 10px; 
+            margin: 10px 0; 
             font-weight: bold; 
-            line-height: 1;
-            transition: transform 0.2s ease;
-            z-index: 100;
+            font-size: 16px; 
+            text-align: center;
+            border: 2px solid #ffc107;
+        }
+        .timer-expirado { color: #ff4444 !important; border-color: #ff4444 !important; animation: parpadeo 1s infinite; }
+        .timer-detenido { color: #25d366 !important; border-color: #25d366 !important; }
+        @keyframes parpadeo { 50% { opacity: 0.5; } }
+
+        .back-btn { 
+            position: absolute; top: 20px; left: 20px; color: #ffc107; text-decoration: none; font-size: 22px; font-weight: bold; line-height: 1; transition: transform 0.2s ease; z-index: 100;
         }
         .back-btn:active { transform: scale(0.85); }
     </style>
@@ -79,13 +85,17 @@
         let miEstado = "activo";
         let miConectado = false;
         let viajesSnapshot = null;
+        let escuchandoCambiosViajeActual = false;
+        
+        let intervalRelojChofer = null;
+        let idViajeConRelojActivo = "";
+        let segundosRegresivos = 420; // Guardamos el tiempo de manera global
 
         function cargar() {
             if(!miCel) window.location.href = "login_conductor.html";
 
             db.ref('conductores/' + miCel).on('value', snap => {
                 const d = snap.val() || {};
-
                 const hoy = new Date();
                 const hoyStr = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-' + String(hoy.getDate()).padStart(2, '0');
                 
@@ -160,6 +170,7 @@
             
             if (!miConectado && miEstado !== "bloqueado") {
                 lista.innerHTML = '<p style="text-align:center; color:#444;">Ponte en línea para recibir pedidos</p>';
+                limpiarRelojChofer();
                 return;
             }
 
@@ -170,13 +181,14 @@
 
             let html = "";
             let hayPendientes = false;
+            let tengoViajeActivo = false;
 
             viajesSnapshot.forEach(child => {
                 const v = child.val();
                 
                 if (v.estado === "pendiente") {
                     hayPendientes = true;
-                    if(ultimoViajeId !== child.key) {
+                    if(ultimoViajeId !== child.key && !tengoViajeActivo) {
                         silbido.play().catch(e => {});
                         ultimoViajeId = child.key;
                     }
@@ -188,11 +200,8 @@
                         botonViaje = `<button class="btn btn-ok" onclick="tomarViaje('${child.key}')">ACEPTAR VIAJE</button>`;
                     }
 
-                    // Calcular la cantidad total de personas que subirán al auto
                     let ocupantesTotales = 1 + parseInt(v.pasajerosAdicionales || 0);
                     let textoOcupantes = ocupantesTotales === 1 ? "👤 1 Pasajero (Solo)" : `👥 ${ocupantesTotales} Personas (Titular + ${v.pasajerosAdicionales})`;
-
-                    // Validar etiqueta si viaja con mascota
                     let htmlMascota = v.mascota ? `<div class="badge-mascota badge-mascota-activa">🐶 LLEVA MASCOTA (+B/. 5.00)</div>` : "";
 
                     html += `
@@ -212,17 +221,35 @@
                 }
 
                 if (v.estado === "en curso" && v.conductorCel === miCel) {
+                    tengoViajeActivo = true;
                     let celPasajero = String(v.clienteCel || "").replace(/\D/g, '');
                     if(celPasajero.length === 8) celPasajero = "507" + celPasajero;
 
                     let ocupantesTotales = 1 + parseInt(v.pasajerosAdicionales || 0);
                     let alertaMascotaCurso = v.mascota ? `<div class="badge-mascota badge-mascota-activa" style="margin-bottom:10px;">🐶 ATENCIÓN: LLEVA MASCOTA</div>` : "";
 
+                    // CORRECCIÓN AQUÍ: Evaluamos directo desde Firebase si el conductor ya llegó
+                    let botonLlegadaOFinalizar = "";
+                    let htmlRelojEstatico = "";
+
+                    if(v.conductorLlego === true) {
+                        // Si en Firebase ya dice que llegó, el reloj se limpia y se congela visualmente
+                        if(intervalRelojChofer) clearInterval(intervalRelojChofer); 
+                        htmlRelojEstatico = `<div class="timer-conductor timer-detenido">✅ ¡LLEGASTE A TIEMPO! Esperando al pasajero...</div>`;
+                        botonLlegadaOFinalizar = `<button class="btn btn-ok" style="background:#000; color:#fff;" onclick="finalizarViaje('${child.key}', ${v.precio})">FINALIZAR VIAJE</button>`;
+                    } else {
+                        // Si no ha llegado, muestra el contenedor donde corre el reloj vivo
+                        htmlRelojEstatico = `<div id="reloj-chofer-pantalla" class="timer-conductor">Calculando tiempo...</div>`;
+                        botonLlegadaOFinalizar = `<button class="btn btn-llegue" onclick="marcarLlegadaSitio('${child.key}')">🏁 ¡YA LLEGUÉ AL PUNTO!</button>`;
+                    }
+
                     html = `
                         <div class="viaje-card" style="border-left-color: #25d366; background: #fff; color: #000;">
                             <p><b>👤 Cliente:</b> ${v.cliente}</p>
                             <p><b>📍 Recoger en:</b> ${v.origen}</p>
                             
+                            ${htmlRelojEstatico}
+
                             <div class="badge-info" style="background:#f0f0f0; color:#000; border: 1px solid #ccc;">
                                 🧑‍🤝‍🧑 Ocupantes en auto: <b>${ocupantesTotales} persona(s)</b><br>
                                 <small style="color:#555;">Extras aplicados: ${v.detallesRecargo || "Ninguno"}</small>
@@ -232,14 +259,98 @@
                             <p style="font-size: 22px; margin: 10px 0;"><b>Total a Cobrar: B/. ${parseFloat(v.precio).toFixed(2)}</b></p>
                             
                             <a href="https://wa.me/${celPasajero}?text=Hola%20${v.cliente},%20soy%20tu%20conductor%20de%20ClickGoTaxi%20estoy%20en%20camino" class="btn btn-ws" target="_blank">HABLAR POR WHATSAPP</a>
-                            <button class="btn btn-ok" style="background:#000; color:#fff;" onclick="finalizarViaje('${child.key}', ${v.precio})">FINALIZAR VIAJE</button>
-                            <button class="btn btn-cancel" onclick="cancelarViaje('${child.key}')">CANCELAR</button>
+                            ${botonLlegadaOFinalizar}
+                            <button class="btn btn-cancel" onclick="cancelarViaje('${child.key}')">CANCELAR VIAJE</button>
                         </div>`;
+
+                    activarEscuchaExpiracion(child.key);
+                    
+                    // Solo iniciamos el reloj si realmente es un viaje nuevo y no ha marcado llegada
+                    if (idViajeConRelojActivo !== child.key && !v.conductorLlego) {
+                        idViajeConRelojActivo = child.key;
+                        segundosRegresivos = 420; // Reseteamos los 7 minutos globales
+                        iniciarRelojConductor();
+                    }
                 }
             });
 
             if(!hayPendientes) ultimoViajeId = "";
-            lista.innerHTML = html || '<p style="text-align:center; color:#333;">Esperando viajes...</p>';
+            
+            if(tengoViajeActivo) {
+                lista.innerHTML = html;
+                // Si el viaje está activo pero no ha marcado llegada, forzamos un print rápido para que no salga "Calculando tiempo..."
+                let elReloj = document.getElementById('reloj-chofer-pantalla');
+                if(elReloj && idViajeConRelojActivo !== "") {
+                    let mins = Math.floor(segundosRegresivos / 60);
+                    let secs = segundosRegresivos % 60;
+                    if(segundosRegresivos > 0) {
+                        elReloj.innerText = `⏱️ Tiempo para llegar: ${mins}:${secs < 10 ? '0' : ''}${secs}`;
+                    }
+                }
+            } else {
+                escuchandoCambiosViajeActual = false; 
+                limpiarRelojChofer();
+                lista.innerHTML = html || '<p style="text-align:center; color:#333;">Esperando viajes...</p>';
+            }
+        }
+
+        // CORRECCIÓN: El setInterval ya no recibe parámetros locales, manipula la variable global directamente
+        function iniciarRelojConductor() {
+            if(intervalRelojChofer) clearInterval(intervalRelojChofer);
+            
+            intervalRelojChofer = setInterval(() => {
+                segundosRegresivos--;
+                let elReloj = document.getElementById('reloj-chofer-pantalla');
+                
+                if (segundosRegresivos > 0) {
+                    if(elReloj) {
+                        let mins = Math.floor(segundosRegresivos / 60);
+                        let secs = segundosRegresivos % 60;
+                        elReloj.innerText = `⏱️ Tiempo para llegar: ${mins}:${secs < 10 ? '0' : ''}${secs}`;
+                    }
+                } else {
+                    clearInterval(intervalRelojChofer);
+                    if(elReloj) {
+                        elReloj.innerText = `🚨 ¡TIEMPO LIMITADO EXHAUSTO! El cliente puede cancelar sin costo.`;
+                        elReloj.classList.add('timer-expirado');
+                    }
+                }
+            }, 1000);
+        }
+
+        function marcarLlegadaSitio(idViaje) {
+            if(intervalRelojChofer) clearInterval(intervalRelojChofer); 
+            
+            // Subimos la bandera a Firebase. Esto congelará el estado para siempre en los refrescos
+            db.ref('viajes/' + idViaje).update({ 
+                conductorLlego: true
+            }).then(() => {
+                renderizarViajes();
+            });
+        }
+
+        function limpiarRelojChofer() {
+            if(intervalRelojChofer) clearInterval(intervalRelojChofer);
+            idViajeConRelojActivo = "";
+            segundosRegresivos = 420;
+        }
+
+        function activarEscuchaExpiracion(idViaje) {
+            if(escuchandoCambiosViajeActual) return; 
+            escuchandoCambiosViajeActual = true;
+
+            db.ref('viajes/' + idViaje).on('value', snapshot => {
+                const viajeDatos = snapshot.val();
+                
+                if(viajeDatos && viajeDatos.estado === 'pendiente' && viajeDatos.conductorCel !== miCel) {
+                    db.ref('viajes/' + idViaje).off(); 
+                    escuchandoCambiosViajeActual = false;
+                    limpiarRelojChofer();
+                    
+                    alert("🚨 ¡VIAJE EXPIRADO O DEVUELTO!\n\nSuperaste el límite de 7 minutos para recoger al pasajero y este decidió buscar a otro conductor disponible.");
+                    renderizarViajes(); 
+                }
+            });
         }
 
         function tomarViaje(id) {
@@ -253,7 +364,8 @@
                     estado: 'en curso',
                     conductorCel: miCel,
                     conductorNombre: d.nombre,
-                    conductorPlaca: d.placa
+                    conductorPlaca: d.placa,
+                    conductorLlego: false // Inicializamos la bandera en falso al tomarlo
                 });
             });
         }
@@ -261,6 +373,9 @@
         function finalizarViaje(id, precio) {
             if(!confirm("¿Finalizar viaje?")) return;
             const p = parseFloat(precio);
+            
+            db.ref('viajes/' + id).off(); 
+            limpiarRelojChofer();
             
             db.ref('viajes/' + id).update({ estado: 'completado' }).then(() => {
                 db.ref('conductores/' + miCel).once('value', s => {
@@ -273,7 +388,11 @@
         }
 
         function cancelarViaje(id) {
-            if(confirm("¿Cancelar este viaje?")) db.ref('viajes/' + id).update({ estado: 'pendiente', conductorCel: null });
+            if(confirm("¿Cancelar este viaje?")) {
+                db.ref('viajes/' + id).off();
+                limpiarRelojChofer();
+                db.ref('viajes/' + id).update({ estado: 'pendiente', conductorCel: null, conductorLlego: null });
+            }
         }
     </script>
 </body>

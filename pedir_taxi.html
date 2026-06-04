@@ -62,7 +62,9 @@
         .loader { border: 4px solid #333; border-top: 4px solid var(--gold); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        .timer-alerta { background: #222; color: #ff4444; padding: 10px; border-radius: 8px; margin-top: 10px; font-weight: bold; font-size: 14px; border: 1px solid #444; }
+        .timer-alerta { background: #222; color: #ff4444; padding: 10px; border-radius: 8px; margin-top: 10px; font-weight: bold; font-size: 14px; border: 1px solid #444; transition: all 0.3s ease; }
+        /* Nueva clase para cuando el conductor llega al punto */
+        .timer-llegado { color: #25d366 !important; border-color: #25d366 !important; background: #05220f !important; }
     </style>
 </head>
 <body>
@@ -370,6 +372,7 @@
             mascota: llevaMascota,
             detallesRecargo: calculo.desgloses.join(", ") || "Ninguno",
             estado: 'pendiente',
+            conductorLlego: false, // Inicializamos la propiedad para el pasajero también
             timestamp: new Date().getTime()
         };
 
@@ -390,13 +393,6 @@
             }
             
             if(v.estado === "en curso") {
-                if (document.getElementById('datos-conductor').style.display === "none") {
-                    audioSilbido.play().catch(e => console.log("Error silbido:", e));
-                    
-                    // Iniciamos los 7 minutos (420 segundos)
-                    iniciarContadorLlegada(420); 
-                }
-
                 document.getElementById('buscando-ui').style.display = "none";
                 document.getElementById('datos-conductor').style.display = "block";
                 document.getElementById('nombre-ch').innerText = v.conductorNombre;
@@ -406,8 +402,22 @@
                 let msgMascota = v.mascota ? "SÍ" : "No";
 
                 const textoSaludo = `Hola ${v.conductorNombre}, soy ${v.cliente}. Aceptaste mi viaje en ClickGoTaxi. Te espero en: ${v.origen}. Destino: ${v.destino}. Pasajeros: ${msgAcompañantes}. Mascota: ${msgMascota}. Detalles Aplicados: [${v.detallesRecargo}]. Tarifa Total: B/. ${parseFloat(v.precio).toFixed(2)}`;
-                
                 document.getElementById('link-ws').href = `https://wa.me/${v.conductorCel}?text=${encodeURIComponent(textoSaludo)}`;
+
+                // CORRECCIÓN AQUÍ: Evaluamos si el conductor ya avisó que llegó al punto
+                let elTimerVisual = document.getElementById('timer-llegada');
+                if (v.conductorLlego === true) {
+                    // Detenemos el reloj de inmediato en la pantalla del pasajero
+                    clearInterval(intervalTimerLlegada);
+                    elTimerVisual.innerText = "✅ ¡Tu conductor ha llegado al punto de recogida!";
+                    elTimerVisual.className = "timer-alerta timer-llegado";
+                } else {
+                    // Si aún no ha llegado y el reloj no está activo, lo encendemos
+                    if (elTimerVisual.innerText === "Tiempo de llegada: 7:00" || elTimerVisual.classList.contains('timer-llegado')) {
+                        elTimerVisual.className = "timer-alerta"; // Quitamos el verde por si acaso
+                        iniciarContadorLlegada(420); 
+                    }
+                }
             }
             if(v.estado === "cancelado" || v.estado === "completado") {
                 clearInterval(intervalTimerLlegada);
@@ -416,7 +426,6 @@
         });
     }
 
-    // MODIFICADO: Ahora el tiempo da una opción al completarse
     function iniciarContadorLlegada(segundos) {
         clearInterval(intervalTimerLlegada); 
         
@@ -425,26 +434,26 @@
             
             let mins = Math.floor(segundos / 60);
             let secs = segundos % 60;
-            document.getElementById('timer-llegada').innerText = `Tiempo de llegada: ${mins}:${secs < 10 ? '0' : ''}${secs}`;
+            let elTimerVisual = document.getElementById('timer-llegada');
+            
+            if(elTimerVisual) {
+                elTimerVisual.innerText = `Tiempo de llegada: ${mins}:${secs < 10 ? '0' : ''}${secs}`;
+            }
             
             if (segundos <= 0) {
                 clearInterval(intervalTimerLlegada);
                 
-                // El tiempo expiró: Le preguntamos la decisión al pasajero
                 let respuestaPasajero = confirm("El conductor ha demorado más de 7 minutos en llegar.\n\n¿Deseas seguir esperándolo? (Presiona 'Aceptar' para esperarlo o 'Cancelar' para buscar otro conductor).");
                 
                 if (respuestaPasajero) {
-                    // El usuario decide esperarlo: Reseteamos el reloj para darle 7 minutos más o dejarlo libre
-                    document.getElementById('timer-llegada').innerText = `Esperando retraso acordado...`;
-                    // Si prefieres que sume 7 minutos limpios adicionales, descomenta la siguiente línea:
-                    // iniciarContadorLlegada(420); 
+                    if(elTimerVisual) elTimerVisual.innerText = `Esperando retraso acordado...`;
                 } else {
-                    // El usuario no quiere esperar: Se le quita el viaje al conductor flojo
                     db.ref('viajes/' + viajeID).update({
                         estado: 'pendiente',
                         conductorNombre: null,
                         conductorPlaca: null,
-                        conductorCel: null
+                        conductorCel: null,
+                        conductorLlego: false
                     }).then(() => {
                         alert("Pedido reestablecido. Tu viaje vuelve a estar disponible para el resto de conductores.");
                     });

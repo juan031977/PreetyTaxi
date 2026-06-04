@@ -79,8 +79,9 @@
         const db = firebase.database();
         const miCel = localStorage.getItem('driverCel');
         
+        // Configuración óptima de Audio con Loop para alertas
         const silbido = new Audio('https://raw.githubusercontent.com/juan031977/PreetyTaxi/main/silbido.mp3');
-        let ultimoViajeId = "";
+        silbido.loop = true; 
         
         let miEstado = "activo";
         let miConectado = false;
@@ -89,7 +90,7 @@
         
         let intervalRelojChofer = null;
         let idViajeConRelojActivo = "";
-        let segundosRegresivos = 420; // Guardamos el tiempo de manera global
+        let segundosRegresivos = 420; 
 
         function cargar() {
             if(!miCel) window.location.href = "login_conductor.html";
@@ -161,7 +162,14 @@
         }
 
         function toggleConexion(el) {
-            silbido.play().then(() => { silbido.pause(); silbido.currentTime = 0; }).catch(e => {});
+            // TRUCO MÁGICO: Al encender o apagar el switch, desbloqueamos el audio en el navegador móvil
+            silbido.volume = 0.1;
+            silbido.play().then(() => { 
+                silbido.pause(); 
+                silbido.currentTime = 0; 
+                silbido.volume = 1.0; // Restablecemos volumen completo
+            }).catch(e => console.log("Audio silenciado temporalmente hasta permiso:", e));
+
             db.ref('conductores/' + miCel).update({ conectado: el.checked });
         }
 
@@ -171,11 +179,16 @@
             if (!miConectado && miEstado !== "bloqueado") {
                 lista.innerHTML = '<p style="text-align:center; color:#444;">Ponte en línea para recibir pedidos</p>';
                 limpiarRelojChofer();
+                // Si el conductor se desconecta, apagamos inmediatamente cualquier silbido
+                silbido.pause();
+                silbido.currentTime = 0;
                 return;
             }
 
             if (!viajesSnapshot) {
                 lista.innerHTML = '<p style="text-align:center; color:#333;">Esperando viajes...</p>';
+                silbido.pause();
+                silbido.currentTime = 0;
                 return;
             }
 
@@ -188,10 +201,6 @@
                 
                 if (v.estado === "pendiente") {
                     hayPendientes = true;
-                    if(ultimoViajeId !== child.key && !tengoViajeActivo) {
-                        silbido.play().catch(e => {});
-                        ultimoViajeId = child.key;
-                    }
 
                     let botonViaje = "";
                     if (miEstado === "bloqueado") {
@@ -228,17 +237,14 @@
                     let ocupantesTotales = 1 + parseInt(v.pasajerosAdicionales || 0);
                     let alertaMascotaCurso = v.mascota ? `<div class="badge-mascota badge-mascota-activa" style="margin-bottom:10px;">🐶 ATENCIÓN: LLEVA MASCOTA</div>` : "";
 
-                    // CORRECCIÓN AQUÍ: Evaluamos directo desde Firebase si el conductor ya llegó
                     let botonLlegadaOFinalizar = "";
                     let htmlRelojEstatico = "";
 
                     if(v.conductorLlego === true) {
-                        // Si en Firebase ya dice que llegó, el reloj se limpia y se congela visualmente
                         if(intervalRelojChofer) clearInterval(intervalRelojChofer); 
                         htmlRelojEstatico = `<div class="timer-conductor timer-detenido">✅ ¡LLEGASTE A TIEMPO! Esperando al pasajero...</div>`;
                         botonLlegadaOFinalizar = `<button class="btn btn-ok" style="background:#000; color:#fff;" onclick="finalizarViaje('${child.key}', ${v.precio})">FINALIZAR VIAJE</button>`;
                     } else {
-                        // Si no ha llegado, muestra el contenedor donde corre el reloj vivo
                         htmlRelojEstatico = `<div id="reloj-chofer-pantalla" class="timer-conductor">Calculando tiempo...</div>`;
                         botonLlegadaOFinalizar = `<button class="btn btn-llegue" onclick="marcarLlegadaSitio('${child.key}')">🏁 ¡YA LLEGUÉ AL PUNTO!</button>`;
                     }
@@ -265,20 +271,28 @@
 
                     activarEscuchaExpiracion(child.key);
                     
-                    // Solo iniciamos el reloj si realmente es un viaje nuevo y no ha marcado llegada
                     if (idViajeConRelojActivo !== child.key && !v.conductorLlego) {
                         idViajeConRelojActivo = child.key;
-                        segundosRegresivos = 420; // Reseteamos los 7 minutos globales
+                        segundosRegresivos = 420; 
                         iniciarRelojConductor();
                     }
                 }
             });
 
-            if(!hayPendientes) ultimoViajeId = "";
+            // CONTROLADOR DEL AUDIO (Sincronizado con los estados globales de la calle)
+            if (hayPendientes && !tengoViajeActivo && miConectado) {
+                // Si hay pedidos pendientes en la calle, el conductor está conectado y libre: silba sin parar
+                if (silbido.paused) {
+                    silbido.play().catch(e => console.log("Bloqueo automático de audio prevenido por el navegador móvil.", e));
+                }
+            } else {
+                // Si no hay viajes pendientes, o si el conductor ya tomó uno: callamos el silbido
+                silbido.pause();
+                silbido.currentTime = 0;
+            }
             
             if(tengoViajeActivo) {
                 lista.innerHTML = html;
-                // Si el viaje está activo pero no ha marcado llegada, forzamos un print rápido para que no salga "Calculando tiempo..."
                 let elReloj = document.getElementById('reloj-chofer-pantalla');
                 if(elReloj && idViajeConRelojActivo !== "") {
                     let mins = Math.floor(segundosRegresivos / 60);
@@ -294,7 +308,6 @@
             }
         }
 
-        // CORRECCIÓN: El setInterval ya no recibe parámetros locales, manipula la variable global directamente
         function iniciarRelojConductor() {
             if(intervalRelojChofer) clearInterval(intervalRelojChofer);
             
@@ -321,7 +334,6 @@
         function marcarLlegadaSitio(idViaje) {
             if(intervalRelojChofer) clearInterval(intervalRelojChofer); 
             
-            // Subimos la bandera a Firebase. Esto congelará el estado para siempre en los refrescos
             db.ref('viajes/' + idViaje).update({ 
                 conductorLlego: true
             }).then(() => {
@@ -358,6 +370,11 @@
                 alert("🔒 Tu cuenta está bloqueada por deuda. Salda tu cuenta para tomar carreras.");
                 return;
             }
+            
+            // Apagamos el silbido inmediatamente al pulsar en aceptar
+            silbido.pause();
+            silbido.currentTime = 0;
+
             db.ref('conductores/' + miCel).once('value', s => {
                 const d = s.val();
                 db.ref('viajes/' + id).update({
@@ -365,7 +382,7 @@
                     conductorCel: miCel,
                     conductorNombre: d.nombre,
                     conductorPlaca: d.placa,
-                    conductorLlego: false // Inicializamos la bandera en falso al tomarlo
+                    conductorLlego: false 
                 });
             });
         }

@@ -60,7 +60,7 @@
         
         #panel-espera { display: none; text-align: center; padding: 30px; }
         .loader { border: 4px solid #333; border-top: 4px solid var(--gold); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes spin { 0 { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
         .timer-alerta { background: #222; color: #ff4444; padding: 10px; border-radius: 8px; margin-top: 10px; font-weight: bold; font-size: 14px; border: 1px solid #444; transition: all 0.3s ease; }
         .timer-llegado { color: #25d366 !important; border-color: #25d366 !important; background: #05220f !important; }
@@ -294,8 +294,6 @@
     
     let intervalTimerLlegada = null; 
 
-    const audioSilbido = new Audio('silbido.mp3');
-
     function filtrarDestinos() {
         const input = document.getElementById('input-busqueda').value.toLowerCase();
         const select = document.getElementById('select-destino');
@@ -354,19 +352,6 @@
 
         const calculo = calcularTarifaDinamica();
 
-        // ==========================================
-        // TRUCO DE AUDIO: Desbloqueo forzado por interacción directa
-        // ==========================================
-        audioSilbido.volume = 0.1;
-        audioSilbido.play().then(() => {
-            audioSilbido.pause();
-            audioSilbido.currentTime = 0;
-            audioSilbido.volume = 1.0; 
-        }).catch(e => {
-            console.log("Esperando asignación para reproducir sonido habilitado...", e);
-        });
-        // ==========================================
-
         const viaje = {
             cliente: localStorage.getItem('userName') || "Pasajero",
             clienteCel: localStorage.getItem('userCel') || "",
@@ -400,11 +385,7 @@
             }
             
             if(v.estado === "en curso") {
-                // Si el panel del conductor estaba oculto, significa que el viaje se acaba de asignar
                 if (document.getElementById('datos-conductor').style.display === "none") {
-                    // Ahora sí sonará en los celulares porque el navegador ya otorgó el permiso arriba
-                    audioSilbido.play().catch(e => console.log("Error silbido:", e));
-                    
                     let elTimerVisual = document.getElementById('timer-llegada');
                     if (elTimerVisual.classList.contains('timer-llegado')) {
                         elTimerVisual.className = "timer-alerta";

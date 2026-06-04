@@ -63,7 +63,6 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
         .timer-alerta { background: #222; color: #ff4444; padding: 10px; border-radius: 8px; margin-top: 10px; font-weight: bold; font-size: 14px; border: 1px solid #444; transition: all 0.3s ease; }
-        /* Nueva clase para cuando el conductor llega al punto */
         .timer-llegado { color: #25d366 !important; border-color: #25d366 !important; background: #05220f !important; }
     </style>
 </head>
@@ -355,10 +354,18 @@
 
         const calculo = calcularTarifaDinamica();
 
+        // ==========================================
+        // TRUCO DE AUDIO: Desbloqueo forzado por interacción directa
+        // ==========================================
+        audioSilbido.volume = 0.1;
         audioSilbido.play().then(() => {
             audioSilbido.pause();
             audioSilbido.currentTime = 0;
-        }).catch(e => console.log("Pre-carga audio:", e));
+            audioSilbido.volume = 1.0; 
+        }).catch(e => {
+            console.log("Esperando asignación para reproducir sonido habilitado...", e);
+        });
+        // ==========================================
 
         const viaje = {
             cliente: localStorage.getItem('userName') || "Pasajero",
@@ -372,7 +379,7 @@
             mascota: llevaMascota,
             detallesRecargo: calculo.desgloses.join(", ") || "Ninguno",
             estado: 'pendiente',
-            conductorLlego: false, // Inicializamos la propiedad para el pasajero también
+            conductorLlego: false, 
             timestamp: new Date().getTime()
         };
 
@@ -393,6 +400,18 @@
             }
             
             if(v.estado === "en curso") {
+                // Si el panel del conductor estaba oculto, significa que el viaje se acaba de asignar
+                if (document.getElementById('datos-conductor').style.display === "none") {
+                    // Ahora sí sonará en los celulares porque el navegador ya otorgó el permiso arriba
+                    audioSilbido.play().catch(e => console.log("Error silbido:", e));
+                    
+                    let elTimerVisual = document.getElementById('timer-llegada');
+                    if (elTimerVisual.classList.contains('timer-llegado')) {
+                        elTimerVisual.className = "timer-alerta";
+                    }
+                    iniciarContadorLlegada(420); 
+                }
+
                 document.getElementById('buscando-ui').style.display = "none";
                 document.getElementById('datos-conductor').style.display = "block";
                 document.getElementById('nombre-ch').innerText = v.conductorNombre;
@@ -404,19 +423,12 @@
                 const textoSaludo = `Hola ${v.conductorNombre}, soy ${v.cliente}. Aceptaste mi viaje en ClickGoTaxi. Te espero en: ${v.origen}. Destino: ${v.destino}. Pasajeros: ${msgAcompañantes}. Mascota: ${msgMascota}. Detalles Aplicados: [${v.detallesRecargo}]. Tarifa Total: B/. ${parseFloat(v.precio).toFixed(2)}`;
                 document.getElementById('link-ws').href = `https://wa.me/${v.conductorCel}?text=${encodeURIComponent(textoSaludo)}`;
 
-                // CORRECCIÓN AQUÍ: Evaluamos si el conductor ya avisó que llegó al punto
+                // DETECTOR DE LLEGADA DEL CONDUCTOR
                 let elTimerVisual = document.getElementById('timer-llegada');
                 if (v.conductorLlego === true) {
-                    // Detenemos el reloj de inmediato en la pantalla del pasajero
                     clearInterval(intervalTimerLlegada);
                     elTimerVisual.innerText = "✅ ¡Tu conductor ha llegado al punto de recogida!";
                     elTimerVisual.className = "timer-alerta timer-llegado";
-                } else {
-                    // Si aún no ha llegado y el reloj no está activo, lo encendemos
-                    if (elTimerVisual.innerText === "Tiempo de llegada: 7:00" || elTimerVisual.classList.contains('timer-llegado')) {
-                        elTimerVisual.className = "timer-alerta"; // Quitamos el verde por si acaso
-                        iniciarContadorLlegada(420); 
-                    }
                 }
             }
             if(v.estado === "cancelado" || v.estado === "completado") {

@@ -74,11 +74,7 @@
     <div id="lista-viajes"></div>
 
     <script>
-        // CONFIGURACIÓN CORREGIDA: Apuntando correctamente a tu base de datos de Firebase
-        const firebaseConfig = { 
-            databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" 
-        };
-        
+        const firebaseConfig = { apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         const miCel = localStorage.getItem('driverCel');
@@ -196,6 +192,8 @@
             let html = "";
             let tengoViajeActivo = false;
             const idsActualesPendientes = {};
+
+            // Obtener el ID respaldado en la memoria del celular
             const idRespaldoLocal = localStorage.getItem('viajeActivoId');
 
             viajesSnapshot.forEach(child => {
@@ -238,6 +236,7 @@
                         </div>`;
                 }
 
+                // MEJORA: Validamos si es nuestro viaje en Firebase O si coincide con el ID guardado localmente
                 if ((v.estado === "en curso" && v.conductorCel === miCel) || viajeId === idRespaldoLocal) {
                     tengoViajeActivo = true;
                     let celPasajero = String(v.clienteCel || "").replace(/\D/g, '');
@@ -361,7 +360,7 @@
                     db.ref('viajes/' + idViaje).off(); 
                     escuchandoCambiosViajeActual = false;
                     limpiarRelojChofer();
-                    localStorage.removeItem('viajeActivoId');
+                    localStorage.removeItem('viajeActivoId'); // Limpiar respaldo local si expira
                     
                     alert("🚨 ¡VIAJE EXPIRADO O DEVUELTO!\n\nSuperaste el límite de 7 minutos para recoger al pasajero y este decidió buscar a otro conductor disponible.");
                     renderizarViajes(); 
@@ -375,6 +374,7 @@
                 return;
             }
 
+            // RESPALDO: Guardamos el ID en la memoria local del teléfono de una vez
             localStorage.setItem('viajeActivoId', id);
 
             db.ref('conductores/' + miCel).once('value', s => {
@@ -395,13 +395,13 @@
             
             db.ref('viajes/' + id).off(); 
             limpiarRelojChofer();
-            localStorage.removeItem('viajeActivoId');
+            localStorage.removeItem('viajeActivoId'); // LIMPIAR RESPALDO: Viaje terminado con éxito
             
             db.ref('viajes/' + id).update({ estado: 'completado' }).then(() => {
                 db.ref('conductores/' + miCel).once('value', s => {
                     const dc = s.val();
                     db.ref('conductores/' + miCel).update({
-                        totalGeneratedHoy: (parseFloat(dc.totalGeneradoHoy || 0) + p).toFixed(2)
+                        totalGeneradoHoy: (parseFloat(dc.totalGeneradoHoy || 0) + p).toFixed(2)
                     });
                 });
             });
@@ -411,7 +411,7 @@
             if(confirm("¿Cancelar este viaje?")) {
                 db.ref('viajes/' + id).off();
                 limpiarRelojChofer();
-                localStorage.removeItem('viajeActivoId');
+                localStorage.removeItem('viajeActivoId'); // LIMPIAR RESPALDO: Viaje cancelado
                 db.ref('viajes/' + id).update({ estado: 'pendiente', conductorCel: null, conductorLlego: null });
             }
         }

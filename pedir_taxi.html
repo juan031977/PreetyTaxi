@@ -125,7 +125,7 @@
         
         #panel-espera { display: none; text-align: center; padding: 30px; }
         .loader { border: 4px solid #333; border-top: 4px solid var(--gold); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
-        @keyframes spin { 0 { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
         .timer-alerta { background: #222; color: #ff4444; padding: 10px; border-radius: 8px; margin-top: 10px; font-weight: bold; font-size: 14px; border: 1px solid #444; transition: all 0.3s ease; }
         .timer-llegado { color: #25d366 !important; border-color: #25d366 !important; background: #05220f !important; }
@@ -171,7 +171,6 @@
                 <option value="7.50">ALTO DE SANTA MARIA - B/. 7.50</option>
                 <option value="15.00">LA CABIMA - B/. 15.00</option>
                 <option value="6.00">RIO ABAJO HASTA EL 16 - B/. 6.00</option>
-                <option value="8.00">ALTOS DE PANAMA - B/. 8.00</option>
                 <option value="4.00">LA CASTELLANA - B/. 4.00</option>
                 <option value="7.00">RIO ABAJO DESPUES DEL 16 - B/. 7.00</option>
                 <option value="2.50">ALTOS DE HIPODROMO - B/. 2.50</option>
@@ -280,7 +279,6 @@
         </select>
 
         <div id="subpanel-interno" style="display: none; background: #151515; padding: 15px; border-radius: 12px; margin-top: 15px; border: 1px solid #333;">
-            
             <p style="margin: 0 0 10px 0; color: var(--gold); font-size: 13px; font-weight: bold; text-align: center;">¿Hacia dónde te diriges internamente?</p>
             
             <div class="sectores-grid">
@@ -503,11 +501,9 @@
                 const selectEsp = document.getElementById('select-especiales-internos');
                 precioBase = parseFloat(selectEsp.value);
             } else if (sectorSeleccionadoNombre) {
-                // Ahora TODOS los sectores (incluido Brisas Norte) calculan en base a la calle
                 const textoCalle = document.getElementById('calle-interna').value.trim();
                 const numeroCalle = parseInt(textoCalle.replace(/[^0-9]/g, ''), 10);
 
-                // Regla general unificada: Calle 1-36 -> 1.50 | Calle 37+ -> 1.75
                 if (!isNaN(numeroCalle) && numeroCalle > 36) {
                     precioBase = 1.75; 
                 } else {
@@ -518,7 +514,9 @@
             }
         } else {
             const selectDestino = document.getElementById('select-destino');
-            precioBase = parseFloat(selectDestino.value);
+            if (selectDestino.selectedIndex !== -1) {
+                precioBase = parseFloat(selectDestino.value);
+            }
         }
 
         if (isNaN(precioBase) || precioBase <= 0) return { total: 0, desgloses: [] };
@@ -613,104 +611,118 @@
         const cantAdicionales = parseInt(document.getElementById('pasajeros-adicionales').value);
         const esDomFeriado = document.getElementById('check-dom-feriado').checked;
         const esNocturno = document.getElementById('check-nocturno').checked;
-        const llevaMascota = document.getElementById('check-mascota').checked;
+        const esMascota = document.getElementById('check-mascota').checked;
 
-        const viaje = {
-            cliente: localStorage.getItem('userName') || "Pasajero",
-            clienteCel: localStorage.getItem('userCel') || "",
+        // Crear objeto de viaje estructurado para Firebase
+        const nuevoViaje = {
             origen: origen,
             destino: destinoText,
-            precio: calculo.total,
-            pasajerosAdicionales: cantAdicionales,
-            domingoFeriado: esDomFeriado,
-            horarioNocturno: esNocturno,
-            mascota: llevaMascota,
-            detallesRecargo: calculo.desgloses.join(", ") || "Ninguno",
-            estado: 'pendiente',
-            conductorLlego: false, 
-            timestamp: new Date().getTime()
+            tarifa: calculo.total,
+            estado: "buscando",
+            timestamp: Date.now(),
+            detalles: {
+                pasajerosAdicionales: cantAdicionales,
+                domingoFeriado: esDomFeriado,
+                nocturno: esNocturno,
+                mascota: esMascota
+            }
         };
 
-        viajeRef = db.ref('viajes').push(viaje);
+        // Generar nodo único en viajes
+        viajeRef = db.ref("viajes").push();
         viajeID = viajeRef.key;
-        
+
+        // Cambiar la pantalla a modo de espera
         document.getElementById('panel-cliente').style.display = "none";
         document.getElementById('panel-espera').style.display = "block";
+        document.getElementById('buscando-ui').style.display = "block";
+        document.getElementById('datos-conductor').style.display = "none";
 
-        viajeRef.on('value', snap => {
-            const v = snap.val();
-            if(!v) return;
-            
-            if(v.estado === "pendiente") {
-                clearInterval(intervalTimerLlegada); 
-                document.getElementById('buscando-ui').style.display = "block";
-                document.getElementById('datos-conductor').style.display = "none";
-            }
-            
-            if(v.estado === "en curso") {
-                if (document.getElementById('datos-conductor').style.display === "none") {
-                    let elTimerVisual = document.getElementById('timer-llegada');
-                    if (elTimerVisual.classList.contains('timer-llegado')) {
-                        elTimerVisual.className = "timer-alerta";
-                    }
-                    iniciarContadorLlegada(420); 
-                }
-
-                document.getElementById('buscando-ui').style.display = "none";
-                document.getElementById('datos-conductor').style.display = "block";
-                document.getElementById('nombre-ch').innerText = v.conductorNombre;
-                document.getElementById('placa-ch').innerText = "PLACA: " + v.conductorPlaca;
-
-                let msgAcompañantes = v.pasajerosAdicionales > 0 ? `${v.pasajerosAdicionales} adicionales` : "Solo el titular";
-                let msgMascota = v.mascota ? "SÍ" : "No";
-
-                const textoSaludo = `Hola ${v.conductorNombre}, soy ${v.cliente}. Aceptaste mi viaje en ClickGoTaxi. Te espero en: ${v.origen}. Destino: ${v.destino}. Pasajeros: ${msgAcompañantes}. Mascota: ${msgMascota}. Detalles Aplicados: [${v.detallesRecargo}]. Tarifa Total: B/. ${parseFloat(v.precio).toFixed(2)}`;
-                document.getElementById('link-ws').href = `https://wa.me/${v.conductorCel}?text=${encodeURIComponent(textoSaludo)}`;
-
-                let elTimerVisual = document.getElementById('timer-llegada');
-                if (v.conductorLlego === true) {
-                    clearInterval(intervalTimerLlegada);
-                    elTimerVisual.innerText = "✅ ¡Tu conductor ha llegado al punto de recogida!";
-                    elTimerVisual.className = "timer-alerta timer-llegado";
-                }
-            }
-            
-            if(v.estado === "cancelado") { resetFormulario("El viaje ha sido cancelado."); }
-            if(v.estado === "completado") { resetFormulario("¡Viaje finalizado con éxito! Gracias por usar ClickGoTaxi."); }
+        // Subir a Firebase y escuchar cambios del conductor
+        viajeRef.set(nuevoViaje).then(() => {
+            escucharCambiosViaje();
+        }).catch((error) => {
+            console.error("Error creando el viaje: ", error);
+            alert("Error de conexión. Inténtalo de nuevo.");
+            resetFormulario("");
         });
     }
 
-    function iniciarContadorLlegada(segundos) {
-        clearInterval(intervalTimerLlegada); 
-        intervalTimerLlegada = setInterval(() => {
-            segundos--;
-            let mins = Math.floor(segundos / 60);
-            let secs = segundos % 60;
-            let elTimerVisual = document.getElementById('timer-llegada');
-            if(elTimerVisual) { elTimerVisual.innerText = `Tiempo de llegada: ${mins}:${secs < 10 ? '0' : ''}${secs}`; }
-            
-            if (segundos <= 0) {
-                clearInterval(intervalTimerLlegada);
-                let respuestaPasajero = confirm("El conductor ha demorado más de 7 minutos.\n\n¿Deseas seguir esperándolo?");
-                if (respuestaPasajero) {
-                    if(elTimerVisual) elTimerVisual.innerText = `Esperando retraso acordado...`;
-                } else {
-                    db.ref('viajes/' + viajeID).update({
-                        estado: 'pendiente', conductorNombre: null, conductorPlaca: null, conductorCel: null, conductorLlego: false
-                    }).then(() => { alert("Pedido reestablecido. Tu viaje vuelve a estar disponible."); });
+    function escucharCambiosViaje() {
+        if (!viajeRef) return;
+
+        viajeRef.on("value", (snapshot) => {
+            const viaje = snapshot.val();
+            if (!viaje) return;
+
+            // Si un conductor acepta la carrera
+            if (viaje.estado === "aceptado" && viaje.conductor) {
+                document.getElementById('buscando-ui').style.display = "none";
+                document.getElementById('datos-conductor').style.display = "block";
+                
+                document.getElementById('nombre-ch').innerText = viaje.conductor.nombre || "Conductor Asignado";
+                document.getElementById('placa-ch').innerText = "Placa: " + (viaje.conductor.placa || "---");
+                
+                if (viaje.conductor.celular) {
+                    document.getElementById('link-ws').href = "https://wa.me/507" + viaje.conductor.celular + "?text=Hola,%20soy%20tu%20pasajero%20de%20ClickGoTaxi";
+                }
+
+                // Iniciar contador si no se ha iniciado antes
+                if (!intervalTimerLlegada) {
+                    iniciarContadorLlegada(viaje.timestampAceptado || Date.now());
                 }
             }
-        }, 1000);
+
+            // Si el conductor finaliza el viaje con éxito
+            if (viaje.estado === "finalizado") {
+                resetFormulario("¡Tu viaje ha finalizado con éxito! Gracias por usar ClickGoTaxi.");
+            }
+        });
     }
 
+    function iniciarContadorLlegada(timestampAceptado) {
+        const tiempoLimite = 7 * 60 * 1000; // 7 minutos en milisegundos
+        const elTimerVisual = document.getElementById('timer-llegada');
+
+        function actualizarContador() {
+            const ahora = Date.now();
+            const transcurrido = ahora - timestampAceptado;
+            const restante = tiempoLimite - transcurrido;
+
+            if (restante <= 0) {
+                clearInterval(intervalTimerLlegada);
+                elTimerVisual.innerText = "¡El conductor ha llegado!";
+                elTimerVisual.classList.add('timer-llegado');
+                return;
+            }
+
+            const minutos = Math.floor(restante / 1000 / 60);
+            const segundos = Math.floor((restante / 1000) % 60);
+            elTimerVisual.innerText = `Tiempo de llegada: ${minutos}:${segundos < 10 ? '0' : ''}${segundos}`;
+        }
+
+        actualizarContador();
+        intervalTimerLlegada = setInterval(actualizarContador, 1000);
+    }
+
+    // FUNCIÓN DE CANCELACIÓN CORREGIDA (Lógica de Actualización de Estado)
     function cancelarPedidoTotal() {
-        if(viajeID && confirm("¿Seguro que deseas cancelar el viaje?")) {
-            clearInterval(intervalTimerLlegada);
-            db.ref('viajes/' + viajeID).update({ estado: 'cancelado' }).then(() => {
-                resetFormulario("Has cancelado el viaje correctamente.");
-            });
-        } else if (!viajeID) { resetFormulario(); }
+        if (!viajeID) {
+            resetFormulario("");
+            return;
+        }
+
+        // Modifica únicamente el estado en lugar de remover el nodo entero
+        db.ref("viajes/" + viajeID).update({
+            estado: "cancelado"
+        }).then(() => {
+            resetFormulario("Has cancelado tu solicitud de taxi.");
+        }).catch((error) => {
+            console.error("Error al cancelar el viaje: ", error);
+            resetFormulario("");
+        });
     }
 </script>
+
 </body>
 </html>

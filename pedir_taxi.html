@@ -10,10 +10,10 @@
         :root { --gold: #ffc107; --dark: #000; --card: #1a1a1a; }
         body { margin: 0; background: var(--dark); color: white; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; }
         
-        .map-header {
-            width: 100%; height: 180px;
-            background-image: url('https://images.unsplash.com/photo-1593351415075-3bac9f45c877?auto=format&fit=crop&q=80&w=800'); 
-            background-size: cover; background-position: center;
+        /* Modificado: Ahora es un contenedor de mapa real */
+        #map {
+            width: 100%; height: 220px;
+            background: #222;
             position: relative; border-bottom: 3px solid var(--gold);
         }
 
@@ -26,96 +26,37 @@
         select, input { width: 100%; padding: 14px; margin-top: 5px; border-radius: 12px; border: 1px solid #444; background: #222; color: white; font-size: 16px; box-sizing: border-box; }
         
         .btn-directo-interno {
-            background: #2a2a2a;
-            color: var(--gold);
-            border: 2px solid var(--gold);
-            width: 100%;
-            padding: 15px;
-            border-radius: 12px;
-            font-size: 15px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 8px;
-            margin-bottom: 5px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
+            background: #2a2a2a; color: var(--gold); border: 2px solid var(--gold);
+            width: 100%; padding: 15px; border-radius: 12px; font-size: 15px; font-weight: bold;
+            cursor: pointer; margin-top: 8px; margin-bottom: 5px;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
             transition: all 0.2s ease;
         }
-        .btn-directo-interno.active {
-            background: var(--gold);
-            color: #000;
-        }
+        .btn-directo-interno.active { background: var(--gold); color: #000; }
 
-        .search-box {
-            border: 1px solid #444 !important;
-            background: #222 !important;
-            margin-bottom: 5px;
-        }
+        .search-box { border: 1px solid #444 !important; background: #222 !important; margin-bottom: 5px; }
 
-        .sectores-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            margin-top: 8px;
-        }
+        .sectores-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 8px; }
         .btn-sector {
-            background: #222;
-            color: #fff;
-            border: 1px solid #444;
-            padding: 12px;
-            border-radius: 10px;
-            font-size: 13px;
-            font-weight: bold;
-            cursor: pointer;
-            text-align: center;
-            transition: all 0.2s ease;
+            background: #222; color: #fff; border: 1px solid #444; padding: 12px;
+            border-radius: 10px; font-size: 13px; font-weight: bold; cursor: pointer;
+            text-align: center; transition: all 0.2s ease;
         }
-        .btn-sector.active {
-            background: var(--gold);
-            color: #000;
-            border-color: var(--gold);
-        }
+        .btn-sector.active { background: var(--gold); color: #000; border-color: var(--gold); }
 
         .btn-ph-especiales {
-            background: #222;
-            color: #fff;
-            border: 1px solid #ffc107;
-            width: 100%;
-            padding: 12px;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: bold;
-            cursor: pointer;
-            text-align: center;
-            margin-top: 15px;
-            transition: all 0.2s ease;
+            background: #222; color: #fff; border: 1px solid #ffc107; width: 100%;
+            padding: 12px; border-radius: 10px; font-size: 14px; font-weight: bold;
+            cursor: pointer; text-align: center; margin-top: 15px; transition: all 0.2s ease;
         }
-        .btn-ph-especiales.active {
-            background: #ffc107;
-            color: #000;
-        }
+        .btn-ph-especiales.active { background: #ffc107; color: #000; }
 
         .checkbox-container {
-            display: flex;
-            align-items: center;
-            background: #222;
-            padding: 12px;
-            border-radius: 12px;
-            margin-top: 8px;
-            border: 1px solid #444;
-            cursor: pointer;
+            display: flex; align-items: center; background: #222; padding: 12px;
+            border-radius: 12px; margin-top: 8px; border: 1px solid #444; cursor: pointer;
         }
-        .checkbox-container input {
-            width: auto;
-            margin: 0 10px 0 0;
-            transform: scale(1.3);
-        }
-        .checkbox-label {
-            font-size: 14px;
-            color: #fff;
-        }
+        .checkbox-container input { width: auto; margin: 0 10px 0 0; transform: scale(1.3); }
+        .checkbox-label { font-size: 14px; color: #fff; }
 
         .price-display { background: #111; padding: 15px; border-radius: 12px; margin-top: 20px; text-align: center; border: 1px dashed var(--gold); }
         .price-display span { font-size: 32px; font-weight: bold; color: var(--gold); }
@@ -125,7 +66,7 @@
         
         #panel-espera { display: none; text-align: center; padding: 30px; }
         .loader { border: 4px solid #333; border-top: 4px solid var(--gold); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
-        @keyframes spin { 0 { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
         .timer-alerta { background: #222; color: #ff4444; padding: 10px; border-radius: 8px; margin-top: 10px; font-weight: bold; font-size: 14px; border: 1px solid #444; transition: all 0.3s ease; }
         .timer-llegado { color: #25d366 !important; border-color: #25d366 !important; background: #05220f !important; }
@@ -133,7 +74,7 @@
 </head>
 <body>
 
-<div class="map-header"></div>
+<div id="map"></div>
 
 <div class="container">
     <div id="panel-cliente" class="card">
@@ -280,7 +221,6 @@
         </select>
 
         <div id="subpanel-interno" style="display: none; background: #151515; padding: 15px; border-radius: 12px; margin-top: 15px; border: 1px solid #333;">
-            
             <p style="margin: 0 0 10px 0; color: var(--gold); font-size: 13px; font-weight: bold; text-align: center;">¿Hacia dónde te diriges internamente?</p>
             
             <div class="sectores-grid">
@@ -392,13 +332,52 @@
     };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+    
     let viajeID = "";
     let viajeRef = null; 
+    let conductorPosRef = null; // Modificado: Referencia separada para rastreo GPS
     let intervalTimerLlegada = null; 
 
     let modoInternoActivo = false;
     let sectorSeleccionadoNombre = "";
     let puntoEspecialActivo = false; 
+
+    // Modificado: Variables del mapa
+    let mapa = null;
+    let marcadorPasajero = null;
+    let marcadorConductor = null;
+
+    // Modificado: Inicialización de Google Maps básica centrada en Brisas del Golf
+    function initMap() {
+        const brisasGolf = { lat: 9.0837, lng: -79.4770 }; 
+        mapa = new google.maps.Map(document.getElementById("map"), {
+            zoom: 14,
+            center: brisasGolf,
+            disableDefaultUI: true, // Mapa limpio sin controles estorbosos
+            styles: [ // Estilo oscuro tipo nocturno para que combine con tu app
+                { elementType: "geometry", stylers: [{ color: "#212121" }] },
+                { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
+                { elementType: "labels.text.fill", stylers: [{ color: "#757575" }] },
+                { featureType: "road", elementType: "geometry", stylers: [{ color: "#2c2c2c" }] },
+                { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#212121" }] },
+                { featureType: "water", elementType: "geometry", stylers: [{ color: "#000000" }] }
+            ]
+        });
+
+        // Intentar obtener la ubicación real del pasajero al cargar para pintar su marcador
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition((position) => {
+                const pos = { lat: position.coords.latitude, lng: position.coords.longitude };
+                mapa.setCenter(pos);
+                marcadorPasajero = new google.maps.Marker({
+                    position: pos,
+                    map: mapa,
+                    title: "Tu ubicación",
+                    icon: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png"
+                });
+            });
+        }
+    }
 
     function filtrarDestinos() {
         const input = document.getElementById('input-busqueda').value.toLowerCase();
@@ -503,11 +482,9 @@
                 const selectEsp = document.getElementById('select-especiales-internos');
                 precioBase = parseFloat(selectEsp.value);
             } else if (sectorSeleccionadoNombre) {
-                // Ahora TODOS los sectores (incluido Brisas Norte) calculan en base a la calle
                 const textoCalle = document.getElementById('calle-interna').value.trim();
                 const numeroCalle = parseInt(textoCalle.replace(/[^0-9]/g, ''), 10);
 
-                // Regla general unificada: Calle 1-36 -> 1.50 | Calle 37+ -> 1.75
                 if (!isNaN(numeroCalle) && numeroCalle > 36) {
                     precioBase = 1.75; 
                 } else {
@@ -546,7 +523,14 @@
     function resetFormulario(mensajeAlert) {
         clearInterval(intervalTimerLlegada);
         if (viajeRef) { viajeRef.off(); viajeRef = null; }
+        if (conductorPosRef) { conductorPosRef.off(); conductorPosRef = null; } // Modificado: Apagar GPS de Firebase
         viajeID = "";
+
+        // Modificado: Limpiar marcador de carro si existía
+        if (marcadorConductor) {
+            marcadorConductor.setMap(null);
+            marcadorConductor = null;
+        }
 
         document.getElementById('origen').value = "";
         document.getElementById('input-busqueda').value = "";
@@ -613,104 +597,151 @@
         const cantAdicionales = parseInt(document.getElementById('pasajeros-adicionales').value);
         const esDomFeriado = document.getElementById('check-dom-feriado').checked;
         const esNocturno = document.getElementById('check-nocturno').checked;
-        const llevaMascota = document.getElementById('check-mascota').checked;
+        const tieneMascota = document.getElementById('check-mascota').checked;
 
-        const viaje = {
-            cliente: localStorage.getItem('userName') || "Pasajero",
-            clienteCel: localStorage.getItem('userCel') || "",
-            origen: origen,
-            destino: destinoText,
-            precio: calculo.total,
-            pasajerosAdicionales: cantAdicionales,
-            domingoFeriado: esDomFeriado,
-            horarioNocturno: esNocturno,
-            mascota: llevaMascota,
-            detallesRecargo: calculo.desgloses.join(", ") || "Ninguno",
-            estado: 'pendiente',
-            conductorLlego: false, 
-            timestamp: new Date().getTime()
-        };
-
-        viajeRef = db.ref('viajes').push(viaje);
-        viajeID = viajeRef.key;
-        
+        // Cambiar paneles visuales de inmediato
         document.getElementById('panel-cliente').style.display = "none";
         document.getElementById('panel-espera').style.display = "block";
+        document.getElementById('buscando-ui').style.display = "block";
+        document.getElementById('datos-conductor').style.display = "none";
 
-        viajeRef.on('value', snap => {
-            const v = snap.val();
-            if(!v) return;
-            
-            if(v.estado === "pendiente") {
-                clearInterval(intervalTimerLlegada); 
-                document.getElementById('buscando-ui').style.display = "block";
-                document.getElementById('datos-conductor').style.display = "none";
+        // Estructura de guardado en base de datos
+        viajeRef = db.ref('viajes').push();
+        viajeID = viajeRef.key;
+
+        viajeRef.set({
+            id: viajeID,
+            origen: origen,
+            destino: destinoText,
+            precio: calculo.total.toFixed(2),
+            desgloses: calculo.desgloses,
+            estado: "buscando",
+            timestamp: Date.now(),
+            detallesPasajeros: {
+                solo: cantAdicionales === 0,
+                cantidadExtra: cantAdicionales,
+                domingoFeriado: esDomFeriado,
+                nocturno: esNocturno,
+                mascota: tieneMascota
             }
-            
-            if(v.estado === "en curso") {
-                if (document.getElementById('datos-conductor').style.display === "none") {
-                    let elTimerVisual = document.getElementById('timer-llegada');
-                    if (elTimerVisual.classList.contains('timer-llegado')) {
-                        elTimerVisual.className = "timer-alerta";
-                    }
-                    iniciarContadorLlegada(420); 
-                }
-
-                document.getElementById('buscando-ui').style.display = "none";
-                document.getElementById('datos-conductor').style.display = "block";
-                document.getElementById('nombre-ch').innerText = v.conductorNombre;
-                document.getElementById('placa-ch').innerText = "PLACA: " + v.conductorPlaca;
-
-                let msgAcompañantes = v.pasajerosAdicionales > 0 ? `${v.pasajerosAdicionales} adicionales` : "Solo el titular";
-                let msgMascota = v.mascota ? "SÍ" : "No";
-
-                const textoSaludo = `Hola ${v.conductorNombre}, soy ${v.cliente}. Aceptaste mi viaje en ClickGoTaxi. Te espero en: ${v.origen}. Destino: ${v.destino}. Pasajeros: ${msgAcompañantes}. Mascota: ${msgMascota}. Detalles Aplicados: [${v.detallesRecargo}]. Tarifa Total: B/. ${parseFloat(v.precio).toFixed(2)}`;
-                document.getElementById('link-ws').href = `https://wa.me/${v.conductorCel}?text=${encodeURIComponent(textoSaludo)}`;
-
-                let elTimerVisual = document.getElementById('timer-llegada');
-                if (v.conductorLlego === true) {
-                    clearInterval(intervalTimerLlegada);
-                    elTimerVisual.innerText = "✅ ¡Tu conductor ha llegado al punto de recogida!";
-                    elTimerVisual.className = "timer-alerta timer-llegado";
-                }
-            }
-            
-            if(v.estado === "cancelado") { resetFormulario("El viaje ha sido cancelado."); }
-            if(v.estado === "completado") { resetFormulario("¡Viaje finalizado con éxito! Gracias por usar ClickGoTaxi."); }
+        }).then(() => {
+            iniciarEscuchaViaje();
+        }).catch((err) => {
+            console.error("Error al subir a Firebase: ", err);
+            resetFormulario("Ocurrió un error al enviar tu solicitud. Inténtalo de nuevo.");
         });
     }
 
-    function iniciarContadorLlegada(segundos) {
-        clearInterval(intervalTimerLlegada); 
-        intervalTimerLlegada = setInterval(() => {
-            segundos--;
-            let mins = Math.floor(segundos / 60);
-            let secs = segundos % 60;
-            let elTimerVisual = document.getElementById('timer-llegada');
-            if(elTimerVisual) { elTimerVisual.innerText = `Tiempo de llegada: ${mins}:${secs < 10 ? '0' : ''}${secs}`; }
-            
-            if (segundos <= 0) {
-                clearInterval(intervalTimerLlegada);
-                let respuestaPasajero = confirm("El conductor ha demorado más de 7 minutos.\n\n¿Deseas seguir esperándolo?");
-                if (respuestaPasajero) {
-                    if(elTimerVisual) elTimerVisual.innerText = `Esperando retraso acordado...`;
-                } else {
-                    db.ref('viajes/' + viajeID).update({
-                        estado: 'pendiente', conductorNombre: null, conductorPlaca: null, conductorCel: null, conductorLlego: false
-                    }).then(() => { alert("Pedido reestablecido. Tu viaje vuelve a estar disponible."); });
+    // Modificado: Función encargada de quedarse atenta a los cambios de estado en Firebase
+    function iniciarEscuchaViaje() {
+        if (!viajeID) return;
+
+        viajeRef = db.ref('viajes/' + viajeID);
+        viajeRef.on('value', (snapshot) => {
+            const viajeActual = snapshot.val();
+            if (!viajeActual) return;
+
+            // CASO: El conductor acepta la carrera
+            if (viajeActual.estado === "aceptado") {
+                document.getElementById('buscando-ui').style.display = "none";
+                document.getElementById('datos-conductor').style.display = "block";
+
+                document.getElementById('nombre-ch').innerText = viajeActual.conductor_nombre || "Conductor Asignado";
+                document.getElementById('placa-ch').innerText = "Placa: " + (viajeActual.conductor_placa || "---");
+                
+                const msgWS = encodeURIComponent(`¡Hola! Soy tu pasajero de ClickGoTaxi. Te espero en: ${viajeActual.origen}. El costo acordado es B/. ${viajeActual.precio}`);
+                document.getElementById('link-ws').href = `https://wa.me/${viajeActual.conductor_whatsapp}?text=${msgWS}`;
+
+                if (!intervalTimerLlegada) {
+                    iniciarContadorVisual();
                 }
+
+                // NUEVO: Ejecutar el oyente en vivo para rastrear las coordenadas del coche en el mapa
+                activarRastreoMapaEnVivo(viajeID);
+            }
+
+            // CASO: El viaje se da por finalizado de forma exitosa
+            if (viajeActual.estado === "terminado") {
+                resetFormulario("¡Tu viaje ha finalizado! Gracias por usar ClickGoTaxi.");
+            }
+
+            // CASO: Cancelado por el chofer
+            if (viajeActual.estado === "cancelado_conductor") {
+                resetFormulario("El conductor asignado tuvo que cancelar el viaje. Por favor, solicita uno nuevo.");
+            }
+        });
+    }
+
+    // Modificado: Escucha las coordenadas del GPS que el conductor sube y actualiza el coche en el mapa
+    function activarRastreoMapaEnVivo(idDelViaje) {
+        if (conductorPosRef) return; // Evitar duplicar oyentes si ya está activo
+
+        conductorPosRef = db.ref('viajes/' + idDelViaje + '/ubicacion_conductor');
+        conductorPosRef.on('value', (snapshot) => {
+            const gps = snapshot.val();
+            if (!gps || !gps.lat || !gps.lng) return;
+
+            const nuevaPosConductor = new google.maps.LatLng(gps.lat, gps.lng);
+
+            if (marcadorConductor === null) {
+                // Si es la primera coordenada recibida, creamos el marcador con icono de auto
+                marcadorConductor = new google.maps.Marker({
+                    position: nuevaPosConductor,
+                    map: mapa,
+                    title: "Tu Taxi",
+                    icon: {
+                        url: "https://maps.google.com/mapfiles/kml/shapes/cabs.png", // Icono por defecto de taxi de Google
+                        scaledSize: new google.maps.Size(35, 35)
+                    }
+                });
+                
+                // Hacer un encuadre para que se vean tanto pasajero como conductor juntos
+                const bounds = new google.maps.LatLngBounds();
+                if (marcadorPasajero) bounds.extend(marcadorPasajero.getPosition());
+                bounds.extend(nuevaPosConductor);
+                mapa.fitBounds(bounds);
+            } else {
+                // Si ya existe en el mapa, simplemente lo desplazamos con fluidez
+                marcadorConductor.setPosition(nuevaPosConductor);
+            }
+        });
+    }
+
+    function iniciarContadorVisual() {
+        let tiempoRestante = 7 * 60; 
+        const elTimerVisual = document.getElementById('timer-llegada');
+
+        intervalTimerLlegada = setInterval(() => {
+            tiempoRestante--;
+            let minutos = Math.floor(tiempoRestante / 60);
+            let segundos = tiempoRestante % 60;
+            if (segundos < 10) segundos = "0" + segundos;
+
+            elTimerVisual.innerText = `Tiempo estimado de llegada: ${minutos}:${segundos}`;
+
+            if (tiempoRestante <= 0) {
+                clearInterval(intervalTimerLlegada);
+                elTimerVisual.innerText = "¡El conductor ha llegado a tu ubicación!";
+                elTimerVisual.classList.add('timer-llegado');
             }
         }, 1000);
     }
 
     function cancelarPedidoTotal() {
-        if(viajeID && confirm("¿Seguro que deseas cancelar el viaje?")) {
-            clearInterval(intervalTimerLlegada);
-            db.ref('viajes/' + viajeID).update({ estado: 'cancelado' }).then(() => {
-                resetFormulario("Has cancelado el viaje correctamente.");
-            });
-        } else if (!viajeID) { resetFormulario(); }
+        const confirmar = confirm("¿Estás seguro de que deseas cancelar tu solicitud de taxi?");
+        if (!confirmar) return;
+
+        if (viajeID) {
+            db.ref('viajes/' + viajeID).update({ estado: "cancelado_pasajero" })
+            .then(() => { resetFormulario("Viaje cancelado por el pasajero."); })
+            .catch(() => { resetFormulario(); });
+        } else {
+            resetFormulario();
+        }
     }
 </script>
+
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBl3OsPn_Q-yeXk0-0_igfCoZgQYduB40g&callback=initMap"></script>
+
 </body>
 </html>

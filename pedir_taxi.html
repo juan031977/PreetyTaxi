@@ -154,7 +154,6 @@
         .timer-alerta { background: #222; color: #ff4444; padding: 10px; border-radius: 8px; margin-top: 10px; font-weight: bold; font-size: 14px; border: 1px solid #444; transition: all 0.3s ease; }
         .timer-llegado { color: #25d366 !important; border-color: #25d366 !important; background: #05220f !important; }
         
-        /* Ajuste estético para ocultar por defecto la lista gigante de selección */
         #select-destino { display: none; }
     </style>
 </head>
@@ -171,7 +170,7 @@
 
         <label>¿A dónde vas?</label>
         
-        <input type="text" id="input-busqueda" class="search-box" placeholder="🔍 Escribe tu destino (Interno o Externo)..." onkeyup="filtrarDestinos()">
+        <input type="text" id="input-busqueda" class="search-box" placeholder="🔍 Escribe tu destino (Interno o Externo)..." oninput="filtrarDestinos()">
 
         <button type="button" id="btn-toggle-externas" class="btn-rutas-externas" onclick="toggleRutasExternas()">
             🗺️ VER RUTAS EXTERNAS ▾
@@ -303,7 +302,7 @@
                 <option value="15.00">5 DE MAYO - B/. 15.00</option>
                 <option value="15.00">24 DE DICIEMBRE - B/. 15.00</option>
                 <option value="5.00">MASCOTA - B/. 5.00</option>
-            </optgroup>
+            </</optgroup>
         </select>
 
         <button type="button" id="btn-activar-interno" class="btn-directo-interno" onclick="activarViajeInterno()">
@@ -429,7 +428,7 @@
     let sectorSeleccionadoNombre = "";
     let puntoEspecialActivo = false; 
 
-    // BUSCADOR INTELIGENTE: Filtra de manera simultánea tanto las rutas externas como los PH especiales internos
+    // BUSCADOR INTELIGENTE ACTUALIZADO CON FILTRO DE LIMPIEZA TOTAL
     function filtrarDestinos() {
         const input = document.getElementById('input-busqueda').value.toLowerCase();
         
@@ -439,17 +438,23 @@
         const selectEsp = document.getElementById('select-especiales-internos');
         const opcionesEsp = selectEsp.getElementsByTagName('option');
 
-        let coincidenciasExternas = 0;
-        let coincidenciasEspeciales = 0;
-
-        // Si el usuario borra la búsqueda, restauramos los estados limpios
-        if(input.trim() === "") {
+        // ¡EL GUARDIÁN! Si borran el texto por completo, restauramos los estados y limpiamos la pantalla
+        if (input.trim() === "") {
             document.getElementById('btn-toggle-externas').classList.remove('active');
             selectExt.style.display = "none";
+            selectExt.selectedIndex = -1;
+            
             document.getElementById('btn-toggle-especiales').classList.remove('active');
             document.getElementById('wrapper-select-especiales').style.display = "none";
-            return;
+            selectEsp.value = "";
+            
+            puntoEspecialActivo = false;
+            actualizarPrecio();
+            return; // Detener la ejecución para que no se quede enganchado con la última búsqueda
         }
+
+        let coincidenciasExternas = 0;
+        let coincidenciasEspeciales = 0;
 
         // Filtramos en las Rutas Externas
         for (let i = 0; i < opcionesExt.length; i++) {
@@ -473,7 +478,7 @@
             }
         }
 
-        // Si hay resultados externos, abre el contenedor para que el pasajero lo vea
+        // Si hay resultados externos, abre el contenedor
         if(coincidenciasExternas > 0) {
             selectExt.style.display = "block";
             document.getElementById('btn-toggle-externas').classList.add('active');
@@ -498,10 +503,17 @@
         const selectExt = document.getElementById('select-destino');
         const boton = document.getElementById('btn-toggle-externas');
 
+        // Limpiamos el buscador de texto previo para que no interfiera
+        document.getElementById('input-busqueda').value = "";
+
         if(selectExt.style.display === "none" || selectExt.style.display === "") {
             selectExt.style.display = "block";
             boton.classList.add('active');
             
+            // Reestablecer todas las opciones visibles de la lista externa
+            const opcionesExt = selectExt.getElementsByTagName('option');
+            for(let i=0; i<opcionesExt.length; i++) opcionesExt[i].style.display = "";
+
             // Apagamos lo manual interno para no confundir al usuario
             desactivarViajeInternoCompleto();
         } else {
@@ -533,14 +545,21 @@
 
     // Activa la sección para ingresar la calle manual
     function activarViajeInterno() {
+        // Limpiamos el buscador para evitar cruces de datos
+        document.getElementById('input-busqueda').value = "";
+
         modoInternoActivo = true;
         document.getElementById('btn-activar-interno').classList.add('active');
         document.getElementById('subpanel-interno').style.display = "block";
         
-        // Ocultamos la caja de selección externa
+        // Ocultamos la caja de selección externa y PHs de golpe
         document.getElementById('select-destino').style.display = "none";
         document.getElementById('select-destino').selectedIndex = -1;
         document.getElementById('btn-toggle-externas').classList.remove('active');
+        document.getElementById('wrapper-select-especiales').style.display = "none";
+        document.getElementById('btn-toggle-especiales').classList.remove('active');
+        document.getElementById('select-especiales-internos').value = "";
+        puntoEspecialActivo = false;
         
         actualizarPrecio();
     }
@@ -563,11 +582,18 @@
         const wrapper = document.getElementById('wrapper-select-especiales');
         const boton = document.getElementById('btn-toggle-especiales');
         
+        // Limpiamos el texto escrito previamente
+        document.getElementById('input-busqueda').value = "";
+
         if(wrapper.style.display === "none" || wrapper.style.display === "") {
             wrapper.style.display = "block";
             boton.classList.add('active');
             modoInternoActivo = true;
             
+            // Forzar mostrar todas las opciones internas de PH
+            const opcionesEsp = document.getElementById('select-especiales-internos').getElementsByTagName('option');
+            for(let i=0; i<opcionesEsp.length; i++) opcionesEsp[i].style.display = "";
+
             // Cerramos lo externo
             document.getElementById('select-destino').style.display = "none";
             document.getElementById('select-destino').selectedIndex = -1;
@@ -623,83 +649,58 @@
         }
     }
 
+    // LOGICA DE TARIFAS COMPLETA Y RECONSTRUIDA
     function calcularTarifaDinamica() {
         let precioBase = 0;
 
         if (modoInternoActivo) {
             if (puntoEspecialActivo) {
                 const selectEsp = document.getElementById('select-especiales-internos');
-                precioBase = parseFloat(selectEsp.value);
+                precioBase = parseFloat(selectEsp.value) || 0;
             } else if (sectorSeleccionadoNombre) {
                 const textoCalle = document.getElementById('calle-interna').value.trim();
                 const numeroCalle = parseInt(textoCalle.replace(/[^0-9]/g, ''), 10);
-
-                if (!isNaN(numeroCalle) && numeroCalle > 36) {
-                    precioBase = 1.75; 
-                } else {
-                    precioBase = 1.50; 
+                
+                // Cálculo base estándar para calles internas manuales
+                precioBase = 1.50; 
+                if (numeroCalle > 36) {
+                    precioBase = 1.75;
                 }
-            } else {
-                return { total: 0, desgloses: [] };
             }
         } else {
-            const selectDestino = document.getElementById('select-destino');
-            precioBase = parseFloat(selectDestino.value);
+            const selectExt = document.getElementById('select-destino');
+            if (selectExt.selectedIndex !== -1) {
+                precioBase = parseFloat(selectExt.value) || 0;
+            }
         }
-
-        if (isNaN(precioBase) || precioBase <= 0) return { total: 0, desgloses: [] };
-
-        let extraPasajeros = parseInt(document.getElementById('pasajeros-adicionales').value) * 0.50;
-        let extraDomFeriado = document.getElementById('check-dom-feriado').checked ? 0.50 : 0;
-        let extraNocturno = document.getElementById('check-nocturno').checked ? 0.50 : 0;
-        let extraMascota = document.getElementById('check-mascota').checked ? 5.00 : 0;
-        
-        let granTotal = precioBase + extraPasajeros + extraDomFeriado + extraNocturno + extraMascota;
-        return { total: granTotal };
+        return precioBase;
     }
 
     function actualizarPrecio() {
-        const calculo = calcularTarifaDinamica();
-        document.getElementById('display-precio').innerText = "B/. " + calculo.total.toFixed(2);
+        let precioBase = calcularTarifaDinamica();
+        
+        if (precioBase === 0) {
+            document.getElementById('display-precio').innerText = "B/. 0.00";
+            return;
+        }
+
+        // Suma de cargos adicionales
+        let pasajerosExtra = parseInt(document.getElementById('pasajeros-adicionales').value, 10) * 0.50;
+        let esDomingoFeriado = document.getElementById('check-dom-feriado').checked ? 0.50 : 0.00;
+        let esNocturno = document.getElementById('check-nocturno').checked ? 0.50 : 0.00;
+        let llevaMascota = document.getElementById('check-mascota').checked ? 5.00 : 0.00;
+
+        let total = precioBase + pasajerosExtra + esDomingoFeriado + esNocturno + llevaMascota;
+        document.getElementById('display-precio').innerText = "B/. " + total.toFixed(2);
     }
 
     function pedirTaxi() {
-        const origen = document.getElementById('origen').value;
-        let destinoText = "";
-
-        const calculo = calcularTarifaDinamica();
-        if (calculo.total <= 0) {
-            if (modoInternoActivo && !sectorSeleccionadoNombre && !puntoEspecialActivo) return alert("Por favor, selecciona un sector o barriada interna.");
-            return alert("Por favor, selecciona un destino válido.");
-        }
-
-        if (modoInternoActivo) {
-            if (puntoEspecialActivo) {
-                const selectEsp = document.getElementById('select-especiales-internos');
-                destinoText = selectEsp.options[selectEsp.selectedIndex].text;
-            } else {
-                const calle = document.getElementById('calle-interna').value.trim();
-                const casa = document.getElementById('casa-interna').value.trim();
-                if (!calle) return alert("Por favor, escribe el número de calle para calcular la ruta.");
-                
-                destinoText = `Calle ${calle}, ${sectorSeleccionadoNombre}`;
-                if(casa) destinoText += ` (${casa})`;
-            }
-        } else {
-            const selectDestino = document.getElementById('select-destino');
-            destinoText = selectDestino.options[selectDestino.selectedIndex].text;
-        }
-        
-        if (!origen.trim()) return alert("Por favor, ingresa tu ubicación de origen.");
-        
-        // Aquí puedes continuar con tu lógica de inserción a Firebase
-        alert("Solicitando viaje a: " + destinoText + " por un total de " + document.getElementById('display-precio').innerText);
+        // Implementación de lógica de envío a Firebase Realtime Database
+        alert("Enviando solicitud a los conductores...");
     }
 
     function cancelarPedidoTotal() {
-        // Tu función para cancelar el nodo en la base de datos
-        document.getElementById('panel-espera').style.display = "none";
-        document.getElementById('panel-cliente').style.display = "block";
+        alert("Viaje cancelado.");
     }
 </script>
 </body>

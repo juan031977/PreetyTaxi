@@ -79,12 +79,8 @@
         const db = firebase.database();
         const miCel = localStorage.getItem('driverCel');
         
-        // El audio suena una única vez (loop en false)
         const silbido = new Audio('https://raw.githubusercontent.com/juan031977/PreetyTaxi/main/silbido.mp3');
-        silbido.loop = false; 
-        
-        // Memoria local para saber qué viajes ya pitaron
-        const viajesNotificados = {};
+        let ultimoViajeId = "";
         
         let miEstado = "activo";
         let miConectado = false;
@@ -93,7 +89,7 @@
         
         let intervalRelojChofer = null;
         let idViajeConRelojActivo = "";
-        let segundosRegresivos = 420; 
+        let segundosRegresivos = 420; // Guardamos el tiempo de manera global
 
         function cargar() {
             if(!miCel) window.location.href = "login_conductor.html";
@@ -165,13 +161,7 @@
         }
 
         function toggleConexion(el) {
-            silbido.volume = 0.1;
-            silbido.play().then(() => { 
-                silbido.pause(); 
-                silbido.currentTime = 0; 
-                silbido.volume = 1.0; 
-            }).catch(e => console.log("Permiso de audio concedido"));
-
+            silbido.play().then(() => { silbido.pause(); silbido.currentTime = 0; }).catch(e => {});
             db.ref('conductores/' + miCel).update({ conectado: el.checked });
         }
 
@@ -190,30 +180,24 @@
             }
 
             let html = "";
+            let hayPendientes = false;
             let tengoViajeActivo = false;
-            const idsActualesPendientes = {};
-
-            // Obtener el ID respaldado en la memoria del celular
-            const idRespaldoLocal = localStorage.getItem('viajeActivoId');
 
             viajesSnapshot.forEach(child => {
                 const v = child.val();
-                const viajeId = child.key;
                 
                 if (v.estado === "pendiente") {
-                    idsActualesPendientes[viajeId] = true;
-
-                    if (!viajesNotificados[viajeId] && miConectado && miEstado !== "bloqueado") {
-                        silbido.currentTime = 0;
-                        silbido.play().catch(e => console.log("Error de reproducción móvil:", e));
-                        viajesNotificados[viajeId] = true; 
+                    hayPendientes = true;
+                    if(ultimoViajeId !== child.key && !tengoViajeActivo) {
+                        silbido.play().catch(e => {});
+                        ultimoViajeId = child.key;
                     }
 
                     let botonViaje = "";
                     if (miEstado === "bloqueado") {
                         botonViaje = `<button class="btn" style="background:#444; color:#888; cursor:not-allowed;" disabled>❌ BLOQUEADO POR DEUDA</button>`;
                     } else {
-                        botonViaje = `<button class="btn btn-ok" onclick="tomarViaje('${viajeId}')">ACEPTAR VIAJE</button>`;
+                        botonViaje = `<button class="btn btn-ok" onclick="tomarViaje('${child.key}')">ACEPTAR VIAJE</button>`;
                     }
 
                     let ocupantesTotales = 1 + parseInt(v.pasajerosAdicionales || 0);
@@ -236,8 +220,7 @@
                         </div>`;
                 }
 
-                // MEJORA: Validamos si es nuestro viaje en Firebase O si coincide con el ID guardado localmente
-                if ((v.estado === "en curso" && v.conductorCel === miCel) || viajeId === idRespaldoLocal) {
+                if (v.estado === "en curso" && v.conductorCel === miCel) {
                     tengoViajeActivo = true;
                     let celPasajero = String(v.clienteCel || "").replace(/\D/g, '');
                     if(celPasajero.length === 8) celPasajero = "507" + celPasajero;
@@ -245,16 +228,19 @@
                     let ocupantesTotales = 1 + parseInt(v.pasajerosAdicionales || 0);
                     let alertaMascotaCurso = v.mascota ? `<div class="badge-mascota badge-mascota-activa" style="margin-bottom:10px;">🐶 ATENCIÓN: LLEVA MASCOTA</div>` : "";
 
+                    // CORRECCIÓN AQUÍ: Evaluamos directo desde Firebase si el conductor ya llegó
                     let botonLlegadaOFinalizar = "";
                     let htmlRelojEstatico = "";
 
                     if(v.conductorLlego === true) {
+                        // Si en Firebase ya dice que llegó, el reloj se limpia y se congela visualmente
                         if(intervalRelojChofer) clearInterval(intervalRelojChofer); 
                         htmlRelojEstatico = `<div class="timer-conductor timer-detenido">✅ ¡LLEGASTE A TIEMPO! Esperando al pasajero...</div>`;
-                        botonLlegadaOFinalizar = `<button class="btn btn-ok" style="background:#000; color:#fff;" onclick="finalizarViaje('${viajeId}', ${v.precio})">FINALIZAR VIAJE</button>`;
+                        botonLlegadaOFinalizar = `<button class="btn btn-ok" style="background:#000; color:#fff;" onclick="finalizarViaje('${child.key}', ${v.precio})">FINALIZAR VIAJE</button>`;
                     } else {
+                        // Si no ha llegado, muestra el contenedor donde corre el reloj vivo
                         htmlRelojEstatico = `<div id="reloj-chofer-pantalla" class="timer-conductor">Calculando tiempo...</div>`;
-                        botonLlegadaOFinalizar = `<button class="btn btn-llegue" onclick="marcarLlegadaSitio('${viajeId}')">🏁 ¡YA LLEGUÉ AL PUNTO!</button>`;
+                        botonLlegadaOFinalizar = `<button class="btn btn-llegue" onclick="marcarLlegadaSitio('${child.key}')">🏁 ¡YA LLEGUÉ AL PUNTO!</button>`;
                     }
 
                     html = `
@@ -274,27 +260,25 @@
                             
                             <a href="https://wa.me/${celPasajero}?text=Hola%20${v.cliente},%20soy%20tu%20conductor%20de%20ClickGoTaxi%20estoy%20en%20camino" class="btn btn-ws" target="_blank">HABLAR POR WHATSAPP</a>
                             ${botonLlegadaOFinalizar}
-                            <button class="btn btn-cancel" onclick="cancelarViaje('${viajeId}')">CANCELAR VIAJE</button>
+                            <button class="btn btn-cancel" onclick="cancelarViaje('${child.key}')">CANCELAR VIAJE</button>
                         </div>`;
 
-                    activarEscuchaExpiracion(viajeId);
+                    activarEscuchaExpiracion(child.key);
                     
-                    if (idViajeConRelojActivo !== viajeId && !v.conductorLlego) {
-                        idViajeConRelojActivo = viajeId;
-                        segundosRegresivos = 420; 
+                    // Solo iniciamos el reloj si realmente es un viaje nuevo y no ha marcado llegada
+                    if (idViajeConRelojActivo !== child.key && !v.conductorLlego) {
+                        idViajeConRelojActivo = child.key;
+                        segundosRegresivos = 420; // Reseteamos los 7 minutos globales
                         iniciarRelojConductor();
                     }
                 }
             });
 
-            for (const id in viajesNotificados) {
-                if (!idsActualesPendientes[id]) {
-                    delete viajesNotificados[id];
-                }
-            }
+            if(!hayPendientes) ultimoViajeId = "";
             
             if(tengoViajeActivo) {
                 lista.innerHTML = html;
+                // Si el viaje está activo pero no ha marcado llegada, forzamos un print rápido para que no salga "Calculando tiempo..."
                 let elReloj = document.getElementById('reloj-chofer-pantalla');
                 if(elReloj && idViajeConRelojActivo !== "") {
                     let mins = Math.floor(segundosRegresivos / 60);
@@ -310,6 +294,7 @@
             }
         }
 
+        // CORRECCIÓN: El setInterval ya no recibe parámetros locales, manipula la variable global directamente
         function iniciarRelojConductor() {
             if(intervalRelojChofer) clearInterval(intervalRelojChofer);
             
@@ -336,6 +321,7 @@
         function marcarLlegadaSitio(idViaje) {
             if(intervalRelojChofer) clearInterval(intervalRelojChofer); 
             
+            // Subimos la bandera a Firebase. Esto congelará el estado para siempre en los refrescos
             db.ref('viajes/' + idViaje).update({ 
                 conductorLlego: true
             }).then(() => {
@@ -360,7 +346,6 @@
                     db.ref('viajes/' + idViaje).off(); 
                     escuchandoCambiosViajeActual = false;
                     limpiarRelojChofer();
-                    localStorage.removeItem('viajeActivoId'); // Limpiar respaldo local si expira
                     
                     alert("🚨 ¡VIAJE EXPIRADO O DEVUELTO!\n\nSuperaste el límite de 7 minutos para recoger al pasajero y este decidió buscar a otro conductor disponible.");
                     renderizarViajes(); 
@@ -373,10 +358,6 @@
                 alert("🔒 Tu cuenta está bloqueada por deuda. Salda tu cuenta para tomar carreras.");
                 return;
             }
-
-            // RESPALDO: Guardamos el ID en la memoria local del teléfono de una vez
-            localStorage.setItem('viajeActivoId', id);
-
             db.ref('conductores/' + miCel).once('value', s => {
                 const d = s.val();
                 db.ref('viajes/' + id).update({
@@ -384,7 +365,7 @@
                     conductorCel: miCel,
                     conductorNombre: d.nombre,
                     conductorPlaca: d.placa,
-                    conductorLlego: false 
+                    conductorLlego: false // Inicializamos la bandera en falso al tomarlo
                 });
             });
         }
@@ -395,7 +376,6 @@
             
             db.ref('viajes/' + id).off(); 
             limpiarRelojChofer();
-            localStorage.removeItem('viajeActivoId'); // LIMPIAR RESPALDO: Viaje terminado con éxito
             
             db.ref('viajes/' + id).update({ estado: 'completado' }).then(() => {
                 db.ref('conductores/' + miCel).once('value', s => {
@@ -411,7 +391,6 @@
             if(confirm("¿Cancelar este viaje?")) {
                 db.ref('viajes/' + id).off();
                 limpiarRelojChofer();
-                localStorage.removeItem('viajeActivoId'); // LIMPIAR RESPALDO: Viaje cancelado
                 db.ref('viajes/' + id).update({ estado: 'pendiente', conductorCel: null, conductorLlego: null });
             }
         }

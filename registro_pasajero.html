@@ -3,88 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro ClickGoTaxi</title>
-    
+    <title>Registro Pasajero - ClickGoTaxi</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
-    
     <style>
-        body { font-family: sans-serif; background: #121212; color: white; display: flex; justify-content: center; padding: 20px; }
-        .box { background: #1e1e1e; padding: 25px; border-radius: 15px; width: 100%; max-width: 400px; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #444; background: #333; color: white; box-sizing: border-box; }
-        button { background: #ffc107; width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: black; margin-top: 10px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0f0f0f; color: white; text-align: center; padding: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+        .box { background: #1a1a1a; padding: 30px; border-radius: 20px; border: 1px solid #333; width: 90%; max-width: 350px; }
+        h2 { color: #ffc107; margin-bottom: 20px; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #222; color: white; box-sizing: border-box; font-size: 16px; }
+        button { background: #ffc107; width: 100%; padding: 15px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 16px; }
     </style>
 </head>
 <body>
-
     <div class="box">
-        <h2>Registro de Usuario</h2>
+        <h2>Crear Cuenta Pasajero 👤</h2>
         <input type="text" id="nom" placeholder="Nombre Completo">
-        <input type="text" id="cedula" placeholder="Número de Cédula">
-        <input type="tel" id="tel" placeholder="Número de Celular">
-        <p style="font-size: 12px; color: #aaa;">Sube tu foto de identidad:</p>
-        <input type="file" id="foto">
+        <input type="tel" id="tel" placeholder="Número Celular">
+        <input type="password" id="pass" placeholder="Crea tu Clave">
         <button onclick="registrar()">REGISTRARME</button>
     </div>
 
-   <script>
-    const firebaseConfig = { 
-        apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg",
-        databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/",
-        storageBucket: "preetytaxiapp.appspot.com"
-    };
+    <script>
+        const firebaseConfig = { 
+            apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg",
+            databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" 
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
-    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    const storage = firebase.storage();
+        function registrar() {
+            const n = document.getElementById('nom').value;
+            const t = document.getElementById('tel').value;
+            const p = document.getElementById('pass').value;
 
-    function registrar() {
-        console.log("Iniciando registro...");
-        
-        const nom = document.getElementById('nom').value;
-        const ced = document.getElementById('cedula').value;
-        const tel = document.getElementById('tel').value;
-        const fotoInput = document.getElementById('foto');
-
-        // VALIDACIÓN DE ARCHIVO
-        if (fotoInput.files.length === 0) {
-            console.error("ERROR: No has seleccionado ninguna foto.");
-            alert("Selecciona una foto primero");
-            return;
+            if(n && t && p) {
+                db.ref('pasajeros/' + t).set({
+                    nombre: n,
+                    celular: t,
+                    password: p
+                }).then(() => { 
+                    alert("¡Éxito! Bienvenido a ClickGoTaxi."); 
+                    window.location.href = "pedir_taxi.html"; 
+                }).catch(err => alert("Error: " + err.message));
+            } else { 
+                alert("Completa todos los datos"); 
+            }
         }
-        const file = fotoInput.files[0];
-
-        console.log("Datos capturados:", {nom, ced, tel, fileName: file.name});
-
-        // SUBIDA
-        const storageRef = storage.ref('cedulas/' + ced);
-        console.log("Intentando subir a:", 'cedulas/' + ced);
-
-        storageRef.put(file)
-            .then(snapshot => {
-                console.log("Foto subida exitosamente.");
-                return snapshot.ref.getDownloadURL();
-            })
-            .then(url => {
-                console.log("URL de imagen obtenida:", url);
-                return db.ref('pasajeros/' + tel).set({
-                    nombre: nom,
-                    cedula: ced,
-                    celular: tel,
-                    fotoURL: url,
-                    status: 'pendiente'
-                });
-            })
-            .then(() => {
-                console.log("Datos guardados en DB.");
-                alert("¡Registro Exitoso!");
-            })
-            .catch(error => {
-                console.error("ERROR DETECTADO POR FIREBASE:", error);
-                alert("Error: " + error.code + " - " + error.message);
-            });
-    }
-</script>
+    </script>
 </body>
 </html>

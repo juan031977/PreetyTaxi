@@ -25,11 +25,76 @@
         label { display: block; margin-top: 15px; color: #aaa; font-size: 12px; font-weight: bold; text-transform: uppercase; }
         select, input { width: 100%; padding: 14px; margin-top: 5px; border-radius: 12px; border: 1px solid #444; background: #222; color: white; font-size: 16px; box-sizing: border-box; }
         
-        .search-box {
-            border: 1px solid var(--gold) !important;
-            background: #2a2a2a !important;
-            margin-bottom: 5px;
+        .btn-directo-interno {
+            background: #2a2a2a;
+            color: var(--gold);
+            border: 2px solid var(--gold);
+            width: 100%;
+            padding: 15px;
+            border-radius: 12px;
+            font-size: 15px;
             font-weight: bold;
+            cursor: pointer;
+            margin-top: 8px;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+        .btn-directo-interno.active {
+            background: var(--gold);
+            color: #000;
+        }
+
+        .search-box {
+            border: 1px solid #444 !important;
+            background: #222 !important;
+            margin-bottom: 5px;
+        }
+
+        .sectores-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 8px;
+        }
+        .btn-sector {
+            background: #222;
+            color: #fff;
+            border: 1px solid #444;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+        .btn-sector.active {
+            background: var(--gold);
+            color: #000;
+            border-color: var(--gold);
+        }
+
+        .btn-ph-especiales {
+            background: #222;
+            color: #fff;
+            border: 1px solid #ffc107;
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+            margin-top: 15px;
+            transition: all 0.2s ease;
+        }
+        .btn-ph-especiales.active {
+            background: #ffc107;
+            color: #000;
         }
 
         .checkbox-container {
@@ -60,7 +125,7 @@
         
         #panel-espera { display: none; text-align: center; padding: 30px; }
         .loader { border: 4px solid #333; border-top: 4px solid var(--gold); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes spin { 0 { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
         .timer-alerta { background: #222; color: #ff4444; padding: 10px; border-radius: 8px; margin-top: 10px; font-weight: bold; font-size: 14px; border: 1px solid #444; transition: all 0.3s ease; }
         .timer-llegado { color: #25d366 !important; border-color: #25d366 !important; background: #05220f !important; }
@@ -77,33 +142,15 @@
         <label>¿Dónde te buscamos?</label>
         <input type="text" id="origen" placeholder="Escribe tu ubicación actual...">
 
-        <label>¿A dónde vas? (Busca tu destino abajo)</label>
-        <input type="text" id="input-busqueda" class="search-box" placeholder="🔍 Escribe para buscar destino..." onkeyup="filtrarDestinos()">
+        <label>¿A dónde vas?</label>
         
-        <select id="select-destino" size="8" onchange="actualizarPrecio()">
-            <optgroup label="ZONAS INTERNAS" id="grupo-interno">
-                <option value="1.50">Angel Rubio, Bonlac, Puma, Pricesmart - B/. 1.50</option>
-                <option value="1.50">Preparatory, AIP, Las Trancas, La Arboleda - B/. 1.50</option>
-                <option value="1.50">Brisas hasta la 36 - B/. 1.50</option>
-                <option value="1.50">Occidente hasta la 35 - B/. 1.50</option>
-                <option value="1.75">Brisas después de la 36 - B/. 1.75</option>
-                <option value="1.75">Occidentes después de la 35 - B/. 1.75</option>
-                <option value="2.00">Brisas Norte, Alpes, Everest, Northside, Peninsula (Garita) - B/. 2.00</option>
-                <option value="2.50">Alpes, Everest (Adentro) - B/. 2.50</option>
-                <option value="2.00">Royal Village - B/. 2.00</option>
-                <option value="2.50">Augusta y Victoria - B/. 2.50</option>
-                <option value="2.50">Olimpus, Montblanc, Sierra Nevada - B/. 2.50</option>
-                <option value="2.50">San Antonio / Cerro Viento - B/. 2.50</option>
-                <option value="3.00">Norte - Corredor de los Pobres - B/. 3.00</option>
-                <option value="3.00">VENTURA - B/. 3.00</option>
-                <option value="3.00">PARQUE RACH - B/. 3.00</option>
-                <option value="3.00">VALLARTA - B/. 3.00</option>
-                <option value="3.00">OXFORD SCHOOL - B/. 3.00</option>
-                <option value="6.00">GREEN CITY - B/. 6.00</option> 
-                <option value="2.50">Club de Golf - B/. 2.50</option> 
-                <option value="2.50">Golf Garden - B/. 2.50</option>
+        <button type="button" id="btn-activar-interno" class="btn-directo-interno" onclick="activarViajeInterno()">
+            📍 DENTRO DE BRISAS DEL GOLF (Zonas Internas)
+        </button>
 
-            </optgroup>
+        <input type="text" id="input-busqueda" class="search-box" placeholder="🔍 Buscar destino fuera de Brisas..." onkeyup="filtrarDestinos()">
+        
+        <select id="select-destino" size="5" onchange="evaluarDestinoExterno()">
             <optgroup label="FUERA DE BRISAS DEL GOLF" id="grupo-fuera">
                 <option value="15.00">INADEH - B/. 15.00</option>
                 <option value="25.00">ATO HOWARD - B/. 25.00</option>
@@ -232,6 +279,58 @@
             </optgroup>
         </select>
 
+        <div id="subpanel-interno" style="display: none; background: #151515; padding: 15px; border-radius: 12px; margin-top: 15px; border: 1px solid #333;">
+            
+            <p style="margin: 0 0 10px 0; color: var(--gold); font-size: 13px; font-weight: bold; text-align: center;">¿Hacia dónde te diriges internamente?</p>
+            
+            <div class="sectores-grid">
+                <div class="btn-sector" id="sec-norte" onclick="seleccionarSector('Brisas Norte', 'sec-norte')">Brisas Norte</div>
+                <div class="btn-sector" id="sec-sur" onclick="seleccionarSector('Brisas Sur', 'sec-sur')">Brisas Sur</div>
+                <div class="btn-sector" id="sec-asur" onclick="seleccionarSector('Brisas Asur', 'sec-asur')">Brisas Asur</div>
+                <div class="btn-sector" id="sec-este" onclick="seleccionarSector('Brisas Este', 'sec-este')">Brisas Este</div>
+                <div class="btn-sector" id="sec-oeste" onclick="seleccionarSector('Brisas Oeste', 'sec-oeste')">Brisas Oeste</div>
+                <div class="btn-sector" id="sec-occidente" onclick="seleccionarSector('Brisas Occidente', 'sec-occidente')">Brisas Occidente</div>
+            </div>
+
+            <div id="campos-calles-bloque" style="margin-top: 10px;">
+                <label>Número de Calle (Ej: Escribe solo 17 o 39):</label>
+                <input type="text" id="calle-interna" placeholder="Ej: 17" onkeyup="actualizarPrecio()">
+                
+                <label style="margin-top: 10px;">Información de Casa (Opcional):</label>
+                <input type="text" id="casa-interna" placeholder="Ej: Casa H-24 o color verde">
+            </div>
+
+            <button type="button" id="btn-toggle-especiales" class="btn-ph-especiales" onclick="toggleVisibilidadEspeciales()">
+                🏢 PH y Lugares Especiales
+            </button>
+
+            <div id="wrapper-select-especiales" style="display: none; margin-top: 8px;">
+                <select id="select-especiales-internos" onchange="seleccionarPuntoEspecial()">
+                    <option value="">-- Selecciona Barriada o Comercio --</option>
+                    <option value="1.50">Angel Rubio, Bonlac, Puma, Pricesmart - B/. 1.50</option>
+                    <option value="1.50">Preparatory, AIP, Las Trancas, La Arboleda - B/. 1.50</option>
+                    <option value="1.50">Brisas hasta la 36 - B/. 1.50</option>
+                    <option value="1.50">Occidente hasta la 35 - B/. 1.50</option>
+                    <option value="1.75">Brisas después de la 36 - B/. 1.75</option>
+                    <option value="1.75">Occidentes después de la 35 - B/. 1.75</option>
+                    <option value="2.00">Brisas Norte, Alpes, Everest, Northside, Peninsula (Garita) - B/. 2.00</option>
+                    <option value="2.50">Alpes, Everest (Adentro) - B/. 2.50</option>
+                    <option value="2.00">Royal Village - B/. 2.00</option>
+                    <option value="2.50">Augusta y Victoria - B/. 2.50</option>
+                    <option value="2.50">Olimpus, Montblanc, Sierra Nevada - B/. 2.50</option>
+                    <option value="2.50">San Antonio / Cerro Viento - B/. 2.50</option>
+                    <option value="3.00">Norte - Corredor de los Pobres - B/. 3.00</option>
+                    <option value="3.00">VENTURA - B/. 3.00</option>
+                    <option value="3.00">PARQUE RACH - B/. 3.00</option>
+                    <option value="3.00">VALLARTA - B/. 3.00</option>
+                    <option value="3.00">OXFORD SCHOOL - B/. 3.00</option>
+                    <option value="6.00">GREEN CITY - B/. 6.00</option> 
+                    <option value="2.50">Club de Golf - B/. 2.50</option> 
+                    <option value="2.50">Golf Garden - B/. 2.50</option>
+                </select>
+            </div>
+        </div>
+
         <label>Pasajeros Acompañantes</label>
         <select id="pasajeros-adicionales" onchange="actualizarPrecio()">
             <option value="0">Voy solo (Sin acompañantes)</option>
@@ -294,8 +393,12 @@
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     let viajeID = "";
-    let viajeRef = null; // Guardará la referencia activa de Firebase
+    let viajeRef = null; 
     let intervalTimerLlegada = null; 
+
+    let modoInternoActivo = false;
+    let sectorSeleccionadoNombre = "";
+    let puntoEspecialActivo = false; 
 
     function filtrarDestinos() {
         const input = document.getElementById('input-busqueda').value.toLowerCase();
@@ -307,6 +410,83 @@
         }
     }
 
+    function activarViajeInterno() {
+        modoInternoActivo = true;
+        document.getElementById('btn-activar-interno').classList.add('active');
+        document.getElementById('subpanel-interno').style.display = "block";
+        
+        document.getElementById('select-destino').selectedIndex = -1;
+        document.getElementById('input-busqueda').value = "";
+        filtrarDestinos();
+        actualizarPrecio();
+    }
+
+    function evaluarDestinoExterno() {
+        modoInternoActivo = false;
+        document.getElementById('btn-activar-interno').classList.remove('active');
+        document.getElementById('subpanel-interno').style.display = "none";
+        
+        sectorSeleccionadoNombre = "";
+        puntoEspecialActivo = false;
+        document.getElementById('select-especiales-internos').value = "";
+        document.querySelectorAll('.btn-sector').forEach(b => b.classList.remove('active'));
+        document.getElementById('calle-interna').value = "";
+        document.getElementById('casa-interna').value = "";
+        
+        document.getElementById('btn-toggle-especiales').classList.remove('active');
+        document.getElementById('wrapper-select-especiales').style.display = "none";
+        
+        actualizarPrecio();
+    }
+
+    function toggleVisibilidadEspeciales() {
+        const wrapper = document.getElementById('wrapper-select-especiales');
+        const boton = document.getElementById('btn-toggle-especiales');
+        
+        if(wrapper.style.display === "none") {
+            wrapper.style.display = "block";
+            boton.classList.add('active');
+            
+            sectorSeleccionadoNombre = "";
+            document.querySelectorAll('.btn-sector').forEach(b => b.classList.remove('active'));
+            document.getElementById('calle-interna').value = "";
+            document.getElementById('casa-interna').value = "";
+        } else {
+            wrapper.style.display = "none";
+            boton.classList.remove('active');
+            document.getElementById('select-especiales-internos').value = "";
+            puntoEspecialActivo = false;
+        }
+        actualizarPrecio();
+    }
+
+    function seleccionarSector(nombreSector, idBoton) {
+        document.getElementById('select-especiales-internos').value = "";
+        puntoEspecialActivo = false;
+        document.getElementById('btn-toggle-especiales').classList.remove('active');
+        document.getElementById('wrapper-select-especiales').style.display = "none";
+
+        document.querySelectorAll('.btn-sector').forEach(b => b.classList.remove('active'));
+        document.getElementById(idBoton).classList.add('active');
+        sectorSeleccionadoNombre = nombreSector;
+        
+        actualizarPrecio();
+    }
+
+    function seleccionarPuntoEspecial() {
+        const selectEsp = document.getElementById('select-especiales-internos');
+        if (selectEsp.value !== "") {
+            puntoEspecialActivo = true;
+            sectorSeleccionadoNombre = "";
+            document.querySelectorAll('.btn-sector').forEach(b => b.classList.remove('active'));
+            document.getElementById('calle-interna').value = "";
+            document.getElementById('casa-interna').value = "";
+        } else {
+            puntoEspecialActivo = false;
+        }
+        actualizarPrecio();
+    }
+
     function toggleCheckbox(id) {
         if(event.target.tagName !== 'INPUT') {
             const chk = document.getElementById(id);
@@ -316,8 +496,31 @@
     }
 
     function calcularTarifaDinamica() {
-        const selectDestino = document.getElementById('select-destino');
-        const precioBase = parseFloat(selectDestino.value);
+        let precioBase = 0;
+
+        if (modoInternoActivo) {
+            if (puntoEspecialActivo) {
+                const selectEsp = document.getElementById('select-especiales-internos');
+                precioBase = parseFloat(selectEsp.value);
+            } else if (sectorSeleccionadoNombre) {
+                // Ahora TODOS los sectores (incluido Brisas Norte) calculan en base a la calle
+                const textoCalle = document.getElementById('calle-interna').value.trim();
+                const numeroCalle = parseInt(textoCalle.replace(/[^0-9]/g, ''), 10);
+
+                // Regla general unificada: Calle 1-36 -> 1.50 | Calle 37+ -> 1.75
+                if (!isNaN(numeroCalle) && numeroCalle > 36) {
+                    precioBase = 1.75; 
+                } else {
+                    precioBase = 1.50; 
+                }
+            } else {
+                return { total: 0, desgloses: [] };
+            }
+        } else {
+            const selectDestino = document.getElementById('select-destino');
+            precioBase = parseFloat(selectDestino.value);
+        }
+
         if (isNaN(precioBase) || precioBase <= 0) return { total: 0, desgloses: [] };
 
         let extraPasajeros = parseInt(document.getElementById('pasajeros-adicionales').value) * 0.50;
@@ -340,18 +543,11 @@
         document.getElementById('display-precio').innerText = "B/. " + calculo.total.toFixed(2);
     }
 
-    // Nueva función para resetear el formulario elegantemente en lugar de usar location.reload()
     function resetFormulario(mensajeAlert) {
         clearInterval(intervalTimerLlegada);
-        
-        // Apagar el escuchador activo de Firebase para evitar fugas de memoria
-        if (viajeRef) {
-            viajeRef.off();
-            viajeRef = null;
-        }
+        if (viajeRef) { viajeRef.off(); viajeRef = null; }
         viajeID = "";
 
-        // Limpiar inputs
         document.getElementById('origen').value = "";
         document.getElementById('input-busqueda').value = "";
         document.getElementById('select-destino').selectedIndex = -1;
@@ -361,38 +557,63 @@
         document.getElementById('check-mascota').checked = false;
         document.getElementById('display-precio').innerText = "B/. 0.00";
 
-        // Restaurar estilos del timer visual
+        modoInternoActivo = false;
+        puntoEspecialActivo = false;
+        document.getElementById('btn-activar-interno').classList.remove('active');
+        document.getElementById('subpanel-interno').style.display = "none";
+        document.getElementById('select-especiales-internos').value = "";
+        document.getElementById('calle-interna').value = "";
+        document.getElementById('casa-interna').value = "";
+        sectorSeleccionadoNombre = "";
+        document.querySelectorAll('.btn-sector').forEach(b => b.classList.remove('active'));
+        
+        document.getElementById('btn-toggle-especiales').classList.remove('active');
+        document.getElementById('wrapper-select-especiales').style.display = "none";
+
         let elTimerVisual = document.getElementById('timer-llegada');
         elTimerVisual.className = "timer-alerta";
         elTimerVisual.innerText = "Tiempo de llegada: 7:00";
 
-        // Cambiar vistas
         document.getElementById('panel-espera').style.display = "none";
         document.getElementById('panel-cliente').style.display = "block";
 
-        // Mostrar todas las opciones del select nuevamente
         filtrarDestinos();
-
-        if(mensajeAlert) {
-            setTimeout(() => { alert(mensajeAlert); }, 300);
-        }
+        if(mensajeAlert) { setTimeout(() => { alert(mensajeAlert); }, 300); }
     }
 
     function pedirTaxi() {
         const origen = document.getElementById('origen').value;
-        const selectDestino = document.getElementById('select-destino');
-        const precioBase = parseFloat(selectDestino.value);
+        let destinoText = "";
+
+        const calculo = calcularTarifaDinamica();
+        if (calculo.total <= 0) {
+            if (modoInternoActivo && !sectorSeleccionadoNombre && !puntoEspecialActivo) return alert("Por favor, selecciona un sector o barriada interna.");
+            return alert("Por favor, selecciona un destino válido.");
+        }
+
+        if (modoInternoActivo) {
+            if (puntoEspecialActivo) {
+                const selectEsp = document.getElementById('select-especiales-internos');
+                destinoText = selectEsp.options[selectEsp.selectedIndex].text;
+            } else {
+                const calle = document.getElementById('calle-interna').value.trim();
+                const casa = document.getElementById('casa-interna').value.trim();
+                if (!calle) return alert("Por favor, escribe el número de calle para calcular la ruta.");
+                
+                destinoText = `Calle ${calle}, ${sectorSeleccionadoNombre}`;
+                if(casa) destinoText += ` (${casa})`;
+            }
+        } else {
+            const selectDestino = document.getElementById('select-destino');
+            destinoText = selectDestino.options[selectDestino.selectedIndex].text;
+        }
         
-        if (precioBase <= 0 || isNaN(precioBase)) return alert("Selecciona un destino de la lista.");
         if (!origen.trim()) return alert("Por favor, ingresa tu ubicación de origen.");
 
-        const destinoText = selectDestino.options[selectDestino.selectedIndex].text;
         const cantAdicionales = parseInt(document.getElementById('pasajeros-adicionales').value);
         const esDomFeriado = document.getElementById('check-dom-feriado').checked;
         const esNocturno = document.getElementById('check-nocturno').checked;
         const llevaMascota = document.getElementById('check-mascota').checked;
-
-        const calculo = calcularTarifaDinamica();
 
         const viaje = {
             cliente: localStorage.getItem('userName') || "Pasajero",
@@ -446,7 +667,6 @@
                 const textoSaludo = `Hola ${v.conductorNombre}, soy ${v.cliente}. Aceptaste mi viaje en ClickGoTaxi. Te espero en: ${v.origen}. Destino: ${v.destino}. Pasajeros: ${msgAcompañantes}. Mascota: ${msgMascota}. Detalles Aplicados: [${v.detallesRecargo}]. Tarifa Total: B/. ${parseFloat(v.precio).toFixed(2)}`;
                 document.getElementById('link-ws').href = `https://wa.me/${v.conductorCel}?text=${encodeURIComponent(textoSaludo)}`;
 
-                // DETECTOR DE LLEGADA DEL CONDUCTOR
                 let elTimerVisual = document.getElementById('timer-llegada');
                 if (v.conductorLlego === true) {
                     clearInterval(intervalTimerLlegada);
@@ -455,47 +675,29 @@
                 }
             }
             
-            // CAMBIO CRÍTICO: Manejar cancelado o completado limpiamente sin romper la app
-            if(v.estado === "cancelado") {
-                resetFormulario("El viaje ha sido cancelado.");
-            }
-            if(v.estado === "completado") {
-                resetFormulario("¡Viaje finalizado con éxito! Gracias por usar ClickGoTaxi.");
-            }
+            if(v.estado === "cancelado") { resetFormulario("El viaje ha sido cancelado."); }
+            if(v.estado === "completado") { resetFormulario("¡Viaje finalizado con éxito! Gracias por usar ClickGoTaxi."); }
         });
     }
 
     function iniciarContadorLlegada(segundos) {
         clearInterval(intervalTimerLlegada); 
-        
         intervalTimerLlegada = setInterval(() => {
             segundos--;
-            
             let mins = Math.floor(segundos / 60);
             let secs = segundos % 60;
             let elTimerVisual = document.getElementById('timer-llegada');
-            
-            if(elTimerVisual) {
-                elTimerVisual.innerText = `Tiempo de llegada: ${mins}:${secs < 10 ? '0' : ''}${secs}`;
-            }
+            if(elTimerVisual) { elTimerVisual.innerText = `Tiempo de llegada: ${mins}:${secs < 10 ? '0' : ''}${secs}`; }
             
             if (segundos <= 0) {
                 clearInterval(intervalTimerLlegada);
-                
-                let respuestaPasajero = confirm("El conductor ha demorado más de 7 minutos en llegar.\n\n¿Deseas seguir esperándolo? (Presiona 'Aceptar' para esperarlo o 'Cancelar' para buscar otro conductor).");
-                
+                let respuestaPasajero = confirm("El conductor ha demorado más de 7 minutos.\n\n¿Deseas seguir esperándolo?");
                 if (respuestaPasajero) {
                     if(elTimerVisual) elTimerVisual.innerText = `Esperando retraso acordado...`;
                 } else {
                     db.ref('viajes/' + viajeID).update({
-                        estado: 'pendiente',
-                        conductorNombre: null,
-                        conductorPlaca: null,
-                        conductorCel: null,
-                        conductorLlego: false
-                    }).then(() => {
-                        alert("Pedido reestablecido. Tu viaje vuelve a estar disponible para el resto de conductores.");
-                    });
+                        estado: 'pendiente', conductorNombre: null, conductorPlaca: null, conductorCel: null, conductorLlego: false
+                    }).then(() => { alert("Pedido reestablecido. Tu viaje vuelve a estar disponible."); });
                 }
             }
         }, 1000);
@@ -507,9 +709,7 @@
             db.ref('viajes/' + viajeID).update({ estado: 'cancelado' }).then(() => {
                 resetFormulario("Has cancelado el viaje correctamente.");
             });
-        } else if (!viajeID) {
-            resetFormulario();
-        }
+        } else if (!viajeID) { resetFormulario(); }
     }
 </script>
 </body>

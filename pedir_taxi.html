@@ -124,8 +124,11 @@
                 directionsRenderer.setDirections(response);
                 const distanceKm = response.routes[0].legs[0].distance.value / 1000;
                 
-                let precioBruto = 1.50 + (distanceKm * 0.60);
-                let opciones = [1.00, 1.50, 1.75, 2.00];
+                // NUEVA TARIFA: Base 1.00 + 0.50 por km
+                let precioBruto = 1.00 + (distanceKm * 0.50);
+                
+                // NUEVO REDONDEO: Opciones 1.00, 1.25, 1.50, 2.00
+                let opciones = [1.00, 1.25, 1.50, 2.00];
                 let precioFinal = opciones.reduce((prev, curr) => {
                     return (Math.abs(curr - precioBruto) < Math.abs(prev - precioBruto) ? curr : prev);
                 });

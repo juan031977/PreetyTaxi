@@ -8,23 +8,8 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #0b0b0b; color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .login-box { background: #1a1a1a; padding: 30px; border-radius: 20px; width: 90%; max-width: 350px; border-top: 5px solid #ffc107; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); position: relative; }
-        
-        /* Estilo de la flecha de retroceso */
-        .back-btn { 
-            position: absolute; 
-            top: 20px; 
-            left: 20px; 
-            color: #ffc107; 
-            text-decoration: none; 
-            font-size: 22px; 
-            font-weight: bold; 
-            line-height: 1;
-            transition: transform 0.2s ease;
-        }
-        .back-btn:active { transform: scale(0.85); }
-
-        h2 { color: #ffc107; margin-top: 15px; }
+        .login-box { background: #1a1a1a; padding: 30px; border-radius: 20px; width: 90%; max-width: 350px; border-top: 5px solid #ffc107; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        h2 { color: #ffc107; }
         input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: none; background: #333; color: white; box-sizing: border-box; font-size: 16px; }
         button { background: #ffc107; width: 100%; padding: 15px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; color: #1a1a1a; }
         .link { color: #888; text-decoration: none; font-size: 13px; margin-top: 15px; display: block; }
@@ -32,9 +17,6 @@
 </head>
 <body>
     <div class="login-box">
-        <!-- BOTÓN DE RETROCESO -->
-        <a href="index.html" class="back-btn">←</a>
-
         <h2>Panel de Chofer</h2>
         <input type="tel" id="tel" placeholder="Número de Celular">
         <input type="password" id="pass" placeholder="Contraseña">
@@ -48,24 +30,39 @@
             databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" 
         };
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
         function login() {
-            const t = document.getElementById('tel').value;
+            const t = document.getElementById('tel').value.replace(/[^0-9]/g, '');
             const p = document.getElementById('pass').value;
 
             if(!t || !p) return alert("Completa los campos");
 
-            firebase.database().ref('conductores/' + t).once('value').then(snap => {
+            // BUSCAMOS POR CELULAR (ID ÚNICO), CERO CONFUSIONES CON NOMBRES
+            db.ref('conductores/' + t).once('value').then(snap => {
                 const driver = snap.val();
+                
                 if(driver && driver.pass === p) {
-                    if(driver.estado === "activo") {
-                        localStorage.setItem('driverCel', t);
-                        window.location.href = "panel_trabajo.html";
-                    } else {
-                        alert("⚠️ Tu cuenta está PENDIENTE de aprobación por el Admin o BLOQUEADA.");
-                    }
+                    
+                    // Empaquetamos TODOS sus datos para que el Panel de Trabajo no se los vuelva a pedir
+                    const datosParaPanel = {
+                        nombre: driver.nombre || 'Conductor',
+                        telefono: t,
+                        vehiculo: driver.vehiculo || 'Auto',
+                        color: driver.color || 'Sin color',
+                        placa: driver.placa || 'Sin placa'
+                    };
+                    
+                    // Guardamos todo en la memoria del celular
+                    localStorage.setItem('datos_conductor', JSON.stringify(datosParaPanel));
+                    
+                    // IMPORTANTE: Lo dejamos pasar al panel sin importar si debe o no.
+                    // El panel_trabajo.html se encargará de mostrarle la pantalla ROJA de bloqueo
+                    // y dejarlo viendo los viajes pasar para que pague rápido.
+                    window.location.href = "panel_trabajo.html";
+
                 } else {
-                    alert("❌ Datos incorrectos.");
+                    alert("❌ Celular o contraseña incorrectos.");
                 }
             });
         }

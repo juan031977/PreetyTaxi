@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Admin ClickGoTaxi - Control Total</title>
+    <title>Admin PreetyTaxi - Control Total</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
@@ -12,24 +12,36 @@
         table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; }
         th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
         th { background: #ffc107; color: black; }
-        .btn { padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .btn { padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin: 3px; }
         .btn-block { background: #dc3545; color: white; }
         .btn-active { background: #28a745; color: white; }
-        .btn-reset { background: #007bff; color: white; margin-bottom: 10px; }
+        .btn-reset { background: #007bff; color: white; }
+        .btn-corte { background: #800080; color: white; padding: 15px; font-size: 16px; width: 100%; margin-bottom: 10px; }
+        
+        /* Colores bonitos para los estados */
+        .badge-activo { color: #28a745; font-weight: bold; }
+        .badge-bloqueado { color: #dc3545; font-weight: bold; }
+        .badge-pendiente { color: #ffc107; font-weight: bold; }
+
+        /* Estilo para el buscador de miles de conductores */
+        .input-buscador { width: 100%; padding: 14px; margin-top: 15px; border-radius: 8px; border: 2px solid #ffc107; font-size: 16px; box-sizing: border-box; outline: none; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="card">
             <h2>Panel de Control Administrativo 🚕</h2>
+            <button class="btn btn-corte" onclick="corteDiario()">🌙 CORTE DIARIO (Cobrar B/. 1.00 y Bloquear a Todos)</button>
             <button class="btn btn-block" onclick="cierreSemanal()">RESETEO SEMANAL (Borrar Viajes y Deudas)</button>
+            
+            <input type="text" id="buscador" onkeyup="filtrarConductores()" placeholder="🔍 Escribe el celular o nombre para buscar entre miles de Juans..." class="input-buscador">
         </div>
 
         <table>
             <thead>
                 <tr>
+                    <th>Celular (ID Único)</th>
                     <th>Nombre</th>
-                    <th>Celular</th>
                     <th>Placa</th>
                     <th>Estado</th>
                     <th>Deuda</th>
@@ -53,28 +65,55 @@
                     const d = child.val();
                     const cel = child.key;
                     
+                    // Determinar el botón según el estado actual
                     let btnEstado = "";
+                    let claseEstado = "badge-bloqueado";
+
                     if (d.estado === "pendiente") {
                         btnEstado = `<button class="btn btn-active" onclick="cambiarEstado('${cel}', 'activo')">ACEPTAR</button>`;
+                        claseEstado = "badge-pendiente";
                     } else if (d.estado === "activo") {
                         btnEstado = `<button class="btn btn-block" onclick="cambiarEstado('${cel}', 'bloqueado')">BLOQUEAR</button>`;
+                        claseEstado = "badge-activo";
                     } else {
                         btnEstado = `<button class="btn btn-active" onclick="cambiarEstado('${cel}', 'activo')">ACTIVAR</button>`;
+                        claseEstado = "badge-bloqueado";
                     }
 
+                    // Formato de deuda limpio (Verde si está en 0, Rojo si debe)
+                    const deudaNum = parseFloat(d.deuda || 0);
+                    const colorDeuda = deudaNum > 0 ? "#dc3545" : "#28a745";
+
+                    // Renderizado con Celular en la primera columna en azul y negrita
                     tbody.innerHTML += `
                         <tr>
+                            <td style="font-weight: bold; color: #007bff;">${cel}</td>
                             <td>${d.nombre}</td>
-                            <td>${cel}</td>
                             <td>${d.placa}</td>
-                            <td><strong>${d.estado.toUpperCase()}</strong></td>
-                            <td style="color:red; font-weight:bold;">B/. ${parseFloat(d.deuda || 0).toFixed(2)}</td>
+                            <td><span class="${claseEstado}">${(d.estado || 'pendiente').toUpperCase()}</span></td>
+                            <td style="color:${colorDeuda}; font-weight: bold;">B/. ${deudaNum.toFixed(2)}</td>
                             <td>
                                 ${btnEstado}
                                 <button class="btn btn-reset" onclick="pagarDeuda('${cel}')">PAGÓ</button>
                             </td>
                         </tr>`;
                 });
+                
+                // Mantiene el filtro de búsqueda activo si estás escribiendo
+                filtrarConductores();
+            });
+        }
+
+        // AGREGADO: Función para filtrar al instante por número o nombre
+        function filtrarConductores() {
+            const input = document.getElementById('buscador').value.toLowerCase();
+            const filas = document.querySelectorAll('#lista-conductores tr');
+            filas.forEach(fila => {
+                if (fila.textContent.toLowerCase().includes(input)) {
+                    fila.style.display = "";
+                } else {
+                    fila.style.display = "none";
+                }
             });
         }
 
@@ -82,12 +121,25 @@
             db.ref('conductores/' + cel).update({ estado: nuevoEstado });
         }
 
+        // CORRECCIÓN CRÍTICA: Ahora cuando paga, pone la deuda en 0 Y lo cambia a 'activo' automáticamente
         function pagarDeuda(cel) {
             if(confirm("¿Confirmar que este conductor pagó su deuda? Se pondrá en 0 y se ACTIVARÁ al instante.")) {
                 db.ref('conductores/' + cel).update({ 
                     deuda: 0,
-                    estado: 'activo'
+                    estado: 'activo' 
                 });
+            }
+        }
+
+        // AGREGADO: Bloqueo masivo diario cobrando el B/. 1.00 indispensable
+        function corteDiario() {
+            if(confirm("⚠️ ¿Estás seguro de BLOQUEAR a todos los conductores? Se les cargará B/. 1.00 de saldo.")) {
+                db.ref('conductores').once('value', snap => {
+                    snap.forEach(c => {
+                        db.ref('conductores/' + c.key).update({ estado: 'bloqueado', deuda: 1.00 });
+                    });
+                });
+                alert("Corte diario ejecutado. Todos los conductores han sido notificados en sus apps.");
             }
         }
 
@@ -96,7 +148,7 @@
                 db.ref('viajes').remove();
                 db.ref('conductores').once('value', snap => {
                     snap.forEach(c => {
-                        db.ref('conductores/' + c.key).update({ deuda: 0 });
+                        db.ref('conductores/' + c.key).update({ deuda: 0, estado: 'activo' });
                     });
                 });
             }

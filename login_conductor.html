@@ -8,15 +8,21 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #0b0b0b; color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .login-box { background: #1a1a1a; padding: 30px; border-radius: 20px; width: 90%; max-width: 350px; border-top: 5px solid #ffc107; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        .login-box { position: relative; background: #1a1a1a; padding: 30px; border-radius: 20px; width: 90%; max-width: 350px; border-top: 5px solid #ffc107; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
         h2 { color: #ffc107; }
         input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: none; background: #333; color: white; box-sizing: border-box; font-size: 16px; }
         button { background: #ffc107; width: 100%; padding: 15px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; color: #1a1a1a; }
         .link { color: #888; text-decoration: none; font-size: 13px; margin-top: 15px; display: block; }
+        
+        /* ESTILO DEL BOTÓN DE RETROCESO */
+        .btn-volver { position: absolute; top: 15px; left: 15px; background: transparent; color: #aaa; border: none; font-size: 14px; font-weight: bold; cursor: pointer; z-index: 20; width: auto; padding: 0; margin: 0; }
+        .btn-volver:hover { color: white; }
     </style>
 </head>
 <body>
     <div class="login-box">
+        <button class="btn-volver" onclick="window.history.back()">⬅ Volver</button>
+        
         <h2>Panel de Chofer</h2>
         <input type="tel" id="tel" placeholder="Número de Celular">
         <input type="password" id="pass" placeholder="Contraseña">
@@ -38,32 +44,32 @@
 
             if(!t || !p) return alert("Completa los campos");
 
-            // BUSCAMOS POR CELULAR (ID ÚNICO), CERO CONFUSIONES CON NOMBRES
+            // Buscamos al conductor por su teléfono (la clave del nodo)
             db.ref('conductores/' + t).once('value').then(snap => {
                 const driver = snap.val();
                 
+                // Verificamos si el conductor existe y si la contraseña coincide con 'pass'
                 if(driver && driver.pass === p) {
                     
-                    // Empaquetamos TODOS sus datos para que el Panel de Trabajo no se los vuelva a pedir
                     const datosParaPanel = {
                         nombre: driver.nombre || 'Conductor',
                         telefono: t,
                         vehiculo: driver.vehiculo || 'Auto',
                         color: driver.color || 'Sin color',
-                        placa: driver.placa || 'Sin placa'
+                        placa: driver.placa || 'Sin placa',
+                        estado: driver.estado || 'activo',
+                        deuda: driver.deuda || 0
                     };
                     
-                    // Guardamos todo en la memoria del celular
                     localStorage.setItem('datos_conductor', JSON.stringify(datosParaPanel));
-                    
-                    // IMPORTANTE: Lo dejamos pasar al panel sin importar si debe o no.
-                    // El panel_trabajo.html se encargará de mostrarle la pantalla ROJA de bloqueo
-                    // y dejarlo viendo los viajes pasar para que pague rápido.
                     window.location.href = "panel_trabajo.html";
 
                 } else {
                     alert("❌ Celular o contraseña incorrectos.");
                 }
+            }).catch(error => {
+                console.error("Error al conectar a Firebase:", error);
+                alert("Error de conexión, intenta de nuevo.");
             });
         }
     </script>

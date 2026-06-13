@@ -13,10 +13,10 @@
         body { margin: 0; background: var(--dark); color: white; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; }
         .map-header { width: 100%; height: 180px; background-image: url('https://images.unsplash.com/photo-1593351415075-3bac9f45c877?auto=format&fit=crop&q=80&w=800'); background-size: cover; background-position: center; border-bottom: 3px solid var(--gold); }
         .container { width: 92%; max-width: 400px; margin-top: -30px; position: relative; z-index: 10; padding-bottom: 40px; }
-        .card { background: var(--card); padding: 20px; border-radius: 20px; border: 1px solid #333; box-shadow: 0 10px 25px rgba(0,0,0,0.8); }
+        .card { background: var(--card); padding: 20px; border-radius: 20px; border: 1px solid #333; box-shadow: 0 10px 25px rgba(0,0,0,0.8); position: relative; }
         .logo-text { color: var(--gold); font-size: 24px; font-weight: bold; text-align: center; margin: 0 0 20px 0; }
         label { display: block; margin-top: 15px; color: #aaa; font-size: 12px; font-weight: bold; text-transform: uppercase; }
-        input { width: 100%; padding: 14px; margin-top: 5px; border-radius: 12px; border: 1px solid #444; background: #222; color: white; font-size: 16px; box-sizing: border-box; }
+        input, select { width: 100%; padding: 14px; margin-top: 5px; border-radius: 12px; border: 1px solid #444; background: #222; color: white; font-size: 16px; box-sizing: border-box; }
         #mapa-destino { width: 100%; height: 300px; border-radius: 15px; margin: 15px 0; border: 3px solid var(--gold); }
         .price-display { background: #111; padding: 15px; border-radius: 12px; margin-top: 20px; text-align: center; border: 1px dashed var(--gold); }
         .price-display span { font-size: 32px; font-weight: bold; color: var(--gold); }
@@ -28,6 +28,15 @@
         .btn-whatsapp { display: block; background: #25D366; color: white; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; margin: 10px auto 0 auto; width: 85%; box-sizing: border-box; }
         .btn-cancelar-viaje { background: #dc3545; color: white; width: 85%; padding: 12px; border: none; border-radius: 10px; font-weight: bold; margin-top: 10px; cursor: pointer; }
         .notificacion-llegada { position: fixed; top: 20px; right: 20px; background: #28a745; color: white; padding: 20px; border-radius: 12px; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.3); animation: slideIn 0.3s; max-width: 300px; }
+        
+        .toggle-modos { display: flex; gap: 10px; margin-top: 15px; }
+        .btn-modo { flex: 1; background: #333; color: white; border: 1px solid #555; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        .btn-modo.active { background: var(--gold); color: black; border-color: var(--gold); }
+        
+        /* ESTILO DEL BOTÓN DE RETROCESO */
+        .btn-volver { position: absolute; top: 20px; left: 15px; background: transparent; color: #aaa; border: none; font-size: 14px; font-weight: bold; cursor: pointer; z-index: 20; }
+        .btn-volver:hover { color: white; }
+
         @keyframes slideIn { from { transform: translateX(400px); } to { transform: translateX(0); } }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
     </style>
@@ -38,14 +47,40 @@
 
 <div class="container">
     <div id="panel-cliente" class="card">
+        <button class="btn-volver" onclick="window.history.back()">⬅ Volver</button>
+        
         <p class="logo-text">🚕 ClickGoTaxi - <span id="nombreUsuario"></span></p>
         <label>Tu número de WhatsApp</label>
         <input type="tel" id="telefono" placeholder="Ej: 50760000000">
+        
         <label>¿Dónde te buscamos?</label>
         <input type="text" id="origen" placeholder="Ej: Plaza del Golf">
-        <label>¿A dónde vas?</label>
-        <input type="text" id="destino-input" placeholder="Ej: Río Abajo">
-        <div id="mapa-destino"></div>
+
+        <div class="toggle-modos">
+            <button id="btn-externa" class="btn-modo active" onclick="cambiarModo('externa')">Externa (Mapa)</button>
+            <button id="btn-interna" class="btn-modo" onclick="cambiarModo('interna')">Interna (Brisas)</button>
+        </div>
+
+        <div id="panel-externo">
+            <label>¿A dónde vas?</label>
+            <input type="text" id="destino-input" placeholder="Ej: Río Abajo">
+            <div id="mapa-destino"></div>
+        </div>
+
+        <div id="panel-interno" style="display: none;">
+            <label>Número de Calle Destino</label>
+            <input type="number" id="calle-interna" placeholder="Ej: 36" oninput="calcularInterna()">
+            <label>Zona</label>
+            <select id="zona-interna" onchange="calcularInterna()">
+                <option value="Asur">Asur</option>
+                <option value="Occidente">Occidente</option>
+                <option value="Norte">Norte</option>
+                <option value="Sur">Sur</option>
+                <option value="Oeste">Oeste</option>
+                <option value="Este">Este</option>
+            </select>
+        </div>
+
         <div class="price-display">
             <small style="color:#888">TARIFA ESTIMADA</small><br>
             <span id="display-precio">B/. 0.00</span>
@@ -69,6 +104,7 @@
     let destinoCoords = null;
     let autoOrigen, autoDestino;
     let viajeID = null;
+    let modoActual = 'externa'; 
     
     let nombrePasajero = localStorage.getItem('nombre_pasajero');
     let telefonoPasajero = localStorage.getItem('telefono_pasajero');
@@ -85,6 +121,34 @@
     document.getElementById('nombreUsuario').textContent = nombrePasajero;
     document.getElementById('telefono').value = telefonoPasajero;
 
+    function cambiarModo(modo) {
+        modoActual = modo;
+        
+        document.getElementById('btn-externa').classList.toggle('active', modo === 'externa');
+        document.getElementById('btn-interna').classList.toggle('active', modo === 'interna');
+        
+        document.getElementById('panel-externo').style.display = modo === 'externa' ? 'block' : 'none';
+        document.getElementById('panel-interno').style.display = modo === 'interna' ? 'block' : 'none';
+        
+        document.getElementById('display-precio').innerText = "B/. 0.00";
+        if (modo === 'externa') {
+            calcularRuta();
+        } else {
+            calcularInterna();
+        }
+    }
+
+    function calcularInterna() {
+        const calle = parseInt(document.getElementById('calle-interna').value);
+        if (isNaN(calle)) {
+            document.getElementById('display-precio').innerText = "B/. 0.00";
+            return;
+        }
+        
+        let precio = (calle <= 36) ? 1.50 : 1.75;
+        document.getElementById('display-precio').innerText = "B/. " + precio.toFixed(2);
+    }
+
     function initMap() {
         mapa = new google.maps.Map(document.getElementById('mapa-destino'), {
             zoom: 13,
@@ -100,20 +164,23 @@
 
         autoOrigen.addListener('place_changed', () => {
             const place = autoOrigen.getPlace();
-            if (place.geometry) origenCoords = place.geometry.location;
+            if (place.geometry) {
+                origenCoords = place.geometry.location;
+                if(modoActual === 'externa') calcularRuta();
+            }
         });
 
         autoDestino.addListener('place_changed', () => {
             const place = autoDestino.getPlace();
             if (place.geometry) {
                 destinoCoords = place.geometry.location;
-                calcularRuta();
+                if(modoActual === 'externa') calcularRuta();
             }
         });
     }
 
     function calcularRuta() {
-        if (!origenCoords || !destinoCoords) return;
+        if (!origenCoords || !destinoCoords || modoActual !== 'externa') return;
 
         directionsService.route({
             origin: origenCoords,
@@ -124,10 +191,8 @@
                 directionsRenderer.setDirections(response);
                 const distanceKm = response.routes[0].legs[0].distance.value / 1000;
                 
-                // NUEVA TARIFA: Base 1.00 + 0.50 por km
                 let precioBruto = 1.00 + (distanceKm * 0.50);
                 
-                // NUEVO REDONDEO: Opciones 1.00, 1.25, 1.50, 2.00
                 let opciones = [1.00, 1.25, 1.50, 2.00];
                 let precioFinal = opciones.reduce((prev, curr) => {
                     return (Math.abs(curr - precioBruto) < Math.abs(prev - precioBruto) ? curr : prev);
@@ -143,12 +208,24 @@
     }
 
     function pedirTaxi() {
-        const destino = document.getElementById('destino-input').value;
+        let destinoFinal = "";
         const precio = document.getElementById('display-precio').innerText;
         const telefono = document.getElementById('telefono').value.replace(/[^0-9]/g, '');
+        const origenVal = document.getElementById('origen').value;
         
-        if (!origenCoords || !destino) return alert("Por favor completa origen y destino");
+        if (modoActual === 'externa') {
+            destinoFinal = document.getElementById('destino-input').value;
+            if (!origenCoords || !destinoFinal) return alert("Por favor completa origen y destino en el mapa");
+        } else {
+            const calle = document.getElementById('calle-interna').value;
+            const zona = document.getElementById('zona-interna').value;
+            if (!origenVal) return alert("Por favor escribe dónde te buscamos.");
+            if (!calle) return alert("Por favor ingresa el número de calle de destino.");
+            destinoFinal = "Calle " + calle + " " + zona + " (Ruta Interna Brisas)";
+        }
+
         if (!telefono || telefono.length < 8) return alert("Por favor ingresa tu número de WhatsApp");
+        if (precio === "B/. 0.00") return alert("Por favor espera a que se calcule la tarifa.");
         
         localStorage.setItem('telefono_pasajero', telefono);
 
@@ -156,23 +233,28 @@
         btnSolicitar.disabled = true;
         btnSolicitar.innerText = "BUSCANDO TAXI...";
         
-        document.getElementById('estado-viaje-container').innerHTML = `
-            <div style="text-align:center; color:#ffc107; font-weight:bold; margin-top:20px; font-size:16px; animation: pulse 2s infinite;">
-                ⏳ Buscando conductor disponible...
-            </div>
-        `;
-
         viajeID = Date.now();
         
+        // AQUÍ AGREGAMOS EL BOTÓN DE CANCELAR BÚSQUEDA
+        document.getElementById('estado-viaje-container').innerHTML = `
+            <div style="text-align:center; margin-top:20px;">
+                <div style="color:#ffc107; font-weight:bold; font-size:16px; animation: pulse 2s infinite; margin-bottom: 15px;">
+                    ⏳ Buscando conductor disponible...
+                </div>
+                <button class="btn-cancelar-viaje" onclick="cancelarViajeCliente('${viajeID}')">❌ Cancelar Búsqueda</button>
+            </div>
+        `;
+        
         db.ref('viajes/' + viajeID).set({
-            origen: document.getElementById('origen').value,
-            destino: destino,
+            origen: origenVal,
+            destino: destinoFinal,
             precio: precio,
             precio_numerico: parseFloat(precio.replace('B/. ', '')),
             estado: 'pendiente',
             timestamp: viajeID,
             pasajero_nombre: nombrePasajero,
-            telefono: telefono
+            telefono: telefono,
+            tipo_ruta: modoActual
         }).then(() => {
             escucharEstadoViaje(viajeID);
         });
@@ -184,7 +266,6 @@
             if (!viaje) return;
 
             if (viaje.estado === 'conductor_asignado') {
-                // ARREGLO: Muestra el número real del conductor
                 const numeroConductor = viaje.conductorCel || 'Sin número';
                 document.getElementById('estado-viaje-container').innerHTML = `
                     <div class="card-conductor">
@@ -197,7 +278,6 @@
                         <button class="btn-cancelar-viaje" onclick="cancelarViajeCliente('${id}')">❌ Cancelar Viaje</button>
                     </div>
                 `;
-                console.log('Conductor asignado con número:', numeroConductor);
             }
             
             if (viaje.estado === 'conductor_llego') {
@@ -221,7 +301,7 @@
             }
             
             if (viaje.estado === 'cancelado') {
-                alert("El viaje fue cancelado");
+                alert("El viaje ha sido cancelado.");
                 resetFormularioUI();
                 db.ref('viajes/' + id).off();
             }
@@ -264,7 +344,7 @@
         if (confirm("¿Estás seguro de que deseas cancelar este viaje?")) {
             db.ref('viajes/' + id).off();
             db.ref('viajes/' + id).update({ estado: 'cancelado' }).then(() => {
-                alert("Has cancelado el viaje.");
+                // Alerta manejada por el listener de estado en su lugar, pero dejamos un reset local
                 resetFormularioUI();
             });
         }

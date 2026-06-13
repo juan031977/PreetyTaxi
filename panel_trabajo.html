@@ -14,15 +14,12 @@
         button { width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin: 8px 0; transition: 0.2s; }
         input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 6px; border: 1px solid #444; background: #222; color: white; font-size: 16px; }
         label { font-size: 12px; color: #aaa; text-transform: uppercase; font-weight: bold; }
-        
-        /* BOTÓN PRINCIPAL DE CONEXIÓN */
         .btn-conexion { font-size: 18px; letter-spacing: 0.5px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-        
-        .btn-llegue { background: #007bff; color: white; }
         .btn-whatsapp { background: #25D366; color: white; }
         .btn-iniciar { background: #28a745; color: white; }
         .btn-finalizar { background: #dc3545; color: white; }
         .btn-editar { background: #444; color: white; padding: 8px; font-size: 14px; width: auto; border-radius: 5px; margin-top: 10px; }
+        .btn-volver { position: absolute; top: 5px; left: 15px; background: transparent; color: #aaa; border: none; font-size: 14px; font-weight: bold; cursor: pointer; z-index: 20; width: auto; padding: 0; margin: 0; }
     </style>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -30,6 +27,7 @@
 <body>
 
     <audio id="sonidoNotificacion" src="https://raw.githubusercontent.com/juan031977/PreetyTaxi/main/silbido.mp3" preload="auto"></audio>
+    <button class="btn-volver" onclick="window.history.back()">⬅ Volver</button>
 
     <div class="header">
         <div>
@@ -47,200 +45,126 @@
 
     <div id="formularioDatos" class="card" style="display: none; border-left: 4px solid #007bff;">
         <h3 style="margin-bottom: 15px; color: #007bff;">Configura tus datos</h3>
-        <label>Tu Nombre</label>
-        <input type="text" id="inNombre" placeholder="Ej: Juan Pérez">
-        
-        <label>WhatsApp (Sin espacios ni signos)</label>
-        <input type="tel" id="inTel" placeholder="Ej: 60000000">
-        
-        <label>Vehículo</label>
-        <input type="text" id="inVehiculo" placeholder="Ej: Kia Picanto">
-        
-        <label>Color</label>
-        <input type="text" id="inColor" placeholder="Ej: Blanco">
-        
-        <label>Placa</label>
-        <input type="text" id="inPlaca" placeholder="Ej: AB1234">
-        
+        <label>Tu Nombre</label> <input type="text" id="inNombre" placeholder="Ej: Juan Pérez">
+        <label>WhatsApp</label> <input type="tel" id="inTel" placeholder="Ej: 60000000">
+        <label>Vehículo</label> <input type="text" id="inVehiculo" placeholder="Ej: Kia Picanto">
+        <label>Color</label> <input type="text" id="inColor" placeholder="Ej: Blanco">
+        <label>Placa</label> <input type="text" id="inPlaca" placeholder="Ej: AB1234">
         <button class="btn-iniciar" onclick="guardarDatos()">GUARDAR DATOS</button>
     </div>
 
-    <div id="area-viajes">
-        <div id="contenedor"></div>
-    </div>
+    <div id="area-viajes"><div id="contenedor"></div></div>
 
     <script>
-        const firebaseConfig = { 
-            apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg",
-            databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" 
-        };
+        const firebaseConfig = { apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-
-        let audioIntentado = false;
         const audio = document.getElementById('sonidoNotificacion');
 
-        document.addEventListener('click', () => {
-            if(!audioIntentado) { audio.play().catch(()=>{}); audio.pause(); audioIntentado = true; }
-        }, { once: true });
+        document.addEventListener('click', () => { audio.play().then(() => audio.pause()).catch(() => {}); }, { once: true });
 
-        // Variables de Control Interno
         let datos = JSON.parse(localStorage.getItem('datos_conductor'));
         let adminEstado = 'pendiente'; 
         let conductorConectado = localStorage.getItem('conductor_conectado') === 'true'; 
         let estoyEnViajeActivo = false;
 
-        if (!datos || !datos.telefono) {
-            mostrarFormulario();
-        } else {
-            document.getElementById('nombreConductor').textContent = datos.nombre;
-            escucharEstadoAdmin(datos.telefono);
-        }
+        if (!datos || !datos.telefono) { mostrarFormulario(); } else { document.getElementById('nombreConductor').textContent = datos.nombre; escucharEstadoAdmin(datos.telefono); }
 
-        function mostrarFormulario() {
-            document.getElementById('area-viajes').style.display = 'none';
-            document.getElementById('formularioDatos').style.display = 'block';
-            if(datos) {
-                document.getElementById('inNombre').value = datos.nombre || '';
-                document.getElementById('inTel').value = datos.telefono || '';
-                document.getElementById('inVehiculo').value = datos.vehiculo || '';
-                document.getElementById('inColor').value = datos.color || '';
-                document.getElementById('inPlaca').value = datos.placa || '';
-            }
-        }
+        function mostrarFormulario() { document.getElementById('area-viajes').style.display = 'none'; document.getElementById('formularioDatos').style.display = 'block'; }
 
         function escucharEstadoAdmin(telefono) {
             db.ref('conductores/' + telefono).on('value', snap => {
-                const d = snap.val();
-                if (d) {
-                    adminEstado = d.estado || 'pendiente';
-                } else {
-                    adminEstado = 'pendiente';
-                }
+                adminEstado = snap.val() ? (snap.val().estado || 'pendiente') : 'pendiente';
                 actualizarInterfaz();
             });
         }
 
         function actualizarInterfaz() {
-            const txtEstado = document.getElementById('txtEstado');
             const btnConexion = document.getElementById('btnConexion');
-            
             if (adminEstado === 'bloqueado' || adminEstado === 'pendiente') {
-                conductorConectado = false; 
-                
-                txtEstado.innerHTML = `<span style="color: #dc3545; font-weight: bold;">⛔ DESCONECTADO (DEUDA)</span>`;
+                conductorConectado = false;
+                document.getElementById('txtEstado').innerHTML = `<span style="color: #dc3545; font-weight: bold;">⛔ DESCONECTADO (DEUDA)</span>`;
                 btnConexion.innerHTML = `❌ BLOQUEADO (Paga tu saldo B/. 1.00)`;
-                btnConexion.style.background = '#dc3545';
-                btnConexion.style.color = 'white';
-                
-                document.getElementById('area-viajes').style.display = 'block';
                 activarEscuchasDeViajes();
-                
-            } else { 
-                txtEstado.innerHTML = `<span style="color: #28a745; font-weight: bold;">✅ CUENTA ACTIVA</span>`;
-                
+            } else {
+                document.getElementById('txtEstado').innerHTML = `<span style="color: #28a745; font-weight: bold;">✅ CUENTA ACTIVA</span>`;
                 if (conductorConectado) {
                     btnConexion.innerHTML = `🟢 CONECTADO (Toca para Desconectar)`;
-                    btnConexion.style.background = '#28a745';
-                    btnConexion.style.color = 'white';
-                    document.getElementById('area-viajes').style.display = 'block';
                     activarEscuchasDeViajes();
                 } else {
                     btnConexion.innerHTML = `⚪ DESCONECTADO (Modo Descanso)`;
-                    btnConexion.style.background = '#444';
-                    btnConexion.style.color = '#aaa';
-                    
-                    document.getElementById('contenedor').innerHTML = '<div style="text-align:center; padding:35px; color:#666; font-size:16px;">💤 Estás desconectado.<br>No recibirás alertas de carreras hasta que te conectes.</div>';
-                    apagarEscuchas();
+                    document.getElementById('contenedor').innerHTML = '<div style="text-align:center; padding:35px; color:#666;">💤 Estás desconectado.</div>';
+                    db.ref('viajes').off();
                 }
             }
         }
 
         function toggleConexion() {
-            if (adminEstado === 'bloqueado' || adminEstado === 'pendiente') {
-                alert("⛔ ACCESO DENEGADO:\nNo puedes conectarte. Debes cancelar tu tarifa diaria de B/. 1.00 y reportarlo al administrador para que habilite tu línea.");
-                return;
-            }
-            
+            if (adminEstado === 'bloqueado' || adminEstado === 'pendiente') return alert("⛔ ACCESO DENEGADO.");
             conductorConectado = !conductorConectado;
             localStorage.setItem('conductor_conectado', conductorConectado);
             actualizarInterfaz();
         }
 
-        // 4. CONTROLADOR DE ENTRADA DE VIAJES REAL-TIME
-        function apagarEscuchas() {
-            db.ref('viajes').off();
-            if(datos && datos.telefono) {
-                db.ref('viajes').orderByChild('conductorCel').equalTo(datos.telefono).off();
-            }
-        }
-
         function activarEscuchasDeViajes() {
-            apagarEscuchas(); 
-            document.getElementById('contenedor').innerHTML = ''; // Limpiamos pantalla al arrancar
+            db.ref('viajes').off();
+            document.getElementById('contenedor').innerHTML = '';
             
-            // A. Escucha los viajes propios del conductor
+            // 1. Escucha viajes PROPIOS (Activos)
             if(datos && datos.telefono) {
                 db.ref('viajes').orderByChild('conductorCel').equalTo(datos.telefono).on('value', (snap) => {
+                    if (!snap.exists()) {
+                        estoyEnViajeActivo = false;
+                        document.getElementById('contenedor').innerHTML = '';
+                        return;
+                    }
+
                     estoyEnViajeActivo = false;
+                    let hayViajeValido = false;
                     snap.forEach((child) => {
                         const v = child.val();
                         if(v.estado === 'conductor_asignado' || v.estado === 'conductor_llego' || v.estado === 'viaje_iniciado') {
+                            hayViajeValido = true;
                             estoyEnViajeActivo = true;
                             renderizarActivo(child.key, v);
                         }
                     });
+                    
+                    if (!hayViajeValido) document.getElementById('contenedor').innerHTML = '';
                 });
             }
 
-            // B. Escucha Nuevos Viajes que van cayendo en el sistema
+            // 2. Escucha viajes PENDIENTES
             db.ref('viajes').orderByChild('estado').equalTo('pendiente').on('child_added', (snap) => {
-                if (estoyEnViajeActivo) return; // Si ya llevas pasajero, ignoramos los nuevos
-                
-                if (adminEstado === 'activo' && conductorConectado) {
-                    audio.currentTime = 0;
-                    audio.play().catch(e => {});
+                if (!estoyEnViajeActivo) {
+                    if (adminEstado === 'activo' && conductorConectado) {
+                        audio.currentTime = 0;
+                        audio.play().catch(e => console.log("Audio falló", e));
+                    }
+                    mostrarPedido(snap.key, snap.val());
                 }
-                mostrarPedido(snap.key, snap.val());
             });
 
-            // C. LA MAGIA ✨: Escucha cuando otro conductor toma el viaje y lo borra al instante
+            // 3. Borrado automático
             db.ref('viajes').orderByChild('estado').equalTo('pendiente').on('child_removed', (snap) => {
-                const tarjetaViaje = document.getElementById('pedido_' + snap.key);
-                if (tarjetaViaje) {
-                    tarjetaViaje.remove(); // Desaparece la tarjeta si otro lo aceptó
-                }
+                const tarj = document.getElementById('pedido_' + snap.key);
+                if (tarj) tarj.remove();
             });
         }
 
         function mostrarPedido(id, p) {
-            // Verificamos si la tarjeta ya existe para no duplicarla en la pantalla
             if(document.getElementById('pedido_' + id)) return;
-
-            const precioMostrado = p.precio_numerico || p.precio || "0.00";
-            
-            const textoBoton = (adminEstado === 'bloqueado' || adminEstado === 'pendiente') ? '🔒 VIAJE BLOQUEADO (PAGA DEUDA)' : 'ACEPTAR VIAJE';
-            const estiloBoton = (adminEstado === 'bloqueado' || adminEstado === 'pendiente') ? 'background: #555; color: #aaa; cursor: not-allowed;' : 'background: #28a745; color: white;';
-
-            // CORRECCIÓN: insertAdjacentHTML permite que los viajes caigan uno debajo del otro sin borrar los anteriores
-            const html = `
-                <div class="card" id="pedido_${id}">
+            const html = `<div class="card" id="pedido_${id}">
                     <div class="info-row">👤 <strong>Cliente:</strong> ${p.pasajero_nombre || 'Cliente'}</div>
                     <div class="info-row">📍 <strong>Origen:</strong> ${p.origen}</div>
                     <div class="info-row">🏁 <strong>Destino:</strong> ${p.destino}</div>
-                    <div class="precio">Total: B/. ${precioMostrado}</div>
-                    <button style="${estiloBoton}" onclick="aceptar('${id}')">${textoBoton}</button>
-                </div>
-            `;
+                    <div class="precio">Total: B/. ${p.precio || "0.00"}</div>
+                    <button style="background: #28a745; color: white;" onclick="aceptar('${id}')">ACEPTAR VIAJE</button>
+                </div>`;
             document.getElementById('contenedor').insertAdjacentHTML('beforeend', html);
         }
 
         window.aceptar = (id) => {
-            if (adminEstado === 'bloqueado' || adminEstado === 'pendiente') {
-                alert("⛔ TRABAJO RETENIDO:\nPuedes ver este viaje, pero NO tomarlo por falta de pago diario (B/. 1.00).\nCancela tu saldo con el Administrador.");
-                return;
-            }
-            
             db.ref('viajes/' + id).update({
                 estado: 'conductor_asignado',
                 conductorNombre: datos.nombre,
@@ -248,84 +172,46 @@
                 conductorVehiculo: datos.vehiculo,
                 conductorColor: datos.color,
                 conductorPlaca: datos.placa
-            }).then(() => location.reload());
+            });
         };
 
-        function guardarDatos() {
-            const tel = document.getElementById('inTel').value.replace(/[^0-9]/g, '');
-            if(tel.length < 8) return alert("Por favor ingresa un número de teléfono válido.");
-            
-            datos = {
-                nombre: document.getElementById('inNombre').value || 'Conductor',
-                telefono: tel,
-                vehiculo: document.getElementById('inVehiculo').value || 'Auto',
-                color: document.getElementById('inColor').value || 'Sin color',
-                placa: document.getElementById('inPlaca').value || 'Sin placa'
-            };
-            
-            localStorage.setItem('datos_conductor', JSON.stringify(datos));
-            document.getElementById('nombreConductor').textContent = datos.nombre;
-            
-            db.ref('conductores/' + datos.telefono).once('value').then((snap) => {
-                const existente = snap.val();
-                let estadoFinal = 'pendiente';
-                let deudaFinal = 1.00;
-                
-                if (existente) {
-                    estadoFinal = existente.estado || 'pendiente';
-                    deudaFinal = existente.deuda !== undefined ? existente.deuda : 1.00;
-                }
-
-                db.ref('conductores/' + datos.telefono).update({
-                    nombre: datos.nombre,
-                    placa: datos.placa,
-                    vehiculo: datos.vehiculo,
-                    color: datos.color,
-                    estado: estadoFinal,
-                    deuda: deudaFinal
-                }).then(() => {
-                    document.getElementById('formularioDatos').style.display = 'none';
-                    escucharEstadoAdmin(datos.telefono);
-                });
-            });
-        }
-
         function renderizarActivo(id, v) {
-            const precioMostrado = v.precio_numerico || v.precio || "0.00";
-            let txtLlegue = v.estado === 'conductor_llego' ? '✓ PASAJERO NOTIFICADO' : '📍 LLEGUÉ AL PUNTO';
-            let colorLlegue = v.estado === 'conductor_llego' ? '#6c757d' : '#007bff';
-
-            // Al estar en un viaje, esto reemplazará todo el contenedor ocultando los viajes pendientes
+            const esLlegada = v.estado === 'conductor_llego';
+            const btnColor = esLlegada ? '#6c757d' : '#007bff';
+            const btnTexto = esLlegada ? '✓ PASAJERO NOTIFICADO' : '📍 LLEGUÉ AL PUNTO';
+            
             document.getElementById('contenedor').innerHTML = `
                 <div class="card">
                     <div style="background:#28a745; padding:10px; border-radius:5px; text-align:center; margin-bottom:15px; font-weight:bold;">✅ VIAJE EN CURSO</div>
                     <div class="info-row">👤 <strong>Cliente:</strong> ${v.pasajero_nombre}</div>
                     <div class="info-row">📍 <strong>Origen:</strong> ${v.origen}</div>
-                    <div class="info-row">🏁 <strong>Destino:</strong> ${v.destino}</div>
-                    <div class="precio">Total: B/. ${precioMostrado}</div>
+                    <div class="precio">Total: B/. ${v.precio || "0.00"}</div>
                     
-                    <button style="background:${colorLlegue}; color:white; width:100%; padding:15px; border:none; border-radius:8px; font-weight:bold; margin:8px 0; cursor:pointer;" 
-                            onclick="actualizar('${id}', 'conductor_llego')">${txtLlegue}</button>
-                    
-                    <button class="btn-whatsapp" onclick="window.open('https://wa.me/${v.telefono}')">💬 WHATSAPP PASAJERO</button>
+                    <button style="background:${btnColor}; color:white;" onclick="actualizar('${id}', 'conductor_llego')">${btnTexto}</button>
+                    <button class="btn-whatsapp" onclick="window.open('https://wa.me/${v.telefono}')">💬 WHATSAPP</button>
                     <button class="btn-iniciar" onclick="actualizar('${id}', 'viaje_iniciado')">▶️ INICIAR VIAJE</button>
-                    <button class="btn-finalizar" onclick="actualizar('${id}', 'completado', ${v.precio_numerico || 0})">🏁 FINALIZAR VIAJE</button>
+                    <button class="btn-finalizar" onclick="actualizar('${id}', 'completado')">🏁 FINALIZAR VIAJE</button>
                 </div>
             `;
         }
 
-        window.actualizar = (id, estado, precio = 0) => {
+        window.actualizar = (id, estado) => {
+            // Se actualiza en BD y forzamos la limpieza si se completó
             db.ref('viajes/' + id).update({ estado: estado }).then(() => {
-                if (estado === 'conductor_llego') {
-                    alert("Se ha notificado al pasajero que ya llegaste.");
-                } else if(estado === 'completado') {
-                    alert("¡Viaje completado exitosamente!");
-                    let ganancia = parseFloat(localStorage.getItem('ganancia_hoy') || 0) + precio;
-                    localStorage.setItem('ganancia_hoy', ganancia);
-                    location.reload();
+                if(estado === 'completado') {
+                    document.getElementById('contenedor').innerHTML = '';
+                    estoyEnViajeActivo = false;
                 }
             });
         };
+        
+        function guardarDatos() {
+            const tel = document.getElementById('inTel').value.replace(/[^0-9]/g, '');
+            if(tel.length < 8) return alert("Número inválido");
+            datos = { nombre: document.getElementById('inNombre').value, telefono: tel, vehiculo: document.getElementById('inVehiculo').value, color: document.getElementById('inColor').value, placa: document.getElementById('inPlaca').value };
+            localStorage.setItem('datos_conductor', JSON.stringify(datos));
+            db.ref('conductores/' + tel).update(datos).then(() => location.reload());
+        }
     </script>
 </body>
 </html>

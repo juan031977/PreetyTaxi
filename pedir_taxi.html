@@ -7,78 +7,114 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBl3OsPn_Q-yeXk0-0_igfCoZgQYduB40g&libraries=places"></script>
-    
     <style>
-        :root { --gold: #ffc107; --dark: #000; --card: #1a1a1a; }
+        :root { --gold: #ffc107; --dark: #000; --card: #1a1a; }
         body { margin: 0; background: var(--dark); color: white; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; }
-        .map-header { width: 100%; height: 180px; background-image: url('https://images.unsplash.com/photo-1593351415075-3bac9f45c877?auto=format&fit=crop&q=80&w=800'); background-size: cover; background-position: center; border-bottom: 3px solid var(--gold); }
-        .container { width: 92%; max-width: 400px; margin-top: -30px; position: relative; z-index: 10; padding-bottom: 40px; }
-        .card { background: var(--card); padding: 20px; border-radius: 20px; border: 1px solid #333; box-shadow: 0 10px 25px rgba(0,0,0,0.8); position: relative; }
-        .logo-text { color: var(--gold); font-size: 24px; font-weight: bold; text-align: center; margin: 0 0 20px 0; }
+    .map-header { width: 100%; height: 180px; background-image: url('https://images.unsplash.com/photo-1593351415075-3bac9f45c877?auto=format&fit=crop&q=80&w=800'); background-size: cover; background-position: center; border-bottom: 3px solid var(--gold); }
+    .container { width: 92%; max-width: 400px; margin-top: -30px; position: relative; z-index: 10; padding-bottom: 40px; }
+    .card { background: var(--card); padding: 20px; border-radius: 20px; border: 1px solid #333; box-shadow: 0 10px 25px rgba(0,0,0,0.8); position: relative; }
+    .logo-text { color: var(--gold); font-size: 24px; font-weight: bold; text-align: center; margin: 0 0 20px 0; }
         label { display: block; margin-top: 15px; color: #aaa; font-size: 12px; font-weight: bold; text-transform: uppercase; }
         input, select { width: 100%; padding: 14px; margin-top: 5px; border-radius: 12px; border: 1px solid #444; background: #222; color: white; font-size: 16px; box-sizing: border-box; }
         #mapa-destino { width: 100%; height: 300px; border-radius: 15px; margin: 15px 0; border: 3px solid var(--gold); }
-        .price-display { background: #111; padding: 15px; border-radius: 12px; margin-top: 20px; text-align: center; border: 1px dashed var(--gold); }
-        .price-display span { font-size: 32px; font-weight: bold; color: var(--gold); }
-        .btn-pedir { background: var(--gold); color: black; width: 100%; padding: 18px; border: none; border-radius: 15px; font-weight: bold; font-size: 18px; margin-top: 20px; cursor: pointer; }
-        .btn-pedir:disabled { background: #444; color: #888; cursor: not-allowed; }
-        .card-conductor { background: #222; padding: 15px; border-radius: 12px; border: 1px solid var(--gold); margin-top: 15px; text-align: center; }
-        .card-conductor h3 { margin: 0 0 10px 0; color: var(--gold); }
-        .card-conductor p { margin: 5px 0; font-size: 15px; }
-        .btn-whatsapp { display: block; background: #25D366; color: white; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; margin: 10px auto 0 auto; width: 85%; box-sizing: border-box; }
-        .btn-cancelar-viaje { background: #dc3545; color: white; width: 85%; padding: 12px; border: none; border-radius: 10px; font-weight: bold; margin-top: 10px; cursor: pointer; }
-        .notificacion-llegada { position: fixed; top: 20px; right: 20px; background: #28a745; color: white; padding: 20px; border-radius: 12px; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.3); animation: slideIn 0.3s; max-width: 300px; }
-        
-        .toggle-modos { display: flex; gap: 10px; margin-top: 15px; }
-        .btn-modo { flex: 1; background: #333; color: white; border: 1px solid #555; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; }
-        .btn-modo.active { background: var(--gold); color: black; border-color: var(--gold); }
-        
-        /* ESTILO DEL BOTÓN DE RETROCESO */
-        .btn-volver { position: absolute; top: 20px; left: 15px; background: transparent; color: #aaa; border: none; font-size: 14px; font-weight: bold; cursor: pointer; z-index: 20; }
-        .btn-volver:hover { color: white; }
-
+    .price-display { background: #111; padding: 15px; border-radius: 12px; margin-top: 20px; text-align: center; border: 1px dashed var(--gold); }
+    .price-display span { font-size: 32px; font-weight: bold; color: var(--gold); }
+    .btn-pedir { background: var(--gold); color: black; width: 100%; padding: 18px; border: none; border-radius: 15px; font-weight: bold; font-size: 18px; margin-top: 20px; cursor: pointer; }
+    .btn-pedir:disabled { background: #444; color: #888; cursor: not-allowed; }
+    .card-conductor { background: #222; padding: 15px; border-radius: 12px; border: 1px solid var(--gold); margin-top: 15px; text-align: center; }
+    .card-conductor h3 { margin: 0 0 10px 0; color: var(--gold); }
+    .card-conductor p { margin: 5px 0; font-size: 15px; }
+    .btn-whatsapp { display: block; background: #25D366; color: white; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; margin: 10px auto 0 auto; width: 85%; box-sizing: border-box; }
+    .btn-cancelar-viaje { background: #dc3545; color: white; width: 85%; padding: 12px; border: none; border-radius: 10px; font-weight: bold; margin-top: 10px; cursor: pointer; }
+    .notificacion-llegada { position: fixed; top: 20px; right: 20px; background: #28a745; color: white; padding: 20px; border-radius: 12px; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.3); animation: slideIn 0.3s; max-width: 300px; }
+    .toggle-modos { display: flex; gap: 10px; margin-top: 15px; }
+    .btn-modo { flex: 1; background: #333; color: white; border: 1px solid #555; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; }
+    .btn-modo.active { background: var(--gold); color: black; border-color: var(--gold); }
+    .btn-volver { position: absolute; top: 20px; left: 15px; background: transparent; color: #aaa; border: none; font-size: 14px; font-weight: bold; cursor: pointer; z-index: 20; }
+    .btn-volver:hover { color: white; }
+    .cat-interna-btn { background: #222; color: #fff; border: 1px solid #444; padding: 10px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; text-align: center; margin: 5px; flex: 1; }
+    .cat-interna-btn.active { background: var(--gold); color: #000; border-color: var(--gold); }
+    .subcat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 10px; max-height: 300px; overflow-y: auto; }
+    .btn-subcat { background: #1a1a; color: #aaa; border: 1px solid #333; padding: 8px; border-radius: 6px; font-size: 11px; cursor: pointer; text-align: left; }
+    .btn-subcat.active { background: var(--gold); color: #000; border-color: var(--gold); font-weight: bold; }
+    .seccion-interna { background: #151515; padding: 15px; border-radius: 12px; margin-top: 15px; border: 1px solid #333; }
+     /* ORIGEN / DESTINO diferenciados */
+     #origen-seccion { background: #1f1a00; border-color: #ffc107; }
+     #origen-seccion label { color: #ffc107; }
+     #destino-seccion { background: #0a1f14; border-color: #25D366; }
+     #destino-seccion label { color: #25D366; }
         @keyframes slideIn { from { transform: translateX(400px); } to { transform: translateX(0); } }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
     </style>
 </head>
 <body>
-
 <div class="map-header"></div>
-
 <div class="container">
     <div id="panel-cliente" class="card">
         <button class="btn-volver" onclick="window.history.back()">⬅ Volver</button>
-        
         <p class="logo-text">🚕 ClickGoTaxi - <span id="nombreUsuario"></span></p>
         <label>Tu número de WhatsApp</label>
         <input type="tel" id="telefono" placeholder="Ej: 50760000000">
-        
-        <label>¿Dónde te buscamos?</label>
-        <input type="text" id="origen" placeholder="Ej: Plaza del Golf">
 
         <div class="toggle-modos">
-    <button id="btn-externa" class="btn-modo active" onclick="cambiarModo('externa')">Rutas Externas</button>
-    <button id="btn-interna" class="btn-modo" onclick="cambiarModo('interna')">Rutas Internas</button>
-</div>
+            <button id="btn-externa" class="btn-modo active" onclick="cambiarModo('externa')">Rutas Externas</button>
+            <button id="btn-interna" class="btn-modo" onclick="cambiarModo('interna')">Rutas Internas</button>
+        </div>
 
         <div id="panel-externo">
+            <label>¿Dónde te buscamos?</label>
+            <input type="text" id="origen" placeholder="Ej: Plaza del Golf">
             <label>¿A dónde vas?</label>
             <input type="text" id="destino-input" placeholder="Ej: Río Abajo">
             <div id="mapa-destino"></div>
         </div>
 
         <div id="panel-interno" style="display: none;">
-            <label>Número de Calle Destino</label>
-            <input type="number" id="calle-interna" placeholder="Ej: 36" oninput="calcularInterna()">
-            <label>Zona</label>
-            <select id="zona-interna" onchange="calcularInterna()">
-                <option value="Asur">Asur</option>
-                <option value="Occidente">Occidente</option>
-                <option value="Norte">Norte</option>
-                <option value="Sur">Sur</option>
-                <option value="Oeste">Oeste</option>
-                <option value="Este">Este</option>
-            </select>
+            <div class="seccion-interna" id="origen-seccion">
+                <label style="margin-top:0;">Donde Te Buscamos</label>
+                <div style="display:flex; gap:5px; flex-wrap:wrap; margin-top:8px;">
+                    <button class="cat-interna-btn" id="origen-cat-calle" onclick="seleccionarOrigenTipo('calle')">Calles Brisas</button>
+                    <button class="cat-interna-btn" id="origen-cat-mall" onclick="seleccionarOrigenTipo('mall')">SuperMercados/Mall</button>
+                    <button class="cat-interna-btn" id="origen-cat-ph" onclick="seleccionarOrigenTipo('ph')">PH</button>
+                    <button class="cat-interna-btn" id="origen-cat-escuelas" onclick="seleccionarOrigenTipo('escuelas')">Escuelas</button>
+                    <button class="cat-interna-btn" id="origen-cat-estacion" onclick="seleccionarOrigenTipo('estacion')">Estación Línea 2</button>
+                </div>
+                <div id="origen-calle-input" style="display:none; margin-top:10px;">
+                    <input type="number" id="calle-origen" placeholder="N° Calle (Ej: 34)" oninput="calcularInterna()">
+                    <select id="zona-origen" onchange="calcularInterna()" style="margin-top:8px;">
+                        <option value="Asur">Asur</option>
+                        <option value="Occidente">Occidente</option>
+                        <option value="Norte">Norte</option>
+                        <option value="Sur">Sur</option>
+                        <option value="Oeste">Oeste</option>
+                        <option value="Este">Este</option>
+                    </select>
+                </div>
+                <div id="origen-subcat-container"></div>
+            </div>
+
+            <div class="seccion-interna" id="destino-seccion">
+                <label style="margin-top:0;">A DONDE VAS</label>
+                <div style="display:flex; gap:5px; flex-wrap:wrap; margin-top:8px;">
+                    <button class="cat-interna-btn" id="dest-cat-calle" onclick="seleccionarDestinoTipo('calle')">Calles Brisas</button>
+                    <button class="cat-interna-btn" id="dest-cat-mall" onclick="seleccionarDestinoTipo('mall')">SuperMercados/Mall</button>
+                    <button class="cat-interna-btn" id="dest-cat-ph" onclick="seleccionarDestinoTipo('ph')">PH</button>
+                    <button class="cat-interna-btn" id="dest-cat-escuelas" onclick="seleccionarDestinoTipo('escuelas')">Escuelas</button>
+                    <button class="cat-interna-btn" id="dest-cat-estacion" onclick="seleccionarDestinoTipo('estacion')">Estación Línea 2</button>
+                </div>
+                <div id="destino-calle-input" style="display:none; margin-top:10px;">
+                    <input type="number" id="calle-destino" placeholder="N° Calle (Ej: 36)" oninput="calcularInterna()">
+                    <select id="zona-destino" onchange="calcularInterna()" style="margin-top:8px;">
+                        <option value="Asur">Asur</option>
+                        <option value="Occidente">Occidente</option>
+                        <option value="Norte">Norte</option>
+                        <option value="Sur">Sur</option>
+                        <option value="Oeste">Oeste</option>
+                        <option value="Este">Este</option>
+                    </select>
+                </div>
+                <div id="destino-subcat-container"></div>
+            </div>
         </div>
 
         <div class="price-display">
@@ -86,29 +122,46 @@
             <span id="display-precio">B/. 0.00</span>
         </div>
         <button class="btn-pedir" id="btn-solicitar" onclick="pedirTaxi()">SOLICITAR TAXI</button>
-        
         <div id="estado-viaje-container"></div>
     </div>
 </div>
-
 <script>
-    const firebaseConfig = { 
-        apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg",
-        databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" 
-    };
+    const firebaseConfig = { apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-
     let mapa, directionsService, directionsRenderer;
     let origenCoords = null;
     let destinoCoords = null;
     let autoOrigen, autoDestino;
     let viajeID = null;
-    let modoActual = 'externa'; 
-    
+    let modoActual = 'externa';
+
+    let origenTipo = null;
+    let origenSeleccionado = null;
+    let origenPrecio = 0;
+    let destinoTipo = null;
+    let destinoSeleccionado = null;
+    let destinoPrecio = 0;
+
+    const PRECIOS_PH = {
+        'PH La Riviera Colonial': 1.75, 'Brisas del Pacífico': 1.75, 'PH Brisas Point': 1.75, 'PH Brisas Heights': 1.75,
+        'PH Golf Gardens': 2.50, 'Club De Golf': 2.50, 'PH Alpes': 2.50, 'PH Everest': 2.50, 'PH Bejin': 2.50,
+        'PH Olimpus': 2.50, 'PH Mont Blanc': 2.50, 'PH Sierra Nevada': 2.50, 'PH Aventura': 3.00, 'PH Vallarta': 3.00,
+        'PH Noura': 3.00, 'PH Cavana': 3.00, 'Parque Rash': 3.00, 'PH Lagun': 1.50, 'PH Royal Village': 2.00,
+        'Oxford School': 3.00, 'Green City': 6.00, 'Golf Garden': 2.50, 'PH Ventura': 3.00
+    };
+    const PRECIOS_ESCUELAS = {
+        'El IJA': 2.50, 'La Internacional': 2.50, 'Panamerican School': 2.50
+    };
+    const PRECIOS_MALL = {
+        'Super 99 Brisas del Golf': 1.50, 'Machetazo': 1.50, 'Riba Smith': 1.50, 'Super Xtra': 1.50,
+        'El Rey Brisas del Golf': 1.50, 'Brisas Capital': 1.50, 'Kennedy Golf Plaza': 1.50, 'Signature': 1.50,
+        'Premier Plaza': 1.50, 'Plaza Point': 1.50, 'Plaza Caja de Ahorro': 1.50, 'Brisas Mall': 1.50,
+        'Plaza Mcdonalds': 1.50, 'Paseo Drive': 2.50, 'Northside Galleries': 2.00, 'Yappy Park': 3.50
+    };
+
     let nombrePasajero = localStorage.getItem('nombre_pasajero');
     let telefonoPasajero = localStorage.getItem('telefono_pasajero');
-    
     if (!nombrePasajero) {
         nombrePasajero = prompt("¿Cuál es tu nombre?", "Pasajero") || "Pasajero";
         localStorage.setItem('nombre_pasajero', nombrePasajero);
@@ -117,134 +170,231 @@
         telefonoPasajero = prompt("¿Cuál es tu número de WhatsApp? (sin + ni espacios)", "50760000000") || "50760000000";
         localStorage.setItem('telefono_pasajero', telefonoPasajero);
     }
-    
     document.getElementById('nombreUsuario').textContent = nombrePasajero;
     document.getElementById('telefono').value = telefonoPasajero;
 
     function cambiarModo(modo) {
         modoActual = modo;
-        
         document.getElementById('btn-externa').classList.toggle('active', modo === 'externa');
         document.getElementById('btn-interna').classList.toggle('active', modo === 'interna');
-        
-        document.getElementById('panel-externo').style.display = modo === 'externa' ? 'block' : 'none';
-        document.getElementById('panel-interno').style.display = modo === 'interna' ? 'block' : 'none';
-        
+        document.getElementById('panel-externo').style.display = modo === 'externa'? 'block' : 'none';
+        document.getElementById('panel-interno').style.display = modo === 'interna'? 'block' : 'none';
         document.getElementById('display-precio').innerText = "B/. 0.00";
-        if (modo === 'externa') {
-            calcularRuta();
+
+        if (modo === 'interna') {
+            if (autoOrigen) {
+                google.maps.event.clearInstanceListeners(document.getElementById('origen'));
+                autoOrigen = null;
+            }
         } else {
-            calcularInterna();
+            if (!autoOrigen) initAutocomplete();
+            calcularRuta();
         }
     }
 
-    function calcularInterna() {
-        const calle = parseInt(document.getElementById('calle-interna').value);
-        if (isNaN(calle)) {
-            document.getElementById('display-precio').innerText = "B/. 0.00";
-            return;
+    function seleccionarOrigenTipo(tipo) {
+        origenTipo = tipo;
+        document.querySelectorAll('#origen-seccion.cat-interna-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('origen-cat-' + tipo).classList.add('active');
+        origenSeleccionado = null;
+        origenPrecio = 0;
+
+        document.getElementById('origen-calle-input').style.display = tipo === 'calle'? 'block' : 'none';
+
+        let html = '';
+        if (tipo === 'mall') {
+            html = '<div class="subcat-grid">';
+            Object.keys(PRECIOS_MALL).forEach(nombre => {
+                html += `<button class="btn-subcat" onclick="seleccionarOrigenSubcat(this, '${nombre}', ${PRECIOS_MALL[nombre]})">${nombre}<br>B/. ${PRECIOS_MALL[nombre].toFixed(2)}</button>`;
+            });
+            html += '</div>';
+        } else if (tipo === 'ph') {
+            html = '<div class="subcat-grid">';
+            Object.keys(PRECIOS_PH).forEach(nombre => {
+                html += `<button class="btn-subcat" onclick="seleccionarOrigenSubcat(this, '${nombre}', ${PRECIOS_PH[nombre]})">${nombre}<br>B/. ${PRECIOS_PH[nombre].toFixed(2)}</button>`;
+            });
+            html += '</div>';
+        } else if (tipo === 'escuelas') {
+            html = '<div class="subcat-grid">';
+            Object.keys(PRECIOS_ESCUELAS).forEach(nombre => {
+                html += `<button class="btn-subcat" onclick="seleccionarOrigenSubcat(this, '${nombre}', ${PRECIOS_ESCUELAS[nombre]})">${nombre}<br>B/. ${PRECIOS_ESCUELAS[nombre].toFixed(2)}</button>`;
+            });
+            html += '</div>';
+        } else if (tipo === 'estacion') {
+            seleccionarOrigenSubcat(null, 'Estación Brisas del Golf Línea 2', 0);
+            html = '<p style="color:#aaa; font-size:12px; margin-top:10px;">Origen seleccionado. Elige destino abajo.</p>';
         }
-        
-        let precio = (calle <= 36) ? 1.50 : 1.75;
+        document.getElementById('origen-subcat-container').innerHTML = html;
+        calcularInterna();
+    }
+
+    function seleccionarOrigenSubcat(btn, nombre, precio) {
+        origenSeleccionado = nombre;
+        origenPrecio = precio;
+        document.querySelectorAll('#origen-subcat-container.btn-subcat').forEach(b => b.classList.remove('active'));
+        if(btn) btn.classList.add('active');
+        calcularInterna();
+    }
+
+    function seleccionarDestinoTipo(tipo) {
+        destinoTipo = tipo;
+        document.querySelectorAll('#destino-seccion.cat-interna-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('dest-cat-' + tipo).classList.add('active');
+        destinoSeleccionado = null;
+        destinoPrecio = 0;
+
+        document.getElementById('destino-calle-input').style.display = tipo === 'calle'? 'block' : 'none';
+
+        let html = '';
+        if (tipo === 'mall') {
+            html = '<div class="subcat-grid">';
+            Object.keys(PRECIOS_MALL).forEach(nombre => {
+                html += `<button class="btn-subcat" onclick="seleccionarDestinoSubcat(this, '${nombre}', ${PRECIOS_MALL[nombre]})">${nombre}<br>B/. ${PRECIOS_MALL[nombre].toFixed(2)}</button>`;
+            });
+            html += '</div>';
+        } else if (tipo === 'ph') {
+            html = '<div class="subcat-grid">';
+            Object.keys(PRECIOS_PH).forEach(nombre => {
+                html += `<button class="btn-subcat" onclick="seleccionarDestinoSubcat(this, '${nombre}', ${PRECIOS_PH[nombre]})">${nombre}<br>B/. ${PRECIOS_PH[nombre].toFixed(2)}</button>`;
+            });
+            html += '</div>';
+        } else if (tipo === 'escuelas') {
+            html = '<div class="subcat-grid">';
+            Object.keys(PRECIOS_ESCUELAS).forEach(nombre => {
+                html += `<button class="btn-subcat" onclick="seleccionarDestinoSubcat(this, '${nombre}', ${PRECIOS_ESCUELAS[nombre]})">${nombre}<br>B/. ${PRECIOS_ESCUELAS[nombre].toFixed(2)}</button>`;
+            });
+            html += '</div>';
+        } else if (tipo === 'estacion') {
+            seleccionarDestinoSubcat(null, 'Estación Brisas del Golf Línea 2', 0);
+            html = '<p style="color:#aaa; font-size:12px; margin-top:10px;">Destino seleccionado. Elige origen arriba.</p>';
+        }
+        document.getElementById('destino-subcat-container').innerHTML = html;
+        calcularInterna();
+    }
+
+    function seleccionarDestinoSubcat(btn, nombre, precio) {
+        destinoSeleccionado = nombre;
+        destinoPrecio = precio;
+        document.querySelectorAll('#destino-subcat-container.btn-subcat').forEach(b => b.classList.remove('active'));
+        if(btn) btn.classList.add('active');
+        calcularInterna();
+    }
+
+    function calcularInterna() {
+        if (modoActual!== 'interna') return;
+        let precio = 0;
+        let origenCalle = null;
+        let destinoCalle = null;
+        if (origenTipo === 'calle') {
+            origenCalle = parseInt(document.getElementById('calle-origen').value);
+        }
+        if (destinoTipo === 'calle') {
+            destinoCalle = parseInt(document.getElementById('calle-destino').value);
+        }
+        const esOrigenEstacion = origenSeleccionado === 'Estación Brisas del Golf Línea 2';
+        const esDestinoEstacion = destinoSeleccionado === 'Estación Brisas del Golf Línea 2';
+        if (esOrigenEstacion || esDestinoEstacion) {
+            const otroPunto = esOrigenEstacion? destinoSeleccionado : origenSeleccionado;
+            if (otroPunto === 'PH Ventura') {
+                precio = 3.00;
+            } else if ((esOrigenEstacion && destinoTipo === 'calle') || (esDestinoEstacion && origenTipo === 'calle')) {
+                const calle = esOrigenEstacion? destinoCalle : origenCalle;
+                if (!isNaN(calle)) precio = calle <= 36? 1.50 : 1.75;
+            } else if (otroPunto) {
+                precio = esOrigenEstacion? destinoPrecio : origenPrecio;
+            }
+        }
+        else if (origenTipo === 'calle' && destinoTipo === 'calle') {
+            if (!isNaN(origenCalle) &&!isNaN(destinoCalle)) {
+                const calleMayor = Math.max(origenCalle, destinoCalle);
+                precio = calleMayor <= 36? 1.50 : 1.75;
+            }
+        }
+        else if (origenTipo === 'calle' && destinoSeleccionado) {
+            precio = destinoPrecio;
+        }
+        else if (destinoTipo === 'calle' && origenSeleccionado) {
+            precio = origenPrecio;
+        }
+        else if (origenSeleccionado && destinoSeleccionado) {
+            precio = Math.max(origenPrecio, destinoPrecio);
+        }
         document.getElementById('display-precio').innerText = "B/. " + precio.toFixed(2);
     }
 
     function initMap() {
-        mapa = new google.maps.Map(document.getElementById('mapa-destino'), {
-            zoom: 13,
-            center: { lat: 8.98, lng: -79.52 }
-        });
+        mapa = new google.maps.Map(document.getElementById('mapa-destino'), { zoom: 13, center: { lat: 8.98, lng: -79.52 } });
         directionsService = new google.maps.DirectionsService();
         directionsRenderer = new google.maps.DirectionsRenderer({ map: mapa });
     }
-
     function initAutocomplete() {
+        if (autoOrigen) return;
         autoOrigen = new google.maps.places.Autocomplete(document.getElementById('origen'), { componentRestrictions: { country: 'pa' } });
         autoDestino = new google.maps.places.Autocomplete(document.getElementById('destino-input'), { componentRestrictions: { country: 'pa' } });
-
         autoOrigen.addListener('place_changed', () => {
             const place = autoOrigen.getPlace();
-            if (place.geometry) {
-                origenCoords = place.geometry.location;
-                if(modoActual === 'externa') calcularRuta();
-            }
+            if (place.geometry) { origenCoords = place.geometry.location; if(modoActual === 'externa') calcularRuta(); }
         });
-
         autoDestino.addListener('place_changed', () => {
             const place = autoDestino.getPlace();
-            if (place.geometry) {
-                destinoCoords = place.geometry.location;
-                if(modoActual === 'externa') calcularRuta();
-            }
+            if (place.geometry) { destinoCoords = place.geometry.location; if(modoActual === 'externa') calcularRuta(); }
         });
     }
-
     function calcularRuta() {
-        if (!origenCoords || !destinoCoords || modoActual !== 'externa') return;
-
-        directionsService.route({
-            origin: origenCoords,
-            destination: destinoCoords,
-            travelMode: 'DRIVING'
-        }, (response, status) => {
+        if (!origenCoords ||!destinoCoords || modoActual!== 'externa') return;
+        directionsService.route({ origin: origenCoords, destination: destinoCoords, travelMode: 'DRIVING' }, (response, status) => {
             if (status === 'OK') {
                 directionsRenderer.setDirections(response);
                 const distanceKm = response.routes[0].legs[0].distance.value / 1000;
-                
                 let precioBruto = 1.00 + (distanceKm * 0.50);
-                
                 let opciones = [1.00, 1.25, 1.50, 2.00];
-                let precioFinal = opciones.reduce((prev, curr) => {
-                    return (Math.abs(curr - precioBruto) < Math.abs(prev - precioBruto) ? curr : prev);
-                });
-
-                if (precioBruto > 2.00) {
-                    precioFinal = Math.ceil(precioBruto * 4) / 4;
-                }
-
+                let precioFinal = opciones.reduce((prev, curr) => (Math.abs(curr - precioBruto) < Math.abs(prev - precioBruto)? curr : prev));
+                if (precioBruto > 2.00) precioFinal = Math.ceil(precioBruto * 4) / 4;
                 document.getElementById('display-precio').innerText = "B/. " + precioFinal.toFixed(2);
             }
         });
     }
-
     function pedirTaxi() {
         let destinoFinal = "";
         const precio = document.getElementById('display-precio').innerText;
         const telefono = document.getElementById('telefono').value.replace(/[^0-9]/g, '');
         const origenVal = document.getElementById('origen').value;
-        
         if (modoActual === 'externa') {
             destinoFinal = document.getElementById('destino-input').value;
-            if (!origenCoords || !destinoFinal) return alert("Por favor completa origen y destino en el mapa");
+            if (!origenCoords ||!destinoFinal) return alert("Por favor completa origen y destino en el mapa");
         } else {
-            const calle = document.getElementById('calle-interna').value;
-            const zona = document.getElementById('zona-interna').value;
-            if (!origenVal) return alert("Por favor escribe dónde te buscamos.");
-            if (!calle) return alert("Por favor ingresa el número de calle de destino.");
-            destinoFinal = "Calle " + calle + " " + zona + " (Ruta Interna Brisas)";
+            let origenTxt = "";
+            if (origenTipo === 'calle') {
+                const calle = document.getElementById('calle-origen').value;
+                const zona = document.getElementById('zona-origen').value;
+                if (!calle) return alert("Por favor ingresa el número de calle de origen");
+                origenTxt = `Calle ${calle} ${zona}`;
+            } else if (origenSeleccionado) {
+                origenTxt = origenSeleccionado;
+            } else {
+                return alert("Selecciona un origen interno");
+            }
+            let destinoTxt = "";
+            if (destinoTipo === 'calle') {
+                const calle = document.getElementById('calle-destino').value;
+                const zona = document.getElementById('zona-destino').value;
+                if (!calle) return alert("Por favor ingresa el número de calle de destino");
+                destinoTxt = `Calle ${calle} ${zona}`;
+            } else if (destinoSeleccionado) {
+                destinoTxt = destinoSeleccionado;
+            } else {
+                return alert("Selecciona un destino interno");
+            }
+            destinoFinal = `${origenTxt} → ${destinoTxt}`;
         }
-
         if (!telefono || telefono.length < 8) return alert("Por favor ingresa tu número de WhatsApp");
         if (precio === "B/. 0.00") return alert("Por favor espera a que se calcule la tarifa.");
-        
         localStorage.setItem('telefono_pasajero', telefono);
-
         const btnSolicitar = document.getElementById('btn-solicitar');
         btnSolicitar.disabled = true;
         btnSolicitar.innerText = "BUSCANDO TAXI...";
-        
+        document.getElementById('estado-viaje-container').innerHTML = `<div style="text-align:center; color:#ffc107; font-weight:bold; margin-top:20px; font-size:16px; animation: pulse 2s infinite;">⏳ Buscando conductor disponible...</div>`;
         viajeID = Date.now();
-        
-        // AQUÍ AGREGAMOS EL BOTÓN DE CANCELAR BÚSQUEDA
-        document.getElementById('estado-viaje-container').innerHTML = `
-            <div style="text-align:center; margin-top:20px;">
-                <div style="color:#ffc107; font-weight:bold; font-size:16px; animation: pulse 2s infinite; margin-bottom: 15px;">
-                    ⏳ Buscando conductor disponible...
-                </div>
-                <button class="btn-cancelar-viaje" onclick="cancelarViajeCliente('${viajeID}')">❌ Cancelar Búsqueda</button>
-            </div>
-        `;
-        
         db.ref('viajes/' + viajeID).set({
             origen: origenVal,
             destino: destinoFinal,
@@ -255,16 +405,12 @@
             pasajero_nombre: nombrePasajero,
             telefono: telefono,
             tipo_ruta: modoActual
-        }).then(() => {
-            escucharEstadoViaje(viajeID);
-        });
+        }).then(() => { escucharEstadoViaje(viajeID); });
     }
-
     function escucharEstadoViaje(id) {
         db.ref('viajes/' + id).on('value', (snapshot) => {
             const viaje = snapshot.val();
             if (!viaje) return;
-
             if (viaje.estado === 'conductor_asignado') {
                 const numeroConductor = viaje.conductorCel || 'Sin número';
                 document.getElementById('estado-viaje-container').innerHTML = `
@@ -279,11 +425,7 @@
                     </div>
                 `;
             }
-            
-            if (viaje.estado === 'conductor_llego') {
-                mostrarNotificacionLlegada(viaje);
-            }
-            
+            if (viaje.estado === 'conductor_llego') mostrarNotificacionLlegada(viaje);
             if (viaje.estado === 'viaje_iniciado') {
                 document.getElementById('estado-viaje-container').innerHTML = `
                     <div class="card-conductor">
@@ -294,12 +436,10 @@
                     </div>
                 `;
             }
-            
             if (viaje.estado === 'completado') {
                 mostrarViajeFinalizado(viaje);
                 db.ref('viajes/' + id).off();
             }
-            
             if (viaje.estado === 'cancelado') {
                 alert("El viaje ha sido cancelado.");
                 resetFormularioUI();
@@ -307,18 +447,16 @@
             }
         });
     }
-
     function mostrarNotificacionLlegada(viaje) {
         if (document.getElementById('notif-llegada')) return;
-        
         const html = `
             <div id="notif-llegada" class="notificacion-llegada">
                 <h4 style="margin:0 0 10px;">🎉 ¡Tu conductor llegó!</h4>
                 <p style="margin:5px 0;">${viaje.conductorNombre} está en el punto de recogida</p>
                 <p style="margin:5px 0; font-size:14px;">${viaje.conductorVehiculo} ${viaje.conductorColor} - ${viaje.conductorPlaca}</p>
                 <p style="margin:5px 0; font-size:14px;">Tel: +${viaje.conductorCel}</p>
-                <a href="https://wa.me/${viaje.conductorCel}?text=Hola ${viaje.conductorNombre}, soy ${viaje.pasajero_nombre}, ya estoy saliendo" 
-                   target="_blank" 
+                <a href="https://wa.me/${viaje.conductorCel}?text=Hola ${viaje.conductorNombre}, soy ${viaje.pasajero_nombre}, ya estoy saliendo"
+                   target="_blank"
                    style="background:white; color:#28a745; padding:8px 16px; border-radius:6px; text-decoration:none; display:inline-block; margin-top:10px; font-weight:bold;">
                     💬 WhatsApp
                 </a>
@@ -327,7 +465,6 @@
         document.body.insertAdjacentHTML('beforeend', html);
         setTimeout(() => document.getElementById('notif-llegada')?.remove(), 15000);
     }
-
     function mostrarViajeFinalizado(viaje) {
         const html = `
             <div style="position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:30px; border-radius:12px; z-index:10000; box-shadow:0 10px 40px rgba(0,0,0,0.3); text-align:center; max-width:400px;">
@@ -339,17 +476,14 @@
         `;
         document.body.insertAdjacentHTML('beforeend', html);
     }
-
     function cancelarViajeCliente(id) {
         if (confirm("¿Estás seguro de que deseas cancelar este viaje?")) {
             db.ref('viajes/' + id).off();
             db.ref('viajes/' + id).update({ estado: 'cancelado' }).then(() => {
-                // Alerta manejada por el listener de estado en su lugar, pero dejamos un reset local
                 resetFormularioUI();
             });
         }
     }
-
     function resetFormularioUI() {
         viajeID = null;
         const btnSolicitar = document.getElementById('btn-solicitar');
@@ -357,12 +491,10 @@
         btnSolicitar.innerText = "SOLICITAR TAXI";
         document.getElementById('estado-viaje-container').innerHTML = "";
     }
-
     window.onload = () => {
         initMap();
         initAutocomplete();
     };
 </script>
-
 </body>
 </html>

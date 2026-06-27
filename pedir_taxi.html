@@ -3,14 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ClickGoTaxi - Pedir Viaje</title>
+    <title>Click&GoTaxi - Pedir Viaje</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBl3OsPn_Q-yeXk0-0_igfCoZgQYduB40g&libraries=places"></script>
     <style>
         :root { --gold: #ffc107; --dark: #000; --card: #1a1a; }
         body { margin: 0; background: var(--dark); color: white; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; }
-    .map-header { width: 100%; height: 180px; background-image: url('https://images.unsplash.com/photo-1593351415075-3bac9f45c877?auto=format&fit=crop&q=80&w=800'); background-size: cover; background-position: center; border-bottom: 3px solid var(--gold); }
+    .map-header {
+    width: 100%;
+    height: 180px;
+    background-image: url('https://firebasestorage.googleapis.com/v0/b/preetytaxiapp.firebasestorage.app/o/taxi%20banner.jpg?alt=media&token=7433caf7-edf1-4fa3-b413-083f5066f90d');
+    background-size: cover;
+    background-position: center;
+}
     .container { width: 92%; max-width: 400px; margin-top: -30px; position: relative; z-index: 10; padding-bottom: 40px; }
     .card { background: var(--card); padding: 20px; border-radius: 20px; border: 1px solid #333; box-shadow: 0 10px 25px rgba(0,0,0,0.8); position: relative; }
     .logo-text { color: var(--gold); font-size: 24px; font-weight: bold; text-align: center; margin: 0 0 20px 0; }
@@ -151,7 +157,8 @@
         'Oxford School': 3.00, 'Green City': 6.00, 'Golf Garden': 2.50, 'PH Ventura': 3.00
     };
     const PRECIOS_ESCUELAS = {
-        'El IJA': 2.50, 'La Internacional': 2.50, 'Panamerican School': 2.50
+        'El IJA': 2.50, 'La Internacional': 2.50, 'Panamerican School': 2.50, 'Saint George': 1.75, 'SAP': 1.50, 'Smart Academy': 1.50, 'Preparatory High School': 1.50,
+        'AIP': 1.50,'Oxford School': 3.00, 'Metropolitan School of Panama': 6.00
     };
     const PRECIOS_MALL = {
         'Super 99 Brisas del Golf': 1.50, 'Machetazo': 1.50, 'Riba Smith': 1.50, 'Super Xtra': 1.50,

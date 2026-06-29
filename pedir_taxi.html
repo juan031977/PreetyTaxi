@@ -82,7 +82,9 @@
                     <button class="cat-interna-btn" id="origen-cat-calle" onclick="seleccionarOrigenTipo('calle')">Calles Brisas</button>
                     <button class="cat-interna-btn" id="origen-cat-mall" onclick="seleccionarOrigenTipo('mall')">SuperMercados/Mall</button>
                     <button class="cat-interna-btn" id="origen-cat-ph" onclick="seleccionarOrigenTipo('ph')">PH</button>
+                    <button class="cat-interna-btn" id="origen-cat-villas" onclick="seleccionarOrigenTipo('villas')">Villas Del Golf</button>
                     <button class="cat-interna-btn" id="origen-cat-escuelas" onclick="seleccionarOrigenTipo('escuelas')">Escuelas</button>
+                    <button class="cat-interna-btn" id="origen-cat-otros" onclick="seleccionarOrigenTipo('otros')">Otras Zonas</button>
                     <button class="cat-interna-btn" id="origen-cat-estacion" onclick="seleccionarOrigenTipo('estacion')">Estación Línea 2</button>
                 </div>
                 <div id="origen-calle-input" style="display:none; margin-top:10px;">
@@ -105,7 +107,9 @@
                     <button class="cat-interna-btn" id="dest-cat-calle" onclick="seleccionarDestinoTipo('calle')">Calles Brisas</button>
                     <button class="cat-interna-btn" id="dest-cat-mall" onclick="seleccionarDestinoTipo('mall')">SuperMercados/Mall</button>
                     <button class="cat-interna-btn" id="dest-cat-ph" onclick="seleccionarDestinoTipo('ph')">PH</button>
+                    <button class="cat-interna-btn" id="dest-cat-villas" onclick="seleccionarDestinoTipo('villas')">Villas Del Golf</button>
                     <button class="cat-interna-btn" id="dest-cat-escuelas" onclick="seleccionarDestinoTipo('escuelas')">Escuelas</button>
+                    <button class="cat-interna-btn" id="dest-cat-otros" onclick="seleccionarDestinoTipo('otros')">Otras Zonas</button>
                     <button class="cat-interna-btn" id="dest-cat-estacion" onclick="seleccionarDestinoTipo('estacion')">Estación Línea 2</button>
                 </div>
                 <div id="destino-calle-input" style="display:none; margin-top:10px;">
@@ -156,10 +160,29 @@
         'PH Noura': 3.00, 'PH Cavana': 3.00, 'Parque Rash': 3.00, 'PH Lagun': 1.50, 'PH Royal Village': 2.00,
         'Oxford School': 3.00, 'Green City': 6.00, 'Golf Garden': 2.50, 'PH Ventura': 3.00
     };
+    
+    const PRECIOS_VILLAS = {
+        'Lomas del Golf (Garita)': 1.50, 'Lomas del Golf (Adentro)': 1.75,
+        'Villas del Golf (Garita)': 1.50, 'Villas del Golf (Adentro)': 1.75,
+        'Monticello 1 (Garita)': 1.50, 'Monticello 1 (Adentro)': 1.75,
+        'Monticello 2 (Garita)': 1.50, 'Monticello 2 (Adentro)': 1.75,
+        'Villa Lido (Garita)': 1.50, 'Villa Lido (Adentro)': 1.75,
+        'Villa Alta (Garita)': 1.50, 'Villa Alta (Adentro)': 1.75,
+        'Villa Tivoli (Garita)': 1.50, 'Villa Tivoli (Adentro)': 1.75,
+        'Villa Navona (Garita)': 1.50, 'Villa Navona (Adentro)': 1.75,
+        'Villa Tiber (Garita)': 1.50, 'Villa Tiber (Adentro)': 1.75
+    };
+
     const PRECIOS_ESCUELAS = {
         'El IJA': 2.50, 'La Internacional': 2.50, 'Panamerican School': 2.50, 'Saint George': 1.75, 'SAP': 1.50, 'Smart Academy': 1.50, 'Preparatory High School': 1.50,
         'AIP': 1.50,'Oxford School': 3.00, 'Metropolitan School of Panama': 6.00
     };
+
+    // AQUI ESTÁN LAS ZONAS APARTE QUE PEDISTE
+    const PRECIOS_OTROS = {
+        'Cerro Viento Rural': 1.75, 'Las Trancas': 1.50
+    };
+
     const PRECIOS_MALL = {
         'Super 99 Brisas del Golf': 1.50, 'Machetazo': 1.50, 'Riba Smith': 1.50, 'Super Xtra': 1.50,
         'El Rey Brisas del Golf': 1.50, 'Brisas Capital': 1.50, 'Kennedy Golf Plaza': 1.50, 'Signature': 1.50,
@@ -201,7 +224,7 @@
 
     function seleccionarOrigenTipo(tipo) {
         origenTipo = tipo;
-        document.querySelectorAll('#origen-seccion.cat-interna-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('#origen-seccion .cat-interna-btn').forEach(b => b.classList.remove('active'));
         document.getElementById('origen-cat-' + tipo).classList.add('active');
         origenSeleccionado = null;
         origenPrecio = 0;
@@ -221,10 +244,22 @@
                 html += `<button class="btn-subcat" onclick="seleccionarOrigenSubcat(this, '${nombre}', ${PRECIOS_PH[nombre]})">${nombre}<br>B/. ${PRECIOS_PH[nombre].toFixed(2)}</button>`;
             });
             html += '</div>';
+        } else if (tipo === 'villas') {
+            html = '<div class="subcat-grid">';
+            Object.keys(PRECIOS_VILLAS).forEach(nombre => {
+                html += `<button class="btn-subcat" onclick="seleccionarOrigenSubcat(this, '${nombre}', ${PRECIOS_VILLAS[nombre]})">${nombre}<br>B/. ${PRECIOS_VILLAS[nombre].toFixed(2)}</button>`;
+            });
+            html += '</div>';
         } else if (tipo === 'escuelas') {
             html = '<div class="subcat-grid">';
             Object.keys(PRECIOS_ESCUELAS).forEach(nombre => {
                 html += `<button class="btn-subcat" onclick="seleccionarOrigenSubcat(this, '${nombre}', ${PRECIOS_ESCUELAS[nombre]})">${nombre}<br>B/. ${PRECIOS_ESCUELAS[nombre].toFixed(2)}</button>`;
+            });
+            html += '</div>';
+        } else if (tipo === 'otros') {
+            html = '<div class="subcat-grid">';
+            Object.keys(PRECIOS_OTROS).forEach(nombre => {
+                html += `<button class="btn-subcat" onclick="seleccionarOrigenSubcat(this, '${nombre}', ${PRECIOS_OTROS[nombre]})">${nombre}<br>B/. ${PRECIOS_OTROS[nombre].toFixed(2)}</button>`;
             });
             html += '</div>';
         } else if (tipo === 'estacion') {
@@ -238,14 +273,14 @@
     function seleccionarOrigenSubcat(btn, nombre, precio) {
         origenSeleccionado = nombre;
         origenPrecio = precio;
-        document.querySelectorAll('#origen-subcat-container.btn-subcat').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('#origen-subcat-container .btn-subcat').forEach(b => b.classList.remove('active'));
         if(btn) btn.classList.add('active');
         calcularInterna();
     }
 
     function seleccionarDestinoTipo(tipo) {
         destinoTipo = tipo;
-        document.querySelectorAll('#destino-seccion.cat-interna-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('#destino-seccion .cat-interna-btn').forEach(b => b.classList.remove('active'));
         document.getElementById('dest-cat-' + tipo).classList.add('active');
         destinoSeleccionado = null;
         destinoPrecio = 0;
@@ -265,10 +300,22 @@
                 html += `<button class="btn-subcat" onclick="seleccionarDestinoSubcat(this, '${nombre}', ${PRECIOS_PH[nombre]})">${nombre}<br>B/. ${PRECIOS_PH[nombre].toFixed(2)}</button>`;
             });
             html += '</div>';
+        } else if (tipo === 'villas') {
+            html = '<div class="subcat-grid">';
+            Object.keys(PRECIOS_VILLAS).forEach(nombre => {
+                html += `<button class="btn-subcat" onclick="seleccionarDestinoSubcat(this, '${nombre}', ${PRECIOS_VILLAS[nombre]})">${nombre}<br>B/. ${PRECIOS_VILLAS[nombre].toFixed(2)}</button>`;
+            });
+            html += '</div>';
         } else if (tipo === 'escuelas') {
             html = '<div class="subcat-grid">';
             Object.keys(PRECIOS_ESCUELAS).forEach(nombre => {
                 html += `<button class="btn-subcat" onclick="seleccionarDestinoSubcat(this, '${nombre}', ${PRECIOS_ESCUELAS[nombre]})">${nombre}<br>B/. ${PRECIOS_ESCUELAS[nombre].toFixed(2)}</button>`;
+            });
+            html += '</div>';
+        } else if (tipo === 'otros') {
+            html = '<div class="subcat-grid">';
+            Object.keys(PRECIOS_OTROS).forEach(nombre => {
+                html += `<button class="btn-subcat" onclick="seleccionarDestinoSubcat(this, '${nombre}', ${PRECIOS_OTROS[nombre]})">${nombre}<br>B/. ${PRECIOS_OTROS[nombre].toFixed(2)}</button>`;
             });
             html += '</div>';
         } else if (tipo === 'estacion') {
@@ -282,7 +329,7 @@
     function seleccionarDestinoSubcat(btn, nombre, precio) {
         destinoSeleccionado = nombre;
         destinoPrecio = precio;
-        document.querySelectorAll('#destino-subcat-container.btn-subcat').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('#destino-subcat-container .btn-subcat').forEach(b => b.classList.remove('active'));
         if(btn) btn.classList.add('active');
         calcularInterna();
     }

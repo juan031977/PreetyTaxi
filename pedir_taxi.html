@@ -58,7 +58,9 @@
 <div class="container">
     <div id="panel-cliente" class="card">
         <button class="btn-volver" onclick="window.history.back()">⬅ Volver</button>
-        <p class="logo-text">🚕 ClickGoTaxi - <span id="nombreUsuario"></span></p>
+        <p class="logo-text">🚕 ClickGoTaxi</p>
+        <label>Nombre del Pasajero</label>
+        <input type="text" id="nombreUsuario" placeholder="Tu Nombre">
         <label>Tu número de WhatsApp</label>
         <input type="tel" id="telefono" placeholder="Ej: 50760000000">
 
@@ -178,7 +180,6 @@
         'AIP': 1.50,'Oxford School': 3.00, 'Metropolitan School of Panama': 6.00
     };
 
-    // AQUI ESTÁN LAS ZONAS APARTE QUE PEDISTE
     const PRECIOS_OTROS = {
         'Cerro Viento Rural': 1.75, 'Las Trancas': 1.50
     };
@@ -190,18 +191,13 @@
         'Plaza Mcdonalds': 1.50, 'Paseo Drive': 2.50, 'Northside Galleries': 2.00, 'Yappy Park': 3.50
     };
 
-    let nombrePasajero = localStorage.getItem('nombre_pasajero');
-    let telefonoPasajero = localStorage.getItem('telefono_pasajero');
-    if (!nombrePasajero) {
-        nombrePasajero = prompt("¿Cuál es tu nombre?", "Pasajero") || "Pasajero";
-        localStorage.setItem('nombre_pasajero', nombrePasajero);
-    }
-    if (!telefonoPasajero) {
-        telefonoPasajero = prompt("¿Cuál es tu número de WhatsApp? (sin + ni espacios)", "50760000000") || "50760000000";
-        localStorage.setItem('telefono_pasajero', telefonoPasajero);
-    }
-    document.getElementById('nombreUsuario').textContent = nombrePasajero;
-    document.getElementById('telefono').value = telefonoPasajero;
+    // Dejamos los campos vacíos al cargar para que el usuario los escriba
+    document.getElementById('nombreUsuario').value = "";
+    document.getElementById('telefono').value = "";
+    
+    // Opcional: Si quieres que el usuario escriba su nombre y cel, 
+    // y luego los guardamos para la próxima vez (sin autocompletar al abrir)
+    // puedes dejar el localStorage para cuando ellos den clic a "Solicitar Taxi"
 
     function cambiarModo(modo) {
         modoActual = modo;
@@ -408,14 +404,22 @@
             }
         });
     }
+    
     function pedirTaxi() {
+        // Obtenemos el nombre en tiempo real del input
+        const nombrePasajero = document.getElementById('nombreUsuario').value || "Pasajero";
+        localStorage.setItem('nombre_pasajero', nombrePasajero);
+        
+        let origenFinal = "";
         let destinoFinal = "";
         const precio = document.getElementById('display-precio').innerText;
         const telefono = document.getElementById('telefono').value.replace(/[^0-9]/g, '');
         const origenVal = document.getElementById('origen').value;
+        
         if (modoActual === 'externa') {
+            origenFinal = origenVal;
             destinoFinal = document.getElementById('destino-input').value;
-            if (!origenCoords ||!destinoFinal) return alert("Por favor completa origen y destino en el mapa");
+            if (!origenCoords || !destinoFinal) return alert("Por favor completa origen y destino en el mapa");
         } else {
             let origenTxt = "";
             if (origenTipo === 'calle') {
@@ -439,18 +443,24 @@
             } else {
                 return alert("Selecciona un destino interno");
             }
-            destinoFinal = `${origenTxt} → ${destinoTxt}`;
+            
+            // LA CORRECCIÓN CLAVE: Las guardamos separadas, no unidas en el Destino.
+            origenFinal = origenTxt;
+            destinoFinal = destinoTxt;
         }
+        
         if (!telefono || telefono.length < 8) return alert("Por favor ingresa tu número de WhatsApp");
         if (precio === "B/. 0.00") return alert("Por favor espera a que se calcule la tarifa.");
         localStorage.setItem('telefono_pasajero', telefono);
+        
         const btnSolicitar = document.getElementById('btn-solicitar');
         btnSolicitar.disabled = true;
         btnSolicitar.innerText = "BUSCANDO TAXI...";
         document.getElementById('estado-viaje-container').innerHTML = `<div style="text-align:center; color:#ffc107; font-weight:bold; margin-top:20px; font-size:16px; animation: pulse 2s infinite;">⏳ Buscando conductor disponible...</div>`;
         viajeID = Date.now();
+        
         db.ref('viajes/' + viajeID).set({
-            origen: origenVal,
+            origen: origenFinal,
             destino: destinoFinal,
             precio: precio,
             precio_numerico: parseFloat(precio.replace('B/. ', '')),
@@ -461,6 +471,7 @@
             tipo_ruta: modoActual
         }).then(() => { escucharEstadoViaje(viajeID); });
     }
+    
     function escucharEstadoViaje(id) {
         db.ref('viajes/' + id).on('value', (snapshot) => {
             const viaje = snapshot.val();

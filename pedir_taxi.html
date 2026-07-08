@@ -25,6 +25,23 @@
         #mapa-destino { width: 100%; height: 300px; border-radius: 15px; margin: 15px 0; border: 3px solid var(--gold); }
     .price-display { background: #111; padding: 15px; border-radius: 12px; margin-top: 20px; text-align: center; border: 1px dashed var(--gold); }
     .price-display span { font-size: 32px; font-weight: bold; color: var(--gold); }
+    
+    /* NUEVO: ESTILO PARA LA NOTA DE TARIFAS EXTRAS */
+    .tarifa-nota {
+        background: #111;
+        border-left: 4px solid var(--gold);
+        padding: 12px 15px;
+        border-radius: 8px;
+        margin-top: 15px;
+        text-align: left;
+        font-size: 13px;
+        color: #ccc;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    }
+    .tarifa-nota span { color: var(--gold); font-weight: bold; display: block; margin-bottom: 5px; font-size: 14px; }
+    .tarifa-nota p { margin: 5px 0; line-height: 1.5; }
+    .tarifa-nota small { font-size: 11px; color: #888; font-style: italic; display: block; margin-top: 5px; }
+
     .btn-pedir { background: var(--gold); color: black; width: 100%; padding: 18px; border: none; border-radius: 15px; font-weight: bold; font-size: 18px; margin-top: 20px; cursor: pointer; }
     .btn-pedir:disabled { background: #444; color: #888; cursor: not-allowed; }
     .card-conductor { background: #222; padding: 15px; border-radius: 12px; border: 1px solid var(--gold); margin-top: 15px; text-align: center; }
@@ -133,6 +150,14 @@
             <small style="color:#888">TARIFA ESTIMADA</small><br>
             <span id="display-precio">B/. 0.00</span>
         </div>
+
+        <div class="tarifa-nota">
+            <span>ℹ️ Información de Tarifas</span>
+            <p>• <strong>Feriados y Domingos:</strong> + B/. 0.25 al total.<br>
+               • <strong>Pasajero adicional:</strong> + B/. 0.50 c/u.</p>
+            <small>*Estos recargos aplican al momento de abordar.</small>
+        </div>
+
         <button class="btn-pedir" id="btn-solicitar" onclick="pedirTaxi()">SOLICITAR TAXI</button>
         <div id="estado-viaje-container"></div>
     </div>
@@ -191,13 +216,8 @@
         'Plaza Mcdonalds': 1.50, 'Paseo Drive': 2.50, 'Northside Galleries': 2.00, 'Yappy Park': 3.50
     };
 
-    // Dejamos los campos vacíos al cargar para que el usuario los escriba
     document.getElementById('nombreUsuario').value = "";
     document.getElementById('telefono').value = "";
-    
-    // Opcional: Si quieres que el usuario escriba su nombre y cel, 
-    // y luego los guardamos para la próxima vez (sin autocompletar al abrir)
-    // puedes dejar el localStorage para cuando ellos den clic a "Solicitar Taxi"
 
     function cambiarModo(modo) {
         modoActual = modo;
@@ -406,7 +426,6 @@
     }
     
     function pedirTaxi() {
-        // Obtenemos el nombre en tiempo real del input
         const nombrePasajero = document.getElementById('nombreUsuario').value || "Pasajero";
         localStorage.setItem('nombre_pasajero', nombrePasajero);
         
@@ -444,7 +463,6 @@
                 return alert("Selecciona un destino interno");
             }
             
-            // LA CORRECCIÓN CLAVE: Las guardamos separadas, no unidas en el Destino.
             origenFinal = origenTxt;
             destinoFinal = destinoTxt;
         }

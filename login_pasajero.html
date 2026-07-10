@@ -26,6 +26,8 @@
         <input type="password" id="pass" placeholder="Tu Contraseña">
         <button onclick="login()">INGRESAR</button>
         <a href="registro_pasajero.html" style="color:#888; display:block; margin-top:15px; text-decoration:none; font-size:13px;">Crear cuenta nueva</a>
+        
+        <button onclick="mostrarRecuperacion()" style="background:transparent; border:none; color:#ffc107; font-size:13px; margin-top:10px; padding:5px; cursor:pointer; width:100%;">¿Olvidaste tu contraseña?</button>
     </div>
 
     <script>
@@ -58,6 +60,28 @@
             }).catch(error => {
                 console.error(error);
                 alert("Error de conexión");
+            });
+        }
+
+        // NUEVO: Función para recuperar contraseña validando con el correo
+        function mostrarRecuperacion() {
+            const tel = prompt("Ingresa tu número de celular registrado:");
+            if (!tel) return;
+
+            const emailConfirm = prompt("Ingresa el correo electrónico con el que te registraste:");
+            if (!emailConfirm) return;
+
+            firebase.database().ref('pasajeros/' + tel).once('value').then(snap => {
+                const u = snap.val();
+                
+                // Comparamos que exista el usuario y que el correo coincida
+                if (u && u.email && u.email.toLowerCase() === emailConfirm.toLowerCase()) {
+                    alert("✅ Tu contraseña es: " + u.password);
+                } else {
+                    alert("❌ Datos incorrectos. El celular o el correo no coinciden.");
+                }
+            }).catch(error => {
+                alert("Error al conectar con la base de datos.");
             });
         }
     </script>

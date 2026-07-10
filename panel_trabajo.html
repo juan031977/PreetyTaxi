@@ -26,8 +26,12 @@
 </head>
 <body>
 
-    <!-- SONIDO DE NOTIFICACIÓN (usando tu GitHub) -->
-    <audio id="sonidoNotificacion" src="https://raw.githubusercontent.com/juan031977/PreetyTaxi/main/silbido.mp3" preload="auto"></audio>
+    <!-- SONIDO DE NOTIFICACIÓN -->
+    <audio id="sonidoNotificacion" preload="auto">
+        <source src="https://raw.githubusercontent.com/juan031977/PreetyTaxi/main/silbido.mp3" type="audio/mpeg">
+        <source src="https://assets.mixkit.co/sfx/preview/2320/2320-preview.mp3" type="audio/mpeg">
+    </audio>
+
     <button class="btn-volver" onclick="window.history.back()">⬅ Volver</button>
 
     <div class="header">
@@ -62,7 +66,26 @@
         const db = firebase.database();
         const audio = document.getElementById('sonidoNotificacion');
 
-        document.addEventListener('click', () => { audio.play().then(() => audio.pause()).catch(() => {}); }, { once: true });
+        let audioListo = false;
+
+        // Desbloquear audio al tocar la pantalla (necesario en móviles)
+        document.addEventListener('touchstart', function desbloquear() {
+            if (!audioListo) {
+                audio.play().then(() => {
+                    audio.pause();
+                    audio.currentTime = 0;
+                    audioListo = true;
+                    console.log("✅ Sonido desbloqueado");
+                }).catch(() => {});
+            }
+        }, { once: true });
+
+        function reproducirSonido() {
+            if (audioListo) {
+                audio.currentTime = 0;
+                audio.play().catch(e => console.log("Error al reproducir:", e));
+            }
+        }
 
         let datos = JSON.parse(localStorage.getItem('datos_conductor'));
         let adminEstado = 'pendiente'; 
@@ -139,6 +162,7 @@
 
             db.ref('viajes').orderByChild('estado').equalTo('pendiente').on('child_added', (snap) => {
                 if (!estoyEnViajeActivo) {
+                    reproducirSonido();   // ← Sonido aquí
                     mostrarPedido(snap.key, snap.val());
                 }
             });

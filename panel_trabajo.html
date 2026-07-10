@@ -26,9 +26,9 @@
 </head>
 <body>
 
-    <!-- SONIDO DE NOTIFICACIÓN -->
+    <!-- SONIDO DE NOTIFICACIÓN CORREGIDO -->
     <audio id="sonidoNotificacion" preload="auto">
-        <source src="https://raw.githubusercontent.com/juan031977/PreetyTaxi/main/silbido.mp3" type="audio/mpeg">
+        <source src="https://cdn.jsdelivr.net/gh/juan031977/PreetyTaxi@main/silbido.mp3" type="audio/mpeg">
         <source src="https://assets.mixkit.co/sfx/preview/2320/2320-preview.mp3" type="audio/mpeg">
     </audio>
 
@@ -68,23 +68,24 @@
 
         let audioListo = false;
 
-        // Desbloquear audio al tocar la pantalla (necesario en móviles)
-        document.addEventListener('touchstart', function desbloquear() {
+        // Lógica de desbloqueo mejorada
+        const desbloquearAudio = () => {
             if (!audioListo) {
                 audio.play().then(() => {
                     audio.pause();
                     audio.currentTime = 0;
                     audioListo = true;
                     console.log("✅ Sonido desbloqueado");
-                }).catch(() => {});
+                }).catch(e => console.log("Esperando interacción..."));
             }
-        }, { once: true });
+        };
+
+        document.addEventListener('touchstart', desbloquearAudio, { once: true });
+        document.addEventListener('click', desbloquearAudio, { once: true });
 
         function reproducirSonido() {
-            if (audioListo) {
-                audio.currentTime = 0;
-                audio.play().catch(e => console.log("Error al reproducir:", e));
-            }
+            audio.currentTime = 0;
+            audio.play().catch(e => console.log("Error al reproducir:", e));
         }
 
         let datos = JSON.parse(localStorage.getItem('datos_conductor'));
@@ -162,7 +163,7 @@
 
             db.ref('viajes').orderByChild('estado').equalTo('pendiente').on('child_added', (snap) => {
                 if (!estoyEnViajeActivo) {
-                    reproducirSonido();   // ← Sonido aquí
+                    reproducirSonido();
                     mostrarPedido(snap.key, snap.val());
                 }
             });
@@ -175,29 +176,20 @@
 
         function mostrarPedido(id, p) {
             if(document.getElementById('pedido_' + id)) return;
-
             const estaBloqueado = (adminEstado === 'bloqueado' || adminEstado === 'pendiente');
-
             const html = `<div class="card" id="pedido_${id}">
                 <div class="info-row">👤 <strong>Cliente:</strong> ${p.pasajero_nombre || 'Cliente'}</div>
                 <div class="info-row">📍 <strong>Origen:</strong> ${p.origen}</div>
                 <div class="info-row">🏁 <strong>Destino:</strong> ${p.destino}</div>
                 <div class="precio">Total: B/. ${p.precio || "0.00"}</div>
                 ${p.metodo_pago ? `<div class="info-row" style="color:#ffc107;">💰 <strong>Pago:</strong> ${p.metodo_pago.toUpperCase()}</div>` : ''}
-                
-                ${estaBloqueado ? 
-                    `<button style="background:#dc3545; color:white;" disabled>⛔ BLOQUEADO - PAGA TU DEUDA</button>` :
-                    `<button style="background: #28a745; color: white;" onclick="aceptar('${id}')">✅ ACEPTAR VIAJE</button>`
-                }
+                ${estaBloqueado ? `<button style="background:#dc3545; color:white;" disabled>⛔ BLOQUEADO - PAGA TU DEUDA</button>` : `<button style="background: #28a745; color: white;" onclick="aceptar('${id}')">✅ ACEPTAR VIAJE</button>`}
             </div>`;
-
             document.getElementById('contenedor').insertAdjacentHTML('beforeend', html);
         }
 
         window.aceptar = (id) => {
-            if (adminEstado === 'bloqueado' || adminEstado === 'pendiente') {
-                return alert("❌ No puedes aceptar viajes porque tu cuenta está bloqueada.");
-            }
+            if (adminEstado === 'bloqueado' || adminEstado === 'pendiente') return alert("❌ No puedes aceptar viajes porque tu cuenta está bloqueada.");
             db.ref('viajes/' + id).update({
                 estado: 'conductor_asignado',
                 conductorNombre: datos.nombre,
@@ -210,18 +202,13 @@
 
         function renderizarActivo(id, v) {
             const esLlegada = v.estado === 'conductor_llego';
-            const btnColor = esLlegada ? '#6c757d' : '#007bff';
-            const btnTexto = esLlegada ? '✓ PASAJERO NOTIFICADO' : '📍 LLEGUÉ AL PUNTO';
-            
             document.getElementById('contenedor').innerHTML = `
                 <div class="card">
                     <div style="background:#28a745; padding:10px; border-radius:5px; text-align:center; margin-bottom:15px; font-weight:bold;">✅ VIAJE EN CURSO</div>
                     <div class="info-row">👤 <strong>Cliente:</strong> ${v.pasajero_nombre}</div>
                     <div class="info-row">📍 <strong>Origen:</strong> ${v.origen}</div>
                     <div class="precio">Total: B/. ${v.precio || "0.00"}</div>
-                    ${v.metodo_pago ? `<div class="info-row">💰 Pago: ${v.metodo_pago.toUpperCase()}</div>` : ''}
-                    
-                    <button style="background:${btnColor}; color:white;" onclick="actualizar('${id}', 'conductor_llego')">${btnTexto}</button>
+                    <button style="background:${esLlegada ? '#6c757d' : '#007bff'}; color:white;" onclick="actualizar('${id}', 'conductor_llego')">${esLlegada ? '✓ PASAJERO NOTIFICADO' : '📍 LLEGUÉ AL PUNTO'}</button>
                     <button class="btn-whatsapp" onclick="window.open('https://wa.me/${v.telefono}')">💬 WHATSAPP</button>
                     <button class="btn-iniciar" onclick="actualizar('${id}', 'viaje_iniciado')">▶️ INICIAR VIAJE</button>
                     <button class="btn-finalizar" onclick="actualizar('${id}', 'completado')">🏁 FINALIZAR VIAJE</button>
@@ -241,13 +228,7 @@
         function guardarDatos() {
             const tel = document.getElementById('inTel').value.replace(/[^0-9]/g, '');
             if(tel.length < 8) return alert("Número inválido");
-            datos = { 
-                nombre: document.getElementById('inNombre').value, 
-                telefono: tel, 
-                vehiculo: document.getElementById('inVehiculo').value, 
-                color: document.getElementById('inColor').value, 
-                placa: document.getElementById('inPlaca').value 
-            };
+            datos = { nombre: document.getElementById('inNombre').value, telefono: tel, vehiculo: document.getElementById('inVehiculo').value, color: document.getElementById('inColor').value, placa: document.getElementById('inPlaca').value };
             localStorage.setItem('datos_conductor', JSON.stringify(datos));
             db.ref('conductores/' + tel).update(datos).then(() => location.reload());
         }

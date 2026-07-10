@@ -8,17 +8,24 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #0f0f0f; color: white; text-align: center; padding: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
-        .box { background: #1a1a1a; padding: 30px; border-radius: 20px; border: 1px solid #333; width: 90%; max-width: 350px; }
+        .box { position: relative; background: #1a1a1a; padding: 30px; border-radius: 20px; border: 1px solid #333; width: 90%; max-width: 350px; }
         h2 { color: #ffc107; margin-bottom: 20px; }
         input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #222; color: white; box-sizing: border-box; font-size: 16px; }
         button { background: #ffc107; width: 100%; padding: 15px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 16px; }
+        
+        /* ESTILO DEL BOTÓN DE RETROCESO */
+        .btn-volver { position: absolute; top: 15px; left: 15px; background: transparent; color: #aaa; border: none; font-size: 14px; font-weight: bold; cursor: pointer; z-index: 20; width: auto; padding: 0; margin: 0; }
+        .btn-volver:hover { color: white; }
     </style>
 </head>
 <body>
     <div class="box">
+        <button class="btn-volver" onclick="window.history.back()">⬅ Volver</button>
+
         <h2>Crear Cuenta Pasajero 👤</h2>
         <input type="text" id="nom" placeholder="Nombre Completo">
         <input type="tel" id="tel" placeholder="Número Celular">
+        <input type="email" id="email" placeholder="Correo Electrónico">
         <input type="password" id="pass" placeholder="Crea tu Clave">
         <button onclick="registrar()">REGISTRARME</button>
     </div>
@@ -35,18 +42,20 @@
             const n = document.getElementById('nom').value;
             const t = document.getElementById('tel').value;
             const p = document.getElementById('pass').value;
+            const e = document.getElementById('email').value;
 
-            if(n && t && p) {
+            if(n && t && p && e) {
                 db.ref('pasajeros/' + t).set({
                     nombre: n,
                     celular: t,
-                    password: p
+                    password: p,
+                    email: e
                 }).then(() => { 
                     alert("¡Éxito! Bienvenido a ClickGoTaxi."); 
                     window.location.href = "pedir_taxi.html"; 
                 }).catch(err => alert("Error: " + err.message));
             } else { 
-                alert("Completa todos los datos"); 
+                alert("Completa todos los datos, incluyendo tu correo."); 
             }
         }
     </script>

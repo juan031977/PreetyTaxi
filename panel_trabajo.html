@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Trabajo - Click&GoTaxi</title>
+    <title>Panel de Trabajo - Click$GoTaxi</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; background: #000; color: #fff; padding: 20px; }
@@ -32,7 +32,7 @@
 
     <!-- PANTALLA DE ACTIVACIÓN -->
     <div id="pantallaInicio">
-        <h2 style="margin-bottom: 20px;">Click&GoTaxi</h2>
+        <h2 style="margin-bottom: 20px;">Click$GoTaxi</h2>
         <p style="margin-bottom: 20px;">Toca el botón para activar las notificaciones sonoras</p>
         <button class="btn-iniciar" onclick="iniciarApp()" style="width: auto; padding: 20px 40px;">ACTIVAR APLICACIÓN</button>
     </div>
@@ -77,13 +77,19 @@
         const db = firebase.database();
         const audio = document.getElementById('sonidoNotificacion');
 
-        // FUNCIÓN PARA ACTIVAR EL AUDIO
+        // FUNCIÓN AUTOMÁTICA AL CARGAR
+        window.onload = function() {
+            if (localStorage.getItem('audio_activado') === 'true') {
+                document.getElementById('pantallaInicio').style.display = 'none';
+            }
+        };
+
         function iniciarApp() {
             audio.play().then(() => {
                 audio.pause();
                 audio.currentTime = 0;
+                localStorage.setItem('audio_activado', 'true');
                 document.getElementById('pantallaInicio').style.display = 'none';
-                console.log("Audio desbloqueado correctamente");
             }).catch(e => alert("Por favor, permite el sonido en tu navegador"));
         }
 
@@ -213,7 +219,7 @@
                     <div class="info-row">📍 <strong>Origen:</strong> ${v.origen}</div>
                     <div class="precio">Total: B/. ${v.precio || "0.00"}</div>
                     <button style="background:${esLlegada ? '#6c757d' : '#007bff'}; color:white;" onclick="actualizar('${id}', 'conductor_llego')">${esLlegada ? '✓ PASAJERO NOTIFICADO' : '📍 LLEGUÉ AL PUNTO'}</button>
-                    <button class="btn-whatsapp" onclick="window.open('https://wa.me/${v.telefono}')">💬 WHATSAPP</button>
+                    <button class="btn-whatsapp" onclick="window.open('https://wa.me/${v.telefono}', '_blank')">💬 WHATSAPP</button>
                     <button class="btn-iniciar" onclick="actualizar('${id}', 'viaje_iniciado')">▶️ INICIAR VIAJE</button>
                     <button class="btn-finalizar" onclick="actualizar('${id}', 'completado')">🏁 FINALIZAR VIAJE</button>
                 </div>

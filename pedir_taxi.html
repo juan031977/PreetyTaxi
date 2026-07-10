@@ -37,7 +37,10 @@
     .card-conductor h3 { margin: 0 0 10px 0; color: var(--gold); }
     .card-conductor p { margin: 5px 0; font-size: 15px; }
     .btn-whatsapp { display: block; background: #25D366; color: white; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; margin: 10px auto 0 auto; width: 85%; box-sizing: border-box; }
-    .btn-cancelar-viaje { background: #dc3545; color: white; width: 85%; padding: 12px; border: none; border-radius: 10px; font-weight: bold; margin-top: 10px; cursor: pointer; }
+    
+    /* NUEVO: Margin top aumentado a 25px para evitar toques accidentales */
+    .btn-cancelar-viaje { background: #dc3545; color: white; width: 85%; padding: 12px; border: none; border-radius: 10px; font-weight: bold; margin-top: 25px; cursor: pointer; }
+    
     .notificacion-llegada { position: fixed; top: 20px; right: 20px; background: #28a745; color: white; padding: 20px; border-radius: 12px; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.3); animation: slideIn 0.3s; max-width: 300px; }
     .toggle-modos { display: flex; gap: 10px; margin-top: 15px; }
     .btn-modo { flex: 1; background: #333; color: white; border: 1px solid #555; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; }
@@ -83,7 +86,6 @@
         </div>
 
         <div id="panel-interno" style="display: none;">
-            <!-- ... (contenido interno igual) ... -->
             <div class="seccion-interna" id="origen-seccion">
                 <label style="margin-top:0;">Donde Te Buscamos</label>
                 <div style="display:flex; gap:5px; flex-wrap:wrap; margin-top:8px;">
@@ -130,7 +132,7 @@
             <span id="display-precio">B/. 0.00</span>
         </div>
 
-        <!-- NUEVO: Selector de Pago -->
+        <!-- Selector de Pago -->
         <label>Forma de Pago</label>
         <select id="formaPago">
             <option value="Efectivo">Efectivo 💵</option>
@@ -245,7 +247,7 @@
     
     function pedirTaxi() {
         const nombrePasajero = document.getElementById('nombreUsuario').value || "Pasajero";
-        const formaPago = document.getElementById('formaPago').value; // Capturamos la forma de pago
+        const formaPago = document.getElementById('formaPago').value;
         localStorage.setItem('nombre_pasajero', nombrePasajero);
         
         let origenFinal = "", destinoFinal = "";
@@ -271,6 +273,9 @@
         document.getElementById('btn-solicitar').innerText = "BUSCANDO TAXI...";
         viajeID = Date.now();
         
+        // NUEVO: Guardar el ID del viaje en el localStorage
+        localStorage.setItem('viaje_activo_id', viajeID);
+        
         db.ref('viajes/' + viajeID).set({
             origen: origenFinal, destino: destinoFinal, precio: precio, forma_pago: formaPago,
             precio_numerico: parseFloat(precio.replace('B/. ', '')),
@@ -279,13 +284,16 @@
         }).then(() => { escucharEstadoViaje(viajeID); });
     }
     
-    // ... funciones restantes (escucharEstadoViaje, mostrarNotificacion, etc) sin cambios ...
     function escucharEstadoViaje(id) {
         db.ref('viajes/' + id).on('value', (snapshot) => {
             const viaje = snapshot.val();
             if (!viaje) return;
             if (viaje.estado === 'conductor_asignado') {
                 const numeroConductor = viaje.conductorCel || 'Sin número';
+                
+                // NUEVO: Codificar el texto del mensaje para evitar errores en navegadores móviles
+                const mensajeWa = encodeURIComponent(`Hola ${viaje.conductorNombre}, soy ${viaje.pasajero_nombre}, pago con ${viaje.forma_pago}`);
+                
                 document.getElementById('estado-viaje-container').innerHTML = `
                     <div class="card-conductor">
                         <h3>✅ ¡Taxi en Camino!</h3>
@@ -293,7 +301,7 @@
                         <p><strong>Conductor:</strong> ${viaje.conductorNombre}</p>
                         <p><strong>Tel:</strong> +${numeroConductor}</p>
                         <p><strong>Vehículo:</strong> ${viaje.conductorVehiculo} ${viaje.conductorColor}</p>
-                        <a class="btn-whatsapp" href="https://wa.me/${numeroConductor}?text=Hola ${viaje.conductorNombre}, soy ${viaje.pasajero_nombre}, pago con ${viaje.forma_pago}" target="_blank">💬 WhatsApp</a>
+                        <a class="btn-whatsapp" href="https://wa.me/${numeroConductor}?text=${mensajeWa}" target="_blank">💬 WhatsApp</a>
                         <button class="btn-cancelar-viaje" onclick="cancelarViajeCliente('${id}')">❌ Cancelar Viaje</button>
                     </div>
                 `;
@@ -308,8 +316,17 @@
                     </div>
                 `;
             }
-            if (viaje.estado === 'completado') { mostrarViajeFinalizado(viaje); db.ref('viajes/' + id).off(); }
-            if (viaje.estado === 'cancelado') { alert("Viaje cancelado."); location.reload(); db.ref('viajes/' + id).off(); }
+            if (viaje.estado === 'completado') { 
+                localStorage.removeItem('viaje_activo_id'); // NUEVO: Limpiar memoria
+                mostrarViajeFinalizado(viaje); 
+                db.ref('viajes/' + id).off(); 
+            }
+            if (viaje.estado === 'cancelado') { 
+                localStorage.removeItem('viaje_activo_id'); // NUEVO: Limpiar memoria
+                alert("Viaje cancelado."); 
+                location.reload(); 
+                db.ref('viajes/' + id).off(); 
+            }
         });
     }
 
@@ -324,12 +341,34 @@
         document.body.insertAdjacentHTML('beforeend', html);
         setTimeout(() => document.getElementById('notif-llegada')?.remove(), 15000);
     }
+    
     function mostrarViajeFinalizado(viaje) {
-        const html = `<div style="position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:30px; border-radius:12px; z-index:10000; text-align:center;"><h3>Viaje Finalizado</h3><p>Total: ${viaje.precio} - ${viaje.forma_pago}</p><button onclick="location.reload()" style="background:#FFC107; padding:12px 30px; border-radius:6px; cursor:pointer;">Nuevo Viaje</button></div>`;
+        const html = `<div style="position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:30px; border-radius:12px; z-index:10000; text-align:center;"><h3 style="color:black;">Viaje Finalizado</h3><p style="color:black;">Total: ${viaje.precio} - ${viaje.forma_pago}</p><button onclick="location.reload()" style="background:#FFC107; color:black; padding:12px 30px; border:none; font-weight:bold; border-radius:6px; cursor:pointer;">Nuevo Viaje</button></div>`;
         document.body.insertAdjacentHTML('beforeend', html);
     }
-    function cancelarViajeCliente(id) { if (confirm("¿Cancelar viaje?")) { db.ref('viajes/' + id).update({ estado: 'cancelado' }).then(() => location.reload()); } }
-    window.onload = () => { initMap(); initAutocomplete(); };
+    
+    function cancelarViajeCliente(id) { 
+        if (confirm("¿Cancelar viaje?")) { 
+            db.ref('viajes/' + id).update({ estado: 'cancelado' }).then(() => {
+                localStorage.removeItem('viaje_activo_id'); // NUEVO: Limpiar memoria si el usuario cancela
+                location.reload();
+            }); 
+        } 
+    }
+    
+    // NUEVO: Modificamos window.onload para que lea el localStorage al iniciar
+    window.onload = () => { 
+        initMap(); 
+        initAutocomplete(); 
+        
+        const viajeGuardado = localStorage.getItem('viaje_activo_id');
+        if (viajeGuardado) {
+            viajeID = viajeGuardado;
+            document.getElementById('btn-solicitar').disabled = true;
+            document.getElementById('btn-solicitar').innerText = "RECUPERANDO VIAJE...";
+            escucharEstadoViaje(viajeID);
+        }
+    };
 </script>
 </body>
 </html>

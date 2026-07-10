@@ -3,10 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Trabajo - ClickGoTaxi</title>
+    <title>Panel de Trabajo - Click&GoTaxi</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; background: #000; color: #fff; padding: 20px; }
+        
+        /* ESTILO DE LA PANTALLA DE INICIO */
+        #pantallaInicio { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 20px; }
+        
         .header { background: #1a1a1a; padding: 15px; border-radius: 12px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #333; }
         .card { background: #1a1a1a; border-radius: 12px; padding: 20px; margin-bottom: 15px; border-left: 4px solid #FFC107; border: 1px solid #333; transition: 0.3s; }
         .info-row { margin: 10px 0; font-size: 16px; }
@@ -26,7 +30,14 @@
 </head>
 <body>
 
-    <!-- SONIDO DE NOTIFICACIÓN CORREGIDO -->
+    <!-- PANTALLA DE ACTIVACIÓN -->
+    <div id="pantallaInicio">
+        <h2 style="margin-bottom: 20px;">Click&GoTaxi</h2>
+        <p style="margin-bottom: 20px;">Toca el botón para activar las notificaciones sonoras</p>
+        <button class="btn-iniciar" onclick="iniciarApp()" style="width: auto; padding: 20px 40px;">ACTIVAR APLICACIÓN</button>
+    </div>
+
+    <!-- SONIDO DE NOTIFICACIÓN -->
     <audio id="sonidoNotificacion" preload="auto">
         <source src="https://cdn.jsdelivr.net/gh/juan031977/PreetyTaxi@main/silbido.mp3" type="audio/mpeg">
         <source src="https://assets.mixkit.co/sfx/preview/2320/2320-preview.mp3" type="audio/mpeg">
@@ -66,22 +77,15 @@
         const db = firebase.database();
         const audio = document.getElementById('sonidoNotificacion');
 
-        let audioListo = false;
-
-        // Lógica de desbloqueo mejorada
-        const desbloquearAudio = () => {
-            if (!audioListo) {
-                audio.play().then(() => {
-                    audio.pause();
-                    audio.currentTime = 0;
-                    audioListo = true;
-                    console.log("✅ Sonido desbloqueado");
-                }).catch(e => console.log("Esperando interacción..."));
-            }
-        };
-
-        document.addEventListener('touchstart', desbloquearAudio, { once: true });
-        document.addEventListener('click', desbloquearAudio, { once: true });
+        // FUNCIÓN PARA ACTIVAR EL AUDIO
+        function iniciarApp() {
+            audio.play().then(() => {
+                audio.pause();
+                audio.currentTime = 0;
+                document.getElementById('pantallaInicio').style.display = 'none';
+                console.log("Audio desbloqueado correctamente");
+            }).catch(e => alert("Por favor, permite el sonido en tu navegador"));
+        }
 
         function reproducirSonido() {
             audio.currentTime = 0;

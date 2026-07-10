@@ -15,6 +15,10 @@
         
         .btn-volver { position: absolute; top: 15px; left: 15px; background: transparent; color: #aaa; border: none; font-size: 14px; font-weight: bold; cursor: pointer; z-index: 20; width: auto; padding: 0; margin: 0; }
         .btn-volver:hover { color: white; }
+
+        /* Estilo del Modal (La ventana emergente personalizada) */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100; justify-content: center; align-items: center; }
+        .modal-content { background: #1a1a1a; padding: 25px; border-radius: 20px; width: 85%; max-width: 300px; border: 1px solid #333; text-align: center; }
     </style>
 </head>
 <body>
@@ -27,7 +31,19 @@
         <button onclick="login()">INGRESAR</button>
         <a href="registro_pasajero.html" style="color:#888; display:block; margin-top:15px; text-decoration:none; font-size:13px;">Crear cuenta nueva</a>
         
-        <button onclick="mostrarRecuperacion()" style="background:transparent; border:none; color:#ffc107; font-size:13px; margin-top:10px; padding:5px; cursor:pointer; width:100%;">¿Olvidaste tu contraseña?</button>
+        <button onclick="abrirModal()" style="background:transparent; border:none; color:#ffc107; font-size:13px; margin-top:10px; padding:5px; cursor:pointer; width:100%;">¿Olvidaste tu contraseña?</button>
+    </div>
+
+    <!-- Modal personalizado (reemplaza al prompt) -->
+    <div id="modalRecuperar" class="modal">
+        <div class="modal-content">
+            <h3 style="color:#ffc107; margin-top:0;">Recuperar Clave</h3>
+            <p style="font-size:14px; color:#ccc;">Ingresa tu número de celular registrado:</p>
+            <input type="tel" id="recTel" placeholder="Ej: 50760000000">
+            <input type="email" id="recEmail" placeholder="Correo electrónico">
+            <button onclick="procesarRecuperacion()">ACEPTAR</button>
+            <button onclick="cerrarModal()" style="background:transparent; color:#888; border:1px solid #444; margin-top:10px;">Cancelar</button>
+        </div>
     </div>
 
     <script>
@@ -41,7 +57,6 @@
             const t = document.getElementById('tel').value;
             const p = document.getElementById('pass').value;
 
-            // Validación básica
             if(!t || !p) {
                 alert("Por favor completa los campos.");
                 return;
@@ -49,7 +64,6 @@
 
             firebase.database().ref('pasajeros/' + t).once('value').then(snap => {
                 const u = snap.val();
-                
                 if(u && u.password === p) {
                     localStorage.setItem('userCel', t);
                     localStorage.setItem('userName', u.nombre);
@@ -63,25 +77,26 @@
             });
         }
 
-        // NUEVO: Función para recuperar contraseña validando con el correo
-        function mostrarRecuperacion() {
-            const tel = prompt("Ingresa tu número de celular registrado:");
-            if (!tel) return;
+        function abrirModal() { document.getElementById('modalRecuperar').style.display = 'flex'; }
+        function cerrarModal() { document.getElementById('modalRecuperar').style.display = 'none'; }
 
-            const emailConfirm = prompt("Ingresa el correo electrónico con el que te registraste:");
-            if (!emailConfirm) return;
+        function procesarRecuperacion() {
+            const tel = document.getElementById('recTel').value;
+            const email = document.getElementById('recEmail').value;
+
+            if (!tel || !email) {
+                alert("Por favor completa ambos campos.");
+                return;
+            }
 
             firebase.database().ref('pasajeros/' + tel).once('value').then(snap => {
                 const u = snap.val();
-                
-                // Comparamos que exista el usuario y que el correo coincida
-                if (u && u.email && u.email.toLowerCase() === emailConfirm.toLowerCase()) {
+                if (u && u.email && u.email.toLowerCase() === email.toLowerCase()) {
                     alert("✅ Tu contraseña es: " + u.password);
+                    cerrarModal();
                 } else {
-                    alert("❌ Datos incorrectos. El celular o el correo no coinciden.");
+                    alert("❌ Datos incorrectos. No coinciden en nuestros registros.");
                 }
-            }).catch(error => {
-                alert("Error al conectar con la base de datos.");
             });
         }
     </script>

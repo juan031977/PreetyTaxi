@@ -85,6 +85,7 @@
                 conductorConectado = false;
                 document.getElementById('txtEstado').innerHTML = `<span style="color: #dc3545; font-weight: bold;">⛔ DESCONECTADO (DEUDA)</span>`;
                 btnConexion.innerHTML = `❌ BLOQUEADO (Paga tu saldo B/. 1.00)`;
+                // Actualizamos las escuchas para que el usuario pueda ver, pero no tomar viajes
                 activarEscuchasDeViajes();
             } else {
                 document.getElementById('txtEstado').innerHTML = `<span style="color: #28a745; font-weight: bold;">✅ CUENTA ACTIVA</span>`;
@@ -100,7 +101,7 @@
         }
 
         function toggleConexion() {
-            if (adminEstado === 'bloqueado' || adminEstado === 'pendiente') return alert("⛔ ACCESO DENEGADO.");
+            if (adminEstado === 'bloqueado' || adminEstado === 'pendiente') return alert("⛔ ACCESO DENEGADO: Tu cuenta no está activa.");
             conductorConectado = !conductorConectado;
             localStorage.setItem('conductor_conectado', conductorConectado);
             actualizarInterfaz();
@@ -110,7 +111,6 @@
             db.ref('viajes').off();
             document.getElementById('contenedor').innerHTML = '';
             
-            // 1. Escucha viajes PROPIOS (Activos)
             if(datos && datos.telefono) {
                 db.ref('viajes').orderByChild('conductorCel').equalTo(datos.telefono).on('value', (snap) => {
                     if (!snap.exists()) {
@@ -118,7 +118,6 @@
                         document.getElementById('contenedor').innerHTML = '';
                         return;
                     }
-
                     estoyEnViajeActivo = false;
                     let hayViajeValido = false;
                     snap.forEach((child) => {
@@ -129,12 +128,10 @@
                             renderizarActivo(child.key, v);
                         }
                     });
-                    
                     if (!hayViajeValido) document.getElementById('contenedor').innerHTML = '';
                 });
             }
 
-            // 2. Escucha viajes PENDIENTES
             db.ref('viajes').orderByChild('estado').equalTo('pendiente').on('child_added', (snap) => {
                 if (!estoyEnViajeActivo) {
                     if (adminEstado === 'activo' && conductorConectado) {
@@ -145,7 +142,6 @@
                 }
             });
 
-            // 3. Borrado automático
             db.ref('viajes').orderByChild('estado').equalTo('pendiente').on('child_removed', (snap) => {
                 const tarj = document.getElementById('pedido_' + snap.key);
                 if (tarj) tarj.remove();
@@ -154,18 +150,30 @@
 
         function mostrarPedido(id, p) {
             if(document.getElementById('pedido_' + id)) return;
+            
+            // LÓGICA DE BLOQUEO VISUAL
+            const estaActivo = adminEstado === 'activo';
+            const botonHTML = estaActivo 
+                ? `<button style="background: #28a745; color: white;" onclick="aceptar('${id}')">ACEPTAR VIAJE</button>`
+                : `<button style="background: #666; color: white; cursor: not-allowed;" disabled>CUENTA NO ACTIVA</button>`;
+
             const html = `<div class="card" id="pedido_${id}">
                     <div class="info-row">👤 <strong>Cliente:</strong> ${p.pasajero_nombre || 'Cliente'}</div>
                     <div class="info-row">📍 <strong>Origen:</strong> ${p.origen}</div>
                     <div class="info-row">🏁 <strong>Destino:</strong> ${p.destino}</div>
                     <div class="info-row">💳 <strong>Pago:</strong> ${p.forma_pago || 'Efectivo'}</div>
                     <div class="precio">Total: B/. ${p.precio || "0.00"}</div>
-                    <button style="background: #28a745; color: white;" onclick="aceptar('${id}')">ACEPTAR VIAJE</button>
+                    ${botonHTML}
                 </div>`;
             document.getElementById('contenedor').insertAdjacentHTML('beforeend', html);
         }
 
         window.aceptar = (id) => {
+            // LÓGICA DE SEGURIDAD (Si fuerzan el botón)
+            if (adminEstado !== 'activo') {
+                return alert("⛔ ACCESO DENEGADO: Debes estar activo para aceptar viajes.");
+            }
+            
             db.ref('viajes/' + id).update({
                 estado: 'conductor_asignado',
                 conductorNombre: datos.nombre,
@@ -198,7 +206,6 @@
         }
 
         window.actualizar = (id, estado) => {
-            // Se actualiza en BD y forzamos la limpieza si se completó
             db.ref('viajes/' + id).update({ estado: estado }).then(() => {
                 if(estado === 'completado') {
                     document.getElementById('contenedor').innerHTML = '';

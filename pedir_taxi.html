@@ -297,20 +297,42 @@
             const viaje = snapshot.val();
             if (!viaje) return;
             if (viaje.estado === 'completado' || viaje.estado === 'cancelado') localStorage.removeItem('viaje_en_curso');
+            
+            // --- NUEVO CÓDIGO INYECTADO AQUÍ PARA BUSCAR LAS FOTOS DEL CONDUCTOR ---
             if (viaje.estado === 'conductor_asignado') {
                 const numeroConductor = viaje.conductorCel || 'Sin número';
-                document.getElementById('estado-viaje-container').innerHTML = `
-                    <div class="card-conductor">
-                        <h3>✅ ¡Taxi en Camino!</h3>
-                        <p><strong>Conductor:</strong> ${viaje.conductorNombre}</p>
-                        <p><strong>Tel:</strong> +${numeroConductor}</p>
-                        <p><strong>Vehículo:</strong> ${viaje.conductorVehiculo} ${viaje.conductorColor}</p>
-                        <p><strong>Placa:</strong> ${viaje.conductorPlaca}</p>
-                        ${viaje.metodo_pago ? `<p><strong>Pago:</strong> ${viaje.metodo_pago.toUpperCase()}</p>` : ''}
-                        <a class="btn-whatsapp" href="https://wa.me/${numeroConductor}?text=Hola ${viaje.conductorNombre}, soy ${viaje.pasajero_nombre}" target="_blank">💬 Enviar WhatsApp</a>
-                        <button class="btn-cancelar-viaje" onclick="cancelarViajeCliente('${id}')">❌ Cancelar Viaje</button>
-                    </div>`;
+                
+                db.ref('conductores/' + numeroConductor).once('value').then(snap => {
+                    const datosConductor = snap.val() || {};
+                    // Si no tiene foto cargada por el admin, muestra un icono básico de perfil y auto
+                    const fotoPerfil = datosConductor.foto_conductor || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png';
+                    const fotoCarro = datosConductor.foto_carro || 'https://cdn-icons-png.flaticon.com/512/3204/3204121.png';
+
+                    document.getElementById('estado-viaje-container').innerHTML = `
+                        <div class="card-conductor">
+                            <h3>✅ ¡Taxi en Camino!</h3>
+                            
+                            <div style="text-align: center; margin-top: 15px; margin-bottom: 10px;">
+                                <img src="${fotoPerfil}" style="width: 90px; height: 90px; border-radius: 50%; border: 3px solid #ffc107; object-fit: cover;">
+                                <p style="font-size: 18px; margin: 5px 0;"><strong>${viaje.conductorNombre}</strong></p>
+                            </div>
+
+                            <p><strong>Tel:</strong> +${numeroConductor}</p>
+                            <p><strong>Vehículo:</strong> ${viaje.conductorVehiculo} ${viaje.conductorColor}</p>
+                            <p><strong>Placa:</strong> ${viaje.conductorPlaca}</p>
+                            
+                            <div style="text-align: center; margin-top: 15px; margin-bottom: 10px;">
+                                <img src="${fotoCarro}" style="width: 100%; border-radius: 8px; object-fit: cover; border: 1px solid #444;">
+                            </div>
+
+                            ${viaje.metodo_pago ? `<p><strong>Pago:</strong> ${viaje.metodo_pago.toUpperCase()}</p>` : ''}
+                            <a class="btn-whatsapp" href="https://wa.me/${numeroConductor}?text=Hola ${viaje.conductorNombre}, soy ${viaje.pasajero_nombre}" target="_blank">💬 Enviar WhatsApp</a>
+                            <button class="btn-cancelar-viaje" onclick="cancelarViajeCliente('${id}')">❌ Cancelar Viaje</button>
+                        </div>`;
+                });
             }
+            // --- FIN DEL CÓDIGO INYECTADO ---
+
             if (viaje.estado === 'conductor_llego') mostrarNotificacionLlegada(viaje);
             if (viaje.estado === 'viaje_iniciado') { document.getElementById('estado-viaje-container').innerHTML = `<div class="card-conductor"><h3>🚗 Viaje en curso</h3><p style="color:#28a745; font-size:18px; margin:15px 0;">Buen viaje</p><p><strong>Conductor:</strong> ${viaje.conductorNombre}</p><p><strong>Tel:</strong> +${viaje.conductorCel}</p></div>`; }
             if (viaje.estado === 'completado') { mostrarViajeFinalizado(viaje); db.ref('viajes/' + id).off(); }

@@ -6,9 +6,12 @@
     <title>Panel de Trabajo - Click$GoTaxi</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; background: #000; color: #fff; padding: 20px; }
+        body { font-family: Arial, sans-serif; background: #000; color: #fff; padding: 20px; transition: background 0.3s; }
         
-        /* ESTILO DE LA PANTALLA DE INICIO */
+        /* ALERTA VISUAL: Parpadeo rojo cuando llega pedido */
+        @keyframes alertaFlash { 0% { background: #000; } 50% { background: #900; } 100% { background: #000; } }
+        .modo-alerta { animation: alertaFlash 1s infinite; }
+
         #pantallaInicio { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 20px; }
         
         .header { background: #1a1a1a; padding: 15px; border-radius: 12px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #333; }
@@ -30,17 +33,14 @@
 </head>
 <body>
 
-    <!-- PANTALLA DE ACTIVACIÓN -->
     <div id="pantallaInicio">
         <h2 style="margin-bottom: 20px;">Click$GoTaxi</h2>
-        <p style="margin-bottom: 20px;">Toca el botón para activar las notificaciones sonoras</p>
+        <p style="margin-bottom: 20px;">Toca el botón para activar el sistema de avisos</p>
         <button class="btn-iniciar" onclick="iniciarApp()" style="width: auto; padding: 20px 40px;">ACTIVAR APLICACIÓN</button>
     </div>
 
-    <!-- SONIDO DE NOTIFICACIÓN -->
     <audio id="sonidoNotificacion" preload="auto">
         <source src="https://cdn.jsdelivr.net/gh/juan031977/PreetyTaxi@main/silbido.mp3" type="audio/mpeg">
-        <source src="https://assets.mixkit.co/sfx/preview/2320/2320-preview.mp3" type="audio/mpeg">
     </audio>
 
     <button class="btn-volver" onclick="window.history.back()">⬅ Volver</button>
@@ -76,32 +76,48 @@
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         const audio = document.getElementById('sonidoNotificacion');
+        let estoyEnViajeActivo = false;
 
-        // FUNCIÓN AUTOMÁTICA AL CARGAR
+        // --- LÓGICA DE AUDIO Y VISIBILIDAD ---
+        function iniciarApp() {
+            // Reproducción forzada para desbloquear el navegador
+            audio.play().then(() => {
+                audio.pause();
+                audio.currentTime = 0;
+                localStorage.setItem('audio_activado', 'true');
+                document.getElementById('pantallaInicio').style.display = 'none';
+            }).catch(e => alert("Por favor, toca la pantalla para autorizar el sonido."));
+        }
+
+        function reproducirSonido() {
+            // 1. Activar Alerta Visual (Failsafe)
+            document.body.classList.add('modo-alerta');
+            setTimeout(() => document.body.classList.remove('modo-alerta'), 3000);
+
+            // 2. Intentar reproducir sonido
+            audio.currentTime = 0;
+            audio.play().catch(e => console.log("Audio bloqueado por navegador"));
+        }
+
+        // Si el usuario vuelve a la app (al cambiar de WhatsApp)
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible") {
+                // Al volver, limpiamos alerta visual y forzamos desbloqueo rápido
+                document.body.classList.remove('modo-alerta');
+                audio.play().then(() => { audio.pause(); }).catch(() => {});
+            }
+        });
+
+        // --- LÓGICA DE LA APP ---
         window.onload = function() {
             if (localStorage.getItem('audio_activado') === 'true') {
                 document.getElementById('pantallaInicio').style.display = 'none';
             }
         };
 
-        function iniciarApp() {
-            audio.play().then(() => {
-                audio.pause();
-                audio.currentTime = 0;
-                localStorage.setItem('audio_activado', 'true');
-                document.getElementById('pantallaInicio').style.display = 'none';
-            }).catch(e => alert("Por favor, permite el sonido en tu navegador"));
-        }
-
-        function reproducirSonido() {
-            audio.currentTime = 0;
-            audio.play().catch(e => console.log("Error al reproducir:", e));
-        }
-
         let datos = JSON.parse(localStorage.getItem('datos_conductor'));
         let adminEstado = 'pendiente'; 
         let conductorConectado = localStorage.getItem('conductor_conectado') === 'true'; 
-        let estoyEnViajeActivo = false;
 
         if (!datos || !datos.telefono) { 
             mostrarFormulario(); 
@@ -167,13 +183,16 @@
                             renderizarActivo(child.key, v);
                         }
                     });
-                    if (!hayViajeValido) document.getElementById('contenedor').innerHTML = '';
+                    if (!hayViajeValido) {
+                        estoyEnViajeActivo = false;
+                        document.getElementById('contenedor').innerHTML = '';
+                    }
                 });
             }
 
             db.ref('viajes').orderByChild('estado').equalTo('pendiente').on('child_added', (snap) => {
                 if (!estoyEnViajeActivo) {
-                    reproducirSonido();
+                    reproducirSonido(); // Esto ahora dispara sonido + alerta visual
                     mostrarPedido(snap.key, snap.val());
                 }
             });

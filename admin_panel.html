@@ -3,14 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <title>Admin PreetyTaxi - Control Total</title>
+    <!-- Agregamos el script de Firebase Storage para las fotos -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script> 
+    
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; }
-        .container { max-width: 900px; margin: auto; }
+        .container { max-width: 1100px; margin: auto; }
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 20px; text-align: center; }
         table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; }
-        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; vertical-align: top; }
         th { background: #ffc107; color: black; }
         .btn { padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin: 3px; }
         .btn-block { background: #dc3545; color: white; }
@@ -18,13 +21,21 @@
         .btn-reset { background: #007bff; color: white; }
         .btn-corte { background: #800080; color: white; padding: 15px; font-size: 16px; width: 100%; margin-bottom: 10px; }
         
+        /* Nuevos botones para fotos y borrado */
+        .btn-info { background: #17a2b8; color: white; font-size: 11px; padding: 5px 8px; }
+        .btn-danger { background: #bd2130; color: white; margin-top: 5px; width: 100%; }
+        
         /* Colores bonitos para los estados */
         .badge-activo { color: #28a745; font-weight: bold; }
         .badge-bloqueado { color: #dc3545; font-weight: bold; }
         .badge-pendiente { color: #ffc107; font-weight: bold; }
 
-        /* Estilo para el buscador de miles de conductores */
+        /* Estilo para el buscador */
         .input-buscador { width: 100%; padding: 14px; margin-top: 15px; border-radius: 8px; border: 2px solid #ffc107; font-size: 16px; box-sizing: border-box; outline: none; }
+        
+        /* Contenedor de controles de foto */
+        .foto-controls { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ccc; }
+        .foto-controls input { margin-bottom: 5px; width: 100%; font-size: 11px; }
     </style>
 </head>
 <body>
@@ -34,14 +45,14 @@
             <button class="btn btn-corte" onclick="corteDiario()">🌙 CORTE DIARIO (Cobrar B/. 1.00 y Bloquear a Todos)</button>
             <button class="btn btn-block" onclick="cierreSemanal()">RESETEO SEMANAL (Borrar Viajes y Deudas)</button>
             
-            <input type="text" id="buscador" onkeyup="filtrarConductores()" placeholder="🔍 Escribe el celular o nombre para buscar entre miles de Juans..." class="input-buscador">
+            <input type="text" id="buscador" onkeyup="filtrarConductores()" placeholder="🔍 Escribe el celular o nombre para buscar entre tus 60 conductores..." class="input-buscador">
         </div>
 
         <table>
             <thead>
                 <tr>
                     <th>Celular (ID Único)</th>
-                    <th>Nombre</th>
+                    <th>Nombre y Fotos</th>
                     <th>Placa</th>
                     <th>Estado</th>
                     <th>Deuda</th>
@@ -53,9 +64,16 @@
     </div>
 
     <script>
-        const firebaseConfig = { apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
+        // AQUÍ ESTÁ LA CORRECCIÓN: Se agregó el storageBucket
+        const firebaseConfig = { 
+            apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", 
+            databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/",
+            storageBucket: "preetytaxiapp.firebasestorage.app"
+        };
+        
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+        const storage = firebase.storage(); // Inicializamos Storage
 
         function cargarDatos() {
             db.ref('conductores').on('value', snap => {
@@ -65,7 +83,6 @@
                     const d = child.val();
                     const cel = child.key;
                     
-                    // Determinar el botón según el estado actual
                     let btnEstado = "";
                     let claseEstado = "badge-bloqueado";
 
@@ -80,31 +97,48 @@
                         claseEstado = "badge-bloqueado";
                     }
 
-                    // Formato de deuda limpio (Verde si está en 0, Rojo si debe)
                     const deudaNum = parseFloat(d.deuda || 0);
                     const colorDeuda = deudaNum > 0 ? "#dc3545" : "#28a745";
 
-                    // Renderizado con Celular en la primera columna en azul y negrita
+                    // Indicadores visuales para saber si ya le subiste fotos
+                    const tieneFotoPerfil = d.foto_conductor ? '<span style="color:green; font-size:11px;">✅ Foto Perfil lista</span>' : '<span style="color:red; font-size:11px;">❌ Falta Perfil</span>';
+                    const tieneFotoCarro = d.foto_carro ? '<span style="color:green; font-size:11px;">✅ Foto Carro lista</span>' : '<span style="color:red; font-size:11px;">❌ Falta Carro</span>';
+
                     tbody.innerHTML += `
                         <tr>
                             <td style="font-weight: bold; color: #007bff;">${cel}</td>
-                            <td>${d.nombre}</td>
+                            <td>
+                                <strong>${d.nombre}</strong><br>
+                                ${tieneFotoPerfil}<br>
+                                ${tieneFotoCarro}
+                            </td>
                             <td>${d.placa}</td>
                             <td><span class="${claseEstado}">${(d.estado || 'pendiente').toUpperCase()}</span></td>
                             <td style="color:${colorDeuda}; font-weight: bold;">B/. ${deudaNum.toFixed(2)}</td>
                             <td>
                                 ${btnEstado}
                                 <button class="btn btn-reset" onclick="pagarDeuda('${cel}')">PAGÓ</button>
+                                
+                                <div class="foto-controls">
+                                    <input type="file" id="file-${cel}-perfil" accept="image/*">
+                                    <button class="btn btn-info" onclick="subirImagen('${cel}', 'perfil')">Subir Perfil</button>
+                                    
+                                    <br><br>
+                                    
+                                    <input type="file" id="file-${cel}-carro" accept="image/*">
+                                    <button class="btn btn-info" onclick="subirImagen('${cel}', 'carro')">Subir Carro</button>
+                                    
+                                    <br>
+                                    <button class="btn btn-danger" onclick="eliminarConductor('${cel}')">❌ Eliminar Conductor</button>
+                                </div>
                             </td>
                         </tr>`;
                 });
                 
-                // Mantiene el filtro de búsqueda activo si estás escribiendo
                 filtrarConductores();
             });
         }
 
-        // AGREGADO: Función para filtrar al instante por número o nombre
         function filtrarConductores() {
             const input = document.getElementById('buscador').value.toLowerCase();
             const filas = document.querySelectorAll('#lista-conductores tr');
@@ -121,7 +155,6 @@
             db.ref('conductores/' + cel).update({ estado: nuevoEstado });
         }
 
-        // CORRECCIÓN CRÍTICA: Ahora cuando paga, pone la deuda en 0 Y lo cambia a 'activo' automáticamente
         function pagarDeuda(cel) {
             if(confirm("¿Confirmar que este conductor pagó su deuda? Se pondrá en 0 y se ACTIVARÁ al instante.")) {
                 db.ref('conductores/' + cel).update({ 
@@ -131,7 +164,6 @@
             }
         }
 
-        // AGREGADO: Bloqueo masivo diario cobrando el B/. 1.00 indispensable
         function corteDiario() {
             if(confirm("⚠️ ¿Estás seguro de BLOQUEAR a todos los conductores? Se les cargará B/. 1.00 de saldo.")) {
                 db.ref('conductores').once('value', snap => {
@@ -150,6 +182,49 @@
                     snap.forEach(c => {
                         db.ref('conductores/' + c.key).update({ deuda: 0, estado: 'activo' });
                     });
+                });
+            }
+        }
+
+        // --- NUEVAS FUNCIONES PARA FOTOS Y ELIMINACIÓN ---
+
+        function subirImagen(cel, tipo) {
+            const fileInput = document.getElementById(`file-${cel}-${tipo}`);
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                return alert("⚠️ Por favor, selecciona un archivo de foto primero.");
+            }
+
+            // Si es 'perfil', lo guardamos como 'foto_conductor', si es 'carro' como 'foto_carro'
+            const nombreCampoDB = tipo === 'perfil' ? 'foto_conductor' : 'foto_carro';
+            const storageRef = storage.ref(`conductores/${cel}/${tipo}.jpg`);
+            
+            alert(`Subiendo foto de ${tipo}... Dale Aceptar y espera unos segundos.`);
+            
+            storageRef.put(file).then(snapshot => {
+                snapshot.ref.getDownloadURL().then(url => {
+                    db.ref('conductores/' + cel).update({ [nombreCampoDB]: url });
+                    alert(`✅ ¡Foto de ${tipo} subida correctamente!`);
+                    fileInput.value = ""; // Limpiar el selector
+                });
+            }).catch(error => {
+                alert("❌ Error al subir la foto: " + error.message);
+            });
+        }
+
+        function eliminarConductor(cel) {
+            if(confirm("🛑 ¿ESTÁS SEGURO? Vas a eliminar a este conductor DEFINITIVAMENTE. Perderá su acceso y liberarás su cupo.")) {
+                // 1. Borramos sus datos de la Realtime Database
+                db.ref('conductores/' + cel).remove().then(() => {
+                    
+                    // 2. Intentamos borrar sus fotos del Storage (no importa si no tenía, el catch lo ignora)
+                    storage.ref(`conductores/${cel}/perfil.jpg`).delete().catch(() => {});
+                    storage.ref(`conductores/${cel}/carro.jpg`).delete().catch(() => {});
+                    
+                    alert("🗑️ Conductor eliminado. El cupo está libre para alguien nuevo.");
+                }).catch(error => {
+                    alert("Error al eliminar: " + error.message);
                 });
             }
         }

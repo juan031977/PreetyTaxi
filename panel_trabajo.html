@@ -33,14 +33,17 @@
 </head>
 <body>
 
+    <!-- PANTALLA DE ACTIVACIÓN -->
     <div id="pantallaInicio">
         <h2 style="margin-bottom: 20px;">Click$GoTaxi</h2>
-        <p style="margin-bottom: 20px;">Toca el botón para activar el sistema de avisos</p>
+        <p style="margin-bottom: 20px;">Toca el botón para activar las notificaciones sonoras</p>
         <button class="btn-iniciar" onclick="iniciarApp()" style="width: auto; padding: 20px 40px;">ACTIVAR APLICACIÓN</button>
     </div>
 
+    <!-- SONIDO DE NOTIFICACIÓN -->
     <audio id="sonidoNotificacion" preload="auto">
         <source src="https://cdn.jsdelivr.net/gh/juan031977/PreetyTaxi@main/silbido.mp3" type="audio/mpeg">
+        <source src="https://assets.mixkit.co/sfx/preview/2320/2320-preview.mp3" type="audio/mpeg">
     </audio>
 
     <button class="btn-volver" onclick="window.history.back()">⬅ Volver</button>
@@ -76,48 +79,36 @@
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         const audio = document.getElementById('sonidoNotificacion');
-        let estoyEnViajeActivo = false;
 
-        // --- LÓGICA DE AUDIO Y VISIBILIDAD ---
+        // FUNCIÓN DE ACTIVACIÓN
         function iniciarApp() {
-            // Reproducción forzada para desbloquear el navegador
             audio.play().then(() => {
                 audio.pause();
                 audio.currentTime = 0;
-                localStorage.setItem('audio_activado', 'true');
                 document.getElementById('pantallaInicio').style.display = 'none';
-            }).catch(e => alert("Por favor, toca la pantalla para autorizar el sonido."));
+            }).catch(e => alert("Por favor, permite el sonido en tu navegador"));
         }
 
         function reproducirSonido() {
-            // 1. Activar Alerta Visual (Failsafe)
+            // Activar alerta visual
             document.body.classList.add('modo-alerta');
             setTimeout(() => document.body.classList.remove('modo-alerta'), 3000);
-
-            // 2. Intentar reproducir sonido
+            
             audio.currentTime = 0;
-            audio.play().catch(e => console.log("Audio bloqueado por navegador"));
+            audio.play().catch(e => console.log("Error al reproducir:", e));
         }
 
-        // Si el usuario vuelve a la app (al cambiar de WhatsApp)
+        // Detectar si el usuario vuelve a la app
         document.addEventListener("visibilitychange", () => {
             if (document.visibilityState === "visible") {
-                // Al volver, limpiamos alerta visual y forzamos desbloqueo rápido
                 document.body.classList.remove('modo-alerta');
-                audio.play().then(() => { audio.pause(); }).catch(() => {});
             }
         });
-
-        // --- LÓGICA DE LA APP ---
-        window.onload = function() {
-            if (localStorage.getItem('audio_activado') === 'true') {
-                document.getElementById('pantallaInicio').style.display = 'none';
-            }
-        };
 
         let datos = JSON.parse(localStorage.getItem('datos_conductor'));
         let adminEstado = 'pendiente'; 
         let conductorConectado = localStorage.getItem('conductor_conectado') === 'true'; 
+        let estoyEnViajeActivo = false;
 
         if (!datos || !datos.telefono) { 
             mostrarFormulario(); 
@@ -183,16 +174,13 @@
                             renderizarActivo(child.key, v);
                         }
                     });
-                    if (!hayViajeValido) {
-                        estoyEnViajeActivo = false;
-                        document.getElementById('contenedor').innerHTML = '';
-                    }
+                    if (!hayViajeValido) document.getElementById('contenedor').innerHTML = '';
                 });
             }
 
             db.ref('viajes').orderByChild('estado').equalTo('pendiente').on('child_added', (snap) => {
                 if (!estoyEnViajeActivo) {
-                    reproducirSonido(); // Esto ahora dispara sonido + alerta visual
+                    reproducirSonido();
                     mostrarPedido(snap.key, snap.val());
                 }
             });

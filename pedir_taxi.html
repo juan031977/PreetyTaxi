@@ -386,11 +386,7 @@
             if (!viaje) return; 
             
             if (viaje.estado === 'conductor_asignado') { 
-                if (!viaje.tiempoAsignacion) {
-                    db.ref('viajes/' + id).update({ tiempoAsignacion: Date.now() });
-                    viaje.tiempoAsignacion = Date.now();
-                }
-
+                // CORRECCIÓN: SE ELIMINÓ LA ESCRITURA FORZADA DE TIEMPO. SOLO LEEMOS EL DATO.
                 const numeroConductor = viaje.conductorCel || 'Sin número'; 
                 
                 db.ref('conductores/' + numeroConductor).once('value').then(snap => {
@@ -425,6 +421,7 @@
 
                     if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
                     relojPasajeroInterval = setInterval(() => {
+                        if(!viaje.tiempoAsignacion) return; // Esperar a que el dato llegue
                         let ahora = Date.now();
                         let limite = 7 * 60 * 1000;
                         let tiempoTranscurrido = ahora - viaje.tiempoAsignacion;

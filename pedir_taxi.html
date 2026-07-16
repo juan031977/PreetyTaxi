@@ -172,8 +172,26 @@
     const PRECIOS_OTROS = { 'Cerro Viento Rural': 1.75, 'Las Trancas': 1.50 };
     const PRECIOS_MALL = { 'Super 99 Brisas del Golf': 1.50, 'Machetazo': 1.50, 'Riba Smith': 1.50, 'Super Xtra': 1.50, 'El Rey Brisas del Golf': 1.50, 'Brisas Capital': 1.50, 'Kennedy Golf Plaza': 1.50, 'Signature': 1.50, 'Premier Plaza': 1.50, 'Plaza Point': 1.50, 'Plaza Caja de Ahorro': 1.50, 'Brisas Mall': 1.50, 'Plaza Mcdonalds': 1.50, 'Paseo Drive': 2.50, 'Northside Galleries': 2.00, 'Yappy Park': 3.50 };
 
-    document.getElementById('nombreUsuario').value = "";
-    document.getElementById('telefono').value = "";
+   // --- ESTE ES EL ÚNICO BLOQUE QUE DEBE IR AQUÍ ---
+    window.onload = function() {
+        const savedCel = localStorage.getItem('userCel');
+        const savedName = localStorage.getItem('userName');
+
+        if (savedCel && savedName) {
+            const telInput = document.getElementById('telefono');
+            const nomInput = document.getElementById('nombreUsuario');
+            
+            if(telInput) {
+                telInput.value = savedCel;
+                telInput.readOnly = true; // Bloquea para que no lo editen
+            }
+            if(nomInput) {
+                nomInput.value = savedName;
+                nomInput.readOnly = true; // Bloquea para que no lo editen
+            }
+        }
+    };
+    // ------------------------------------------------
 
     function cambiarModo(modo) {
         modoActual = modo;
@@ -182,7 +200,15 @@
         document.getElementById('panel-externo').style.display = modo === 'externa'? 'block' : 'none';
         document.getElementById('panel-interno').style.display = modo === 'interna'? 'block' : 'none';
         document.getElementById('display-precio').innerText = "B/. 0.00";
-        if (modo === 'interna') { if (autoOrigen) { google.maps.event.clearInstanceListeners(document.getElementById('origen')); autoOrigen = null; } } else { if (!autoOrigen) initAutocomplete(); calcularRuta(); }
+        if (modo === 'interna') {
+            if (autoOrigen) {
+                google.maps.event.clearInstanceListeners(document.getElementById('origen'));
+                autoOrigen = null;
+            }
+        } else {
+            if (!autoOrigen) initAutocomplete();
+            calcularRuta();
+        }
     }
 
     function seleccionarOrigenTipo(tipo) {
@@ -241,6 +267,7 @@
     }
 
     function initMap() { mapa = new google.maps.Map(document.getElementById('mapa-destino'), { zoom: 13, center: { lat: 8.98, lng: -79.52 } }); directionsService = new google.maps.DirectionsService(); directionsRenderer = new google.maps.DirectionsRenderer({ map: mapa }); }
+    
     function initAutocomplete() {
         if (autoOrigen) return;
         autoOrigen = new google.maps.places.Autocomplete(document.getElementById('origen'), { componentRestrictions: { country: 'pa' } });
@@ -248,6 +275,7 @@
         autoOrigen.addListener('place_changed', () => { const place = autoOrigen.getPlace(); if (place.geometry) { origenCoords = place.geometry.location; if(modoActual === 'externa') calcularRuta(); } });
         autoDestino.addListener('place_changed', () => { const place = autoDestino.getPlace(); if (place.geometry) { destinoCoords = place.geometry.location; if(modoActual === 'externa') calcularRuta(); } });
     }
+
     function calcularRuta() {
         if (!origenCoords ||!destinoCoords || modoActual!== 'externa') return;
         directionsService.route({ origin: origenCoords, destination: destinoCoords, travelMode: 'DRIVING' }, (response, status) => {
@@ -265,49 +293,76 @@
     
     function pedirTaxi() {
         let destinoFinal = "";
+        let origenFinal = ""; // <-- CORRECCIÓN: Separamos la variable de origen
         const precio = document.getElementById('display-precio').innerText;
-        const nombrePasajero = document.getElementById('nombreUsuario').value || "Pasajero";
+        
+        // CORRECCIÓN: Asegurarnos de capturar el nombre directamente del input en este instante
+        const nombrePasajeroActual = document.getElementById('nombreUsuario').value || "Pasajero"; 
         const telefono = document.getElementById('telefono').value.replace(/[^0-9]/g, '');
-        const origenVal = document.getElementById('origen').value;
         
         if (modoActual === 'externa') {
+            origenFinal = document.getElementById('origen').value;
             destinoFinal = document.getElementById('destino-input').value;
-            if (!origenCoords ||!destinoFinal) return alert("Por favor completa origen y destino en el mapa");
+            if (!origenFinal || !destinoFinal) return alert("Por favor completa origen y destino en el mapa");
         } else {
-            let origenTxt = ""; if (origenTipo === 'calle') { const calle = document.getElementById('calle-origen').value; const zona = document.getElementById('zona-origen').value; if (!calle) return alert("Por favor ingresa el número de calle de origen"); origenTxt = `Calle ${calle} ${zona}`; } else if (origenSeleccionado) { origenTxt = origenSeleccionado; } else { return alert("Selecciona un origen interno"); }
-            let destinoTxt = ""; if (destinoTipo === 'calle') { const calle = document.getElementById('calle-destino').value; const zona = document.getElementById('zona-destino').value; if (!calle) return alert("Por favor ingresa el número de calle de destino"); destinoTxt = `Calle ${calle} ${zona}`; } else if (destinoSeleccionado) { destinoTxt = destinoSeleccionado; } else { return alert("Selecciona un destino interno"); }
-            destinoFinal = `${origenTxt} → ${destinoTxt}`;
-        }
+            let origenTxt = ""; 
+            if (origenTipo === 'calle') { 
+                const calle = document.getElementById('calle-origen').value; 
+                const zona = document.getElementById('zona-origen').value; 
+                if (!calle) return alert("Por favor ingresa el número de calle de origen"); 
+                origenTxt = `Calle ${calle} ${zona}`; 
+            } else if (origenSeleccionado) { 
+                origenTxt = origenSeleccionado; 
+            } else { 
+                return alert("Selecciona un origen interno"); 
+            } 
+
+            let destinoTxt = ""; 
+            if (destinoTipo === 'calle') { 
+                const calle = document.getElementById('calle-destino').value; 
+                const zona = document.getElementById('zona-destino').value; 
+                if (!calle) return alert("Por favor ingresa el número de calle de destino"); 
+                destinoTxt = `Calle ${calle} ${zona}`; 
+            } else if (destinoSeleccionado) { 
+                destinoTxt = destinoSeleccionado; 
+            } else {
+                return alert("Selecciona un destino interno"); 
+            } 
+            
+            // <-- CORRECCIÓN: Asignamos origen y destino en variables separadas
+            origenFinal = origenTxt;
+            destinoFinal = destinoTxt;
+        } 
         
-        if (!telefono || telefono.length < 8) return alert("Por favor ingresa tu número de WhatsApp");
-        if (precio === "B/. 0.00") return alert("Por favor espera a que se calcule la tarifa.");
+        if (!telefono || telefono.length < 8) return alert("Por favor ingresa tu número de WhatsApp"); 
+        if (precio === "B/. 0.00") return alert("Por favor espera a que se calcule la tarifa."); 
         
-        localStorage.setItem('telefono_pasajero', telefono);
-        localStorage.setItem('nombre_pasajero', nombrePasajero);
-        
-        const btnSolicitar = document.getElementById('btn-solicitar');
-        btnSolicitar.disabled = true;
-        btnSolicitar.innerText = "BUSCANDO TAXI...";
+        localStorage.setItem('telefono_pasajero', telefono); 
+        localStorage.setItem('nombre_pasajero', nombrePasajeroActual); // Guardamos el nombre actualizado
+
+        const btnSolicitar = document.getElementById('btn-solicitar'); 
+        btnSolicitar.disabled = true; 
+        btnSolicitar.innerText = "BUSCANDO TAXI..."; 
         
         // AQUÍ ESTÁ EL BOTÓN DE CANCELAR BÚSQUEDA
         document.getElementById('estado-viaje-container').innerHTML = `
             <div style="text-align:center; color:#ffc107; font-weight:bold; margin-top:20px; font-size:16px; animation: pulse 2s infinite;">⏳ Buscando conductor disponible...</div>
             <button class="btn-cancelar-viaje" onclick="cancelarViajeCliente('${Date.now()}')" style="margin-top: 15px; width: 100%;">❌ Cancelar Búsqueda</button>
-        `;
+        `; 
         
-        viajeID = Date.now();
-        db.ref('viajes/' + viajeID).set({
-            origen: origenVal,
-            destino: destinoFinal,
-            precio: precio,
-            precio_numerico: parseFloat(precio.replace('B/. ', '')),
-            estado: 'pendiente',
-            timestamp: viajeID,
-            pasajero_nombre: nombrePasajero,
-            telefono: telefono,
-            tipo_ruta: modoActual
-        }).then(() => { escucharEstadoViaje(viajeID); });
-    }
+        viajeID = Date.now(); 
+        db.ref('viajes/' + viajeID).set({ 
+            origen: origenFinal,  // <-- CORRECCIÓN: Ahora se envía el origen por separado
+            destino: destinoFinal, // <-- CORRECCIÓN: Y el destino por separado
+            precio: precio, 
+            precio_numerico: parseFloat(precio.replace('B/. ', '')), 
+            estado: 'pendiente', 
+            timestamp: viajeID, 
+            pasajero_nombre: nombrePasajeroActual, // Asegura tomar el nombre tipeado
+            telefono: telefono, 
+            tipo_ruta: modoActual 
+        }).then(() => { escucharEstadoViaje(viajeID); }); 
+    } 
 
     // --- FUNCIÓN DE CANCELACIÓN DEL JUEGAVIVO (BUSCAR OTRO TAXI) ---
     window.revertirViaje = function(id) {
@@ -334,19 +389,19 @@
         }
     };
 
-    function escucharEstadoViaje(id) {
-        db.ref('viajes/' + id).on('value', (snapshot) => {
-            const viaje = snapshot.val();
-            if (!viaje) return;
+    function escucharEstadoViaje(id) { 
+        db.ref('viajes/' + id).on('value', (snapshot) => { 
+            const viaje = snapshot.val(); 
+            if (!viaje) return; 
             
-            if (viaje.estado === 'conductor_asignado') {
+            if (viaje.estado === 'conductor_asignado') { 
                 // 1. Iniciamos el temporizador en Firebase si el conductor no lo puso
                 if (!viaje.tiempoAsignacion) {
                     db.ref('viajes/' + id).update({ tiempoAsignacion: Date.now() });
                     viaje.tiempoAsignacion = Date.now();
                 }
 
-                const numeroConductor = viaje.conductorCel || 'Sin número';
+                const numeroConductor = viaje.conductorCel || 'Sin número'; 
                 
                 // Extraer las fotos del perfil del conductor desde Firebase
                 db.ref('conductores/' + numeroConductor).once('value').then(snap => {
@@ -412,7 +467,7 @@
                         }
                     }, 1000);
                 });
-            }
+            } 
             
             if (viaje.estado === 'conductor_llego') {
                 // DETENER EL RELOJ PORQUE EL CHOFER YA LLEGÓ
@@ -420,10 +475,10 @@
                 let elContenedorReloj = document.getElementById('contenedor-reloj-pasajero');
                 if (elContenedorReloj) elContenedorReloj.innerHTML = `<p style="color: #28a745; font-weight: bold; margin: 0; text-align:center;">✅ El conductor ha llegado</p>`;
                 
-                mostrarNotificacionLlegada(viaje);
-            }
+                mostrarNotificacionLlegada(viaje); 
+            } 
 
-            if (viaje.estado === 'viaje_iniciado') {
+            if (viaje.estado === 'viaje_iniciado') { 
                 if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
                 document.getElementById('estado-viaje-container').innerHTML = `
                     <div class="card-conductor">
@@ -431,67 +486,67 @@
                         <p style="color:#28a745; font-size:18px; margin:15px 0;">Buen viaje</p>
                         <p><strong>Conductor:</strong> ${viaje.conductorNombre}</p>
                         <p><strong>Tel:</strong> +${viaje.conductorCel}</p>
-                    </div>`;
-            }
-            if (viaje.estado === 'completado') {
+                    </div>`; 
+            } 
+            if (viaje.estado === 'completado') { 
                 if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
-                mostrarViajeFinalizado(viaje);
-                db.ref('viajes/' + id).off();
-            }
-            if (viaje.estado === 'cancelado') {
+                mostrarViajeFinalizado(viaje); 
+                db.ref('viajes/' + id).off(); 
+            } 
+            if (viaje.estado === 'cancelado') { 
                 if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
-                alert("El viaje ha sido cancelado.");
-                resetFormularioUI();
-                db.ref('viajes/' + id).off();
-            }
-        });
-    }
+                alert("El viaje ha sido cancelado."); 
+                resetFormularioUI(); 
+                db.ref('viajes/' + id).off(); 
+            } 
+        }); 
+    } 
 
-    function mostrarNotificacionLlegada(viaje) {
-        if (document.getElementById('notif-llegada')) return;
+    function mostrarNotificacionLlegada(viaje) { 
+        if (document.getElementById('notif-llegada')) return; 
         const html = `
             <div id="notif-llegada" class="notificacion-llegada">
                 <h4 style="margin:0 0 10px;">🎉 ¡Tu conductor llegó!</h4>
                 <p style="margin:5px 0;">${viaje.conductorNombre} está en el punto de recogida</p>
                 <p style="margin:5px 0; font-size:14px;">${viaje.conductorVehiculo} ${viaje.conductorColor} - ${viaje.conductorPlaca}</p>
                 <a href="https://wa.me/${viaje.conductorCel}?text=Hola ${viaje.conductorNombre}, soy ${viaje.pasajero_nombre}, ya estoy saliendo" target="_blank" style="background:white; color:#28a745; padding:8px 16px; border-radius:6px; text-decoration:none; display:inline-block; margin-top:10px; font-weight:bold;">💬 WhatsApp</a>
-            </div>`;
-        document.body.insertAdjacentHTML('beforeend', html);
-        setTimeout(() => document.getElementById('notif-llegada')?.remove(), 15000);
-    }
+            </div>`; 
+        document.body.insertAdjacentHTML('beforeend', html); 
+        setTimeout(() => document.getElementById('notif-llegada')?.remove(), 15000); 
+    } 
 
-    function mostrarViajeFinalizado(viaje) {
+    function mostrarViajeFinalizado(viaje) { 
         const html = `
             <div style="position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:30px; border-radius:12px; z-index:10000; box-shadow:0 10px 40px rgba(0,0,0,0.3); text-align:center; max-width:400px;">
                 <h3 style="color:#28a745; margin:0 0 15px;">Viaje Finalizado</h3>
                 <p style="color:#666;">Gracias por viajar con ClickGoTaxi</p>
                 <p style="font-size:24px; font-weight:bold; color:#333; margin:15px 0;">Total: B/. ${viaje.precio_numerico.toFixed(2)}</p>
                 <button onclick="location.reload()" style="background:#FFC107; color:#000; border:none; padding:12px 30px; border-radius:6px; cursor:pointer; font-weight:bold; margin-top:10px;">Nuevo Viaje</button>
-            </div>`;
-        document.body.insertAdjacentHTML('beforeend', html);
-    }
+            </div>`; 
+        document.body.insertAdjacentHTML('beforeend', html); 
+    } 
 
-    function cancelarViajeCliente(id) {
-        if (confirm("¿Estás seguro de que deseas cancelar este viaje?")) {
+    function cancelarViajeCliente(id) { 
+        if (confirm("¿Estás seguro de que deseas cancelar este viaje?")) { 
             if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
-            db.ref('viajes/' + id).off();
-            db.ref('viajes/' + id).update({ estado: 'cancelado' }).then(() => {
-                resetFormularioUI();
-            });
-        }
-    }
+            db.ref('viajes/' + id).off(); 
+            db.ref('viajes/' + id).update({ estado: 'cancelado' }).then(() => { 
+                resetFormularioUI(); 
+            }); 
+        } 
+    } 
 
-    function resetFormularioUI() {
-        viajeID = null;
-        const btnSolicitar = document.getElementById('btn-solicitar');
-        btnSolicitar.disabled = false;
-        btnSolicitar.innerText = "SOLICITAR TAXI";
-        document.getElementById('estado-viaje-container').innerHTML = "";
-    }
+    function resetFormularioUI() { 
+        viajeID = null; 
+        const btnSolicitar = document.getElementById('btn-solicitar'); 
+        btnSolicitar.disabled = false; 
+        btnSolicitar.innerText = "SOLICITAR TAXI"; 
+        document.getElementById('estado-viaje-container').innerHTML = ""; 
+    } 
 
-    window.onload = () => {
-        initMap();
-        initAutocomplete();
+    window.onload = () => { 
+        initMap(); 
+        initAutocomplete(); 
     };
 </script>
 </body>

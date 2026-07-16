@@ -28,7 +28,7 @@
         .card-conductor { background: #222; padding: 15px; border-radius: 12px; border: 1px solid var(--gold); margin-top: 15px; text-align: center; }
         .card-conductor h3 { margin: 0 0 10px 0; color: var(--gold); }
         .card-conductor p { margin: 5px 0; font-size: 15px; }
-        .btn-whatsapp { display: block; background: #25D366; color: white; padding: 12px; border-radius: 10px; text-decoration: none; font-weight: bold; margin: 10px auto 0 auto; width: 85%; box-sizing: border-box; }
+        .btn-whatsapp { display: block; background: #25D366; color: white; padding: 12px; border-radius: 10px; font-weight: bold; margin: 10px auto 0 auto; width: 85%; box-sizing: border-box; border: none; cursor: pointer; }
         .btn-cancelar-viaje { background: #dc3545; color: white; width: 85%; padding: 12px; border: none; border-radius: 10px; font-weight: bold; margin-top: 10px; cursor: pointer; display: block; margin-left: auto; margin-right: auto;}
         .notificacion-llegada { position: fixed; top: 20px; right: 20px; background: #28a745; color: white; padding: 20px; border-radius: 12px; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.3); animation: slideIn 0.3s; max-width: 300px; }
         .toggle-modos { display: flex; gap: 10px; margin-top: 15px; }
@@ -164,7 +164,7 @@
 
     let origenTipo = null, origenSeleccionado = null, origenPrecio = 0;
     let destinoTipo = null, destinoSeleccionado = null, destinoPrecio = 0;
-    let relojPasajeroInterval = null; // Cronómetro global
+    let relojPasajeroInterval = null; 
 
     const PRECIOS_PH = { 'PH La Riviera Colonial': 1.75, 'Brisas del Pacífico': 1.75, 'PH Brisas Point': 1.75, 'PH Brisas Heights': 1.75, 'PH Golf Gardens': 2.50, 'Club De Golf': 2.50, 'PH Alpes': 2.50, 'PH Everest': 2.50, 'PH Bejin': 2.50, 'PH Olimpus': 2.50, 'PH Mont Blanc': 2.50, 'PH Sierra Nevada': 2.50, 'PH Aventura': 3.00, 'PH Vallarta': 3.00, 'PH Noura': 3.00, 'PH Cavana': 3.00, 'Parque Rash': 3.00, 'PH Lagun': 1.50, 'PH Royal Village': 2.00, 'Oxford School': 3.00, 'Green City': 6.00, 'Golf Garden': 2.50, 'PH Ventura': 3.00 };
     const PRECIOS_VILLAS = { 'Lomas del Golf (Garita)': 1.50, 'Lomas del Golf (Adentro)': 1.75, 'Villas del Golf (Garita)': 1.50, 'Villas del Golf (Adentro)': 1.75, 'Monticello 1 (Garita)': 1.50, 'Monticello 1 (Adentro)': 1.75, 'Monticello 2 (Garita)': 1.50, 'Monticello 2 (Adentro)': 1.75, 'Villa Lido (Garita)': 1.50, 'Villa Lido (Adentro)': 1.75, 'Villa Alta (Garita)': 1.50, 'Villa Alta (Adentro)': 1.75, 'Villa Tivoli (Garita)': 1.50, 'Villa Tivoli (Adentro)': 1.75, 'Villa Navona (Garita)': 1.50, 'Villa Navona (Adentro)': 1.75, 'Villa Tiber (Garita)': 1.50, 'Villa Tiber (Adentro)': 1.75 };
@@ -172,26 +172,18 @@
     const PRECIOS_OTROS = { 'Cerro Viento Rural': 1.75, 'Las Trancas': 1.50 };
     const PRECIOS_MALL = { 'Super 99 Brisas del Golf': 1.50, 'Machetazo': 1.50, 'Riba Smith': 1.50, 'Super Xtra': 1.50, 'El Rey Brisas del Golf': 1.50, 'Brisas Capital': 1.50, 'Kennedy Golf Plaza': 1.50, 'Signature': 1.50, 'Premier Plaza': 1.50, 'Plaza Point': 1.50, 'Plaza Caja de Ahorro': 1.50, 'Brisas Mall': 1.50, 'Plaza Mcdonalds': 1.50, 'Paseo Drive': 2.50, 'Northside Galleries': 2.00, 'Yappy Park': 3.50 };
 
-   // --- ESTE ES EL ÚNICO BLOQUE QUE DEBE IR AQUÍ ---
     window.onload = function() {
+        initMap(); 
+        initAutocomplete();
         const savedCel = localStorage.getItem('userCel');
         const savedName = localStorage.getItem('userName');
-
         if (savedCel && savedName) {
             const telInput = document.getElementById('telefono');
             const nomInput = document.getElementById('nombreUsuario');
-            
-            if(telInput) {
-                telInput.value = savedCel;
-                telInput.readOnly = true; // Bloquea para que no lo editen
-            }
-            if(nomInput) {
-                nomInput.value = savedName;
-                nomInput.readOnly = true; // Bloquea para que no lo editen
-            }
+            if(telInput) { telInput.value = savedCel; telInput.readOnly = true; }
+            if(nomInput) { nomInput.value = savedName; nomInput.readOnly = true; }
         }
     };
-    // ------------------------------------------------
 
     function cambiarModo(modo) {
         modoActual = modo;
@@ -293,10 +285,8 @@
     
     function pedirTaxi() {
         let destinoFinal = "";
-        let origenFinal = ""; // <-- CORRECCIÓN: Separamos la variable de origen
+        let origenFinal = ""; 
         const precio = document.getElementById('display-precio').innerText;
-        
-        // CORRECCIÓN: Asegurarnos de capturar el nombre directamente del input en este instante
         const nombrePasajeroActual = document.getElementById('nombreUsuario').value || "Pasajero"; 
         const telefono = document.getElementById('telefono').value.replace(/[^0-9]/g, '');
         
@@ -328,8 +318,6 @@
             } else {
                 return alert("Selecciona un destino interno"); 
             } 
-            
-            // <-- CORRECCIÓN: Asignamos origen y destino en variables separadas
             origenFinal = origenTxt;
             destinoFinal = destinoTxt;
         } 
@@ -338,13 +326,12 @@
         if (precio === "B/. 0.00") return alert("Por favor espera a que se calcule la tarifa."); 
         
         localStorage.setItem('telefono_pasajero', telefono); 
-        localStorage.setItem('nombre_pasajero', nombrePasajeroActual); // Guardamos el nombre actualizado
+        localStorage.setItem('nombre_pasajero', nombrePasajeroActual); 
 
         const btnSolicitar = document.getElementById('btn-solicitar'); 
         btnSolicitar.disabled = true; 
         btnSolicitar.innerText = "BUSCANDO TAXI..."; 
         
-        // AQUÍ ESTÁ EL BOTÓN DE CANCELAR BÚSQUEDA
         document.getElementById('estado-viaje-container').innerHTML = `
             <div style="text-align:center; color:#ffc107; font-weight:bold; margin-top:20px; font-size:16px; animation: pulse 2s infinite;">⏳ Buscando conductor disponible...</div>
             <button class="btn-cancelar-viaje" onclick="cancelarViajeCliente('${Date.now()}')" style="margin-top: 15px; width: 100%;">❌ Cancelar Búsqueda</button>
@@ -352,24 +339,21 @@
         
         viajeID = Date.now(); 
         db.ref('viajes/' + viajeID).set({ 
-            origen: origenFinal,  // <-- CORRECCIÓN: Ahora se envía el origen por separado
-            destino: destinoFinal, // <-- CORRECCIÓN: Y el destino por separado
+            origen: origenFinal,
+            destino: destinoFinal, 
             precio: precio, 
             precio_numerico: parseFloat(precio.replace('B/. ', '')), 
             estado: 'pendiente', 
             timestamp: viajeID, 
-            pasajero_nombre: nombrePasajeroActual, // Asegura tomar el nombre tipeado
+            pasajero_nombre: nombrePasajeroActual,
             telefono: telefono, 
             tipo_ruta: modoActual 
         }).then(() => { escucharEstadoViaje(viajeID); }); 
     } 
 
-    // --- FUNCIÓN DE CANCELACIÓN DEL JUEGAVIVO (BUSCAR OTRO TAXI) ---
     window.revertirViaje = function(id) {
         if (confirm("¿El conductor demoró mucho? Vamos a quitarle el viaje y a buscarte otro taxi cercano.")) {
             if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
-            
-            // Regresamos el viaje a estado pendiente en Firebase
             db.ref('viajes/' + id).update({
                 estado: 'pendiente',
                 conductorCel: null,
@@ -380,8 +364,6 @@
                 tiempoAsignacion: null,
                 conductorLlego: null
             });
-            
-            // Devolvemos la UI al estado de búsqueda
             document.getElementById('estado-viaje-container').innerHTML = `
                 <div style="text-align:center; color:#ffc107; font-weight:bold; margin-top:20px; font-size:16px; animation: pulse 2s infinite;">⏳ Relanzando búsqueda...</div>
                 <button class="btn-cancelar-viaje" onclick="cancelarViajeCliente('${id}')" style="margin-top: 15px; width: 100%;">❌ Cancelar Búsqueda</button>
@@ -395,7 +377,6 @@
             if (!viaje) return; 
             
             if (viaje.estado === 'conductor_asignado') { 
-                // 1. Iniciamos el temporizador en Firebase si el conductor no lo puso
                 if (!viaje.tiempoAsignacion) {
                     db.ref('viajes/' + id).update({ tiempoAsignacion: Date.now() });
                     viaje.tiempoAsignacion = Date.now();
@@ -403,7 +384,6 @@
 
                 const numeroConductor = viaje.conductorCel || 'Sin número'; 
                 
-                // Extraer las fotos del perfil del conductor desde Firebase
                 db.ref('conductores/' + numeroConductor).once('value').then(snap => {
                     const datosConductor = snap.val() || {};
                     const fotoPerfil = datosConductor.foto_conductor || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png';
@@ -412,22 +392,17 @@
                     document.getElementById('estado-viaje-container').innerHTML = `
                         <div class="card-conductor">
                             <h3>✅ ¡Taxi en Camino!</h3>
-                            
                             <div style="text-align: center; margin-top: 15px; margin-bottom: 10px;">
                                 <img src="${fotoPerfil}" style="width: 90px; height: 90px; border-radius: 50%; border: 3px solid #ffc107; object-fit: cover;">
                                 <p style="font-size: 18px; margin: 5px 0;"><strong>${viaje.conductorNombre}</strong></p>
                             </div>
-
                             <p><strong>Tel:</strong> +${numeroConductor}</p>
                             <p><strong>Vehículo:</strong> ${viaje.conductorVehiculo} ${viaje.conductorColor}</p>
                             <p><strong>Placa:</strong> ${viaje.conductorPlaca}</p>
-                            
                             <div style="text-align: center; margin-top: 15px; margin-bottom: 10px;">
                                 <img src="${fotoCarro}" style="width: 100%; border-radius: 8px; object-fit: cover; border: 1px solid #444;">
                             </div>
-
                             ${viaje.metodo_pago ? `<p><strong>Pago:</strong> ${viaje.metodo_pago.toUpperCase()}</p>` : ''}
-                            
                             <div id="contenedor-reloj-pasajero" style="background: #111; padding: 10px; border-radius: 8px; margin: 15px 0; border: 1px solid #444;">
                                  <p style="color: #ffc107; font-weight: bold; margin: 0; font-size: 14px;" id="texto-reloj-pasajero">⏱️ Calculando tiempo...</p>
                                  <div id="opciones-demora" style="display:none; margin-top: 10px;">
@@ -435,25 +410,19 @@
                                      <button style="background: #ffc107; color: black; padding: 10px; border: none; border-radius: 5px; width: 100%; font-weight: bold; cursor: pointer;" onclick="revertirViaje('${id}')">🔄 BUSCAR OTRO TAXI</button>
                                  </div>
                             </div>
-
-                            <a class="btn-whatsapp" href="https://wa.me/${numeroConductor}?text=Hola ${viaje.conductorNombre}, soy ${viaje.pasajero_nombre}" target="_blank">💬 Enviar WhatsApp</a>
+                            <button class="btn-whatsapp" onclick="event.stopPropagation(); window.open('https://wa.me/${numeroConductor}?text=Hola ${viaje.conductorNombre}, soy ${viaje.pasajero_nombre}', '_blank')">💬 Enviar WhatsApp</button>
                             <button class="btn-cancelar-viaje" onclick="cancelarViajeCliente('${id}')">❌ Cancelar Viaje</button>
                         </div>`;
 
-                    // EJECUTAR EL CRONÓMETRO DE 7 MINUTOS PARA EL PASAJERO
                     if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
-                    
                     relojPasajeroInterval = setInterval(() => {
                         let ahora = Date.now();
-                        let limite = 7 * 60 * 1000; // 7 minutos
+                        let limite = 7 * 60 * 1000;
                         let tiempoTranscurrido = ahora - viaje.tiempoAsignacion;
                         let tiempoRestante = limite - tiempoTranscurrido;
-                        
                         let elTextoReloj = document.getElementById('texto-reloj-pasajero');
                         let elDivDemora = document.getElementById('opciones-demora');
-                        
                         if (!elTextoReloj) return;
-                        
                         if (tiempoRestante > 0) {
                             let mins = Math.floor(tiempoRestante / 60000);
                             let secs = Math.floor((tiempoRestante % 60000) / 1000);
@@ -461,32 +430,21 @@
                         } else {
                             elTextoReloj.innerText = `🚨 Tiempo expirado (7 min)`;
                             elTextoReloj.style.color = '#dc3545';
-                            // MOSTRAR OPCIÓN DE CANCELAR AL "JUEGAVIVO"
                             if (elDivDemora) elDivDemora.style.display = 'block';
                             clearInterval(relojPasajeroInterval);
                         }
                     }, 1000);
                 });
             } 
-            
             if (viaje.estado === 'conductor_llego') {
-                // DETENER EL RELOJ PORQUE EL CHOFER YA LLEGÓ
                 if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
                 let elContenedorReloj = document.getElementById('contenedor-reloj-pasajero');
                 if (elContenedorReloj) elContenedorReloj.innerHTML = `<p style="color: #28a745; font-weight: bold; margin: 0; text-align:center;">✅ El conductor ha llegado</p>`;
-                
                 mostrarNotificacionLlegada(viaje); 
             } 
-
             if (viaje.estado === 'viaje_iniciado') { 
                 if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
-                document.getElementById('estado-viaje-container').innerHTML = `
-                    <div class="card-conductor">
-                        <h3>🚗 Viaje en curso</h3>
-                        <p style="color:#28a745; font-size:18px; margin:15px 0;">Buen viaje</p>
-                        <p><strong>Conductor:</strong> ${viaje.conductorNombre}</p>
-                        <p><strong>Tel:</strong> +${viaje.conductorCel}</p>
-                    </div>`; 
+                document.getElementById('estado-viaje-container').innerHTML = `<div class="card-conductor"><h3>🚗 Viaje en curso</h3><p style="color:#28a745; font-size:18px; margin:15px 0;">Buen viaje</p><p><strong>Conductor:</strong> ${viaje.conductorNombre}</p><p><strong>Tel:</strong> +${viaje.conductorCel}</p></div>`; 
             } 
             if (viaje.estado === 'completado') { 
                 if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
@@ -504,25 +462,13 @@
 
     function mostrarNotificacionLlegada(viaje) { 
         if (document.getElementById('notif-llegada')) return; 
-        const html = `
-            <div id="notif-llegada" class="notificacion-llegada">
-                <h4 style="margin:0 0 10px;">🎉 ¡Tu conductor llegó!</h4>
-                <p style="margin:5px 0;">${viaje.conductorNombre} está en el punto de recogida</p>
-                <p style="margin:5px 0; font-size:14px;">${viaje.conductorVehiculo} ${viaje.conductorColor} - ${viaje.conductorPlaca}</p>
-                <a href="https://wa.me/${viaje.conductorCel}?text=Hola ${viaje.conductorNombre}, soy ${viaje.pasajero_nombre}, ya estoy saliendo" target="_blank" style="background:white; color:#28a745; padding:8px 16px; border-radius:6px; text-decoration:none; display:inline-block; margin-top:10px; font-weight:bold;">💬 WhatsApp</a>
-            </div>`; 
+        const html = `<div id="notif-llegada" class="notificacion-llegada"><h4 style="margin:0 0 10px;">🎉 ¡Tu conductor llegó!</h4><p style="margin:5px 0;">${viaje.conductorNombre} está en el punto de recogida</p><p style="margin:5px 0; font-size:14px;">${viaje.conductorVehiculo} ${viaje.conductorColor} - ${viaje.conductorPlaca}</p><button onclick="window.open('https://wa.me/${viaje.conductorCel}?text=Hola ${viaje.conductorNombre}, soy ${viaje.pasajero_nombre}, ya estoy saliendo', '_blank')" style="background:white; color:#28a745; padding:8px 16px; border-radius:6px; text-decoration:none; display:inline-block; margin-top:10px; font-weight:bold; cursor:pointer;">💬 WhatsApp</button></div>`; 
         document.body.insertAdjacentHTML('beforeend', html); 
         setTimeout(() => document.getElementById('notif-llegada')?.remove(), 15000); 
     } 
 
     function mostrarViajeFinalizado(viaje) { 
-        const html = `
-            <div style="position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:30px; border-radius:12px; z-index:10000; box-shadow:0 10px 40px rgba(0,0,0,0.3); text-align:center; max-width:400px;">
-                <h3 style="color:#28a745; margin:0 0 15px;">Viaje Finalizado</h3>
-                <p style="color:#666;">Gracias por viajar con ClickGoTaxi</p>
-                <p style="font-size:24px; font-weight:bold; color:#333; margin:15px 0;">Total: B/. ${viaje.precio_numerico.toFixed(2)}</p>
-                <button onclick="location.reload()" style="background:#FFC107; color:#000; border:none; padding:12px 30px; border-radius:6px; cursor:pointer; font-weight:bold; margin-top:10px;">Nuevo Viaje</button>
-            </div>`; 
+        const html = `<div style="position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:30px; border-radius:12px; z-index:10000; box-shadow:0 10px 40px rgba(0,0,0,0.3); text-align:center; max-width:400px;"><h3 style="color:#28a745; margin:0 0 15px;">Viaje Finalizado</h3><p style="color:#666;">Gracias por viajar con ClickGoTaxi</p><p style="font-size:24px; font-weight:bold; color:#333; margin:15px 0;">Total: B/. ${viaje.precio_numerico.toFixed(2)}</p><button onclick="location.reload()" style="background:#FFC107; color:#000; border:none; padding:12px 30px; border-radius:6px; cursor:pointer; font-weight:bold; margin-top:10px;">Nuevo Viaje</button></div>`; 
         document.body.insertAdjacentHTML('beforeend', html); 
     } 
 
@@ -530,9 +476,7 @@
         if (confirm("¿Estás seguro de que deseas cancelar este viaje?")) { 
             if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
             db.ref('viajes/' + id).off(); 
-            db.ref('viajes/' + id).update({ estado: 'cancelado' }).then(() => { 
-                resetFormularioUI(); 
-            }); 
+            db.ref('viajes/' + id).update({ estado: 'cancelado' }).then(() => { resetFormularioUI(); }); 
         } 
     } 
 
@@ -543,11 +487,6 @@
         btnSolicitar.innerText = "SOLICITAR TAXI"; 
         document.getElementById('estado-viaje-container').innerHTML = ""; 
     } 
-
-    window.onload = () => { 
-        initMap(); 
-        initAutocomplete(); 
-    };
 </script>
 </body>
 </html>

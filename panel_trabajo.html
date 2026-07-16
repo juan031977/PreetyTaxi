@@ -259,6 +259,7 @@
                     <div style="background:#28a745; padding:10px; border-radius:5px; text-align:center; margin-bottom:15px; font-weight:bold;">✅ VIAJE EN CURSO</div>
                     <div class="info-row">👤 <strong>Cliente:</strong> ${v.pasajero_nombre}</div>
                     <div class="info-row">📍 <strong>Origen:</strong> ${v.origen}</div>
+                    <div class="info-row">🏁 <strong>Destino:</strong> ${v.destino}</div>
                     <div class="precio">Total: B/. ${v.precio || "0.00"}</div>
                     ${relojHtml}
                     <button style="background:${esLlegada ? '#6c757d' : '#007bff'}; color:white;" onclick="actualizar('${id}', 'conductor_llego')">${esLlegada ? '✓ PASAJERO NOTIFICADO' : '📍 LLEGUÉ AL PUNTO'}</button>

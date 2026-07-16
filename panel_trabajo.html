@@ -78,7 +78,6 @@
         const db = firebase.database();
         const audio = document.getElementById('sonidoNotificacion');
 
-        // FUNCIÓN DE ACTIVACIÓN
         function iniciarApp() {
             audio.play().then(() => {
                 audio.pause();
@@ -88,15 +87,12 @@
         }
 
         function reproducirSonido() {
-            // Activar alerta visual
             document.body.classList.add('modo-alerta');
             setTimeout(() => document.body.classList.remove('modo-alerta'), 3000);
-            
             audio.currentTime = 0;
             audio.play().catch(e => console.log("Error al reproducir:", e));
         }
 
-        // Detectar si el usuario vuelve a la app
         document.addEventListener("visibilitychange", () => {
             if (document.visibilityState === "visible") {
                 document.body.classList.remove('modo-alerta');
@@ -107,7 +103,7 @@
         let adminEstado = 'pendiente'; 
         let conductorConectado = localStorage.getItem('conductor_conectado') === 'true'; 
         let estoyEnViajeActivo = false;
-        let intervaloReloj = null; // VARIABLE DEL RELOJ PARA EL CONDUCTOR
+        let intervaloReloj = null;
 
         if (!datos || !datos.telefono) { 
             mostrarFormulario(); 
@@ -165,7 +161,7 @@
             if(datos && datos.telefono) {
                 db.ref('viajes').orderByChild('conductorCel').equalTo(datos.telefono).on('value', (snap) => {
                     let hayViajeValido = false;
-                    let viajeData = null; // Guardamos el viaje actual para el reloj
+                    let viajeData = null;
 
                     snap.forEach((child) => {
                         const v = child.val();
@@ -182,15 +178,13 @@
                         document.getElementById('contenedor').innerHTML = '';
                         if(intervaloReloj) clearInterval(intervaloReloj);
                     } else {
-                        // LOGICA DEL RELOJ PARA EL CONDUCTOR
                         if(intervaloReloj) clearInterval(intervaloReloj);
-                        // Solo correr el reloj si el conductor apenas fue asignado
                         if (viajeData && viajeData.estado === 'conductor_asignado' && viajeData.tiempoAsignacion) {
                             intervaloReloj = setInterval(() => {
                                 const elReloj = document.getElementById('reloj-conductor');
                                 if(elReloj) {
                                     const tiempoPasado = Date.now() - viajeData.tiempoAsignacion;
-                                    const tiempoRestante = (7 * 60 * 1000) - tiempoPasado; // 7 Minutos
+                                    const tiempoRestante = (7 * 60 * 1000) - tiempoPasado;
                                     if(tiempoRestante > 0) {
                                         const mins = Math.floor(tiempoRestante / 60000);
                                         const secs = Math.floor((tiempoRestante % 60000) / 1000);
@@ -242,14 +236,13 @@
                 conductorVehiculo: datos.vehiculo,
                 conductorColor: datos.color,
                 conductorPlaca: datos.placa,
-                tiempoAsignacion: Date.now() // ENVÍA LA HORA PARA QUE ARRANQUE EL RELOJ DEL PASAJERO
+                tiempoAsignacion: firebase.database.ServerValue.TIMESTAMP // CORRECCIÓN: TIEMPO DEL SERVIDOR
             });
         };
 
         function renderizarActivo(id, v) {
             const esLlegada = v.estado === 'conductor_llego';
             let relojHtml = '';
-            // Si apenas va en camino, mostramos el texto del reloj
             if (v.estado === 'conductor_asignado') {
                 relojHtml = `<div id="reloj-conductor" style="text-align:center; color:#ffc107; font-weight:bold; margin-bottom:15px; font-size:16px;">⏱️ Calculando tiempo...</div>`;
             }

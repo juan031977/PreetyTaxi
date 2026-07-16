@@ -183,6 +183,15 @@
             if(telInput) { telInput.value = savedCel; telInput.readOnly = true; }
             if(nomInput) { nomInput.value = savedName; nomInput.readOnly = true; }
         }
+        
+        // Recuperación de viaje activo
+        const viajeRecuperado = localStorage.getItem('viajeActivoID');
+        if (viajeRecuperado) {
+            viajeID = viajeRecuperado;
+            document.getElementById('btn-solicitar').disabled = true;
+            document.getElementById('btn-solicitar').innerText = "RECUPERANDO VIAJE...";
+            escucharEstadoViaje(viajeID);
+        }
     };
 
     function cambiarModo(modo) {
@@ -337,7 +346,8 @@
             <button class="btn-cancelar-viaje" onclick="cancelarViajeCliente('${Date.now()}')" style="margin-top: 15px; width: 100%;">❌ Cancelar Búsqueda</button>
         `; 
         
-        viajeID = Date.now(); 
+        viajeID = Date.now();
+        localStorage.setItem('viajeActivoID', viajeID);
         db.ref('viajes/' + viajeID).set({ 
             origen: origenFinal,
             destino: destinoFinal, 
@@ -448,6 +458,7 @@
             } 
             if (viaje.estado === 'completado') { 
                 if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
+                localStorage.removeItem('viajeActivoID');
                 mostrarViajeFinalizado(viaje); 
                 db.ref('viajes/' + id).off(); 
             } 
@@ -475,12 +486,14 @@
     function cancelarViajeCliente(id) { 
         if (confirm("¿Estás seguro de que deseas cancelar este viaje?")) { 
             if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
+            localStorage.removeItem('viajeActivoID');
             db.ref('viajes/' + id).off(); 
             db.ref('viajes/' + id).update({ estado: 'cancelado' }).then(() => { resetFormularioUI(); }); 
         } 
     } 
 
     function resetFormularioUI() { 
+        localStorage.removeItem('viajeActivoID');
         viajeID = null; 
         const btnSolicitar = document.getElementById('btn-solicitar'); 
         btnSolicitar.disabled = false; 

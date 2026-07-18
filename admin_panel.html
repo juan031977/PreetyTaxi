@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <title>Admin PreetyTaxi - Control Total</title>
-    <!-- Agregamos el script de Firebase Storage para las fotos -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script> 
     
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; }
-        .container { max-width: 1100px; margin: auto; }
+        .container { max-width: 1200px; margin: auto; }
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 20px; text-align: center; }
         table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; }
         th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; vertical-align: top; }
@@ -20,42 +19,39 @@
         .btn-active { background: #28a745; color: white; }
         .btn-reset { background: #007bff; color: white; }
         .btn-corte { background: #800080; color: white; padding: 15px; font-size: 16px; width: 100%; margin-bottom: 10px; }
-        
-        /* Nuevos botones para fotos y borrado */
         .btn-info { background: #17a2b8; color: white; font-size: 11px; padding: 5px 8px; }
         .btn-danger { background: #bd2130; color: white; margin-top: 5px; width: 100%; }
         
-        /* Colores bonitos para los estados */
         .badge-activo { color: #28a745; font-weight: bold; }
         .badge-bloqueado { color: #dc3545; font-weight: bold; }
         .badge-pendiente { color: #ffc107; font-weight: bold; }
-
-        /* Estilo para el buscador */
         .input-buscador { width: 100%; padding: 14px; margin-top: 15px; border-radius: 8px; border: 2px solid #ffc107; font-size: 16px; box-sizing: border-box; outline: none; }
         
-        /* Contenedor de controles de foto */
         .foto-controls { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ccc; }
         .foto-controls input { margin-bottom: 5px; width: 100%; font-size: 11px; }
+        
+        /* Estilos del Modal */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+        .modal-content { background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 500px; border-radius: 10px; position: relative; }
+        .close-btn { position: absolute; top: 10px; right: 15px; font-size: 24px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="card">
             <h2>Panel de Control Administrativo 🚕</h2>
-            <button class="btn btn-corte" onclick="corteDiario()">🌙 CORTE DIARIO (Cobrar B/. 1.00 y Bloquear a Todos)</button>
-            <button class="btn btn-block" onclick="cierreSemanal()">RESETEO SEMANAL (Borrar Viajes y Deudas)</button>
-            
-            <input type="text" id="buscador" onkeyup="filtrarConductores()" placeholder="🔍 Escribe el celular o nombre para buscar entre tus 60 conductores..." class="input-buscador">
+            <button class="btn btn-corte" onclick="corteDiario()">🌙 CORTE DIARIO</button>
+            <button class="btn btn-block" onclick="cierreSemanal()">RESETEO SEMANAL</button>
+            <input type="text" id="buscador" onkeyup="filtrarConductores()" placeholder="🔍 Buscar conductor..." class="input-buscador">
         </div>
 
         <table>
             <thead>
                 <tr>
-                    <th>Celular (ID Único)</th>
+                    <th>Celular</th>
                     <th>Nombre y Fotos</th>
-                    <th>Placa</th>
-                    <th>Estado</th>
-                    <th>Deuda</th>
+                    <th>Estado/Deuda</th>
+                    <th>Calificaciones</th>
                     <th>Acción</th>
                 </tr>
             </thead>
@@ -63,8 +59,16 @@
         </table>
     </div>
 
+    <!-- Modal de Comentarios -->
+    <div id="modalComentarios" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="cerrarModal()">&times;</span>
+            <h3>Comentarios del Conductor</h3>
+            <div id="lista-detallada" style="max-height: 400px; overflow-y: auto;"></div>
+        </div>
+    </div>
+
     <script>
-        // AQUÍ ESTÁ LA CORRECCIÓN: Se agregó el storageBucket
         const firebaseConfig = { 
             apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", 
             databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/",
@@ -73,160 +77,142 @@
         
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-        const storage = firebase.storage(); // Inicializamos Storage
+        const storage = firebase.storage();
 
         function cargarDatos() {
             db.ref('conductores').on('value', snap => {
                 const tbody = document.getElementById('lista-conductores');
                 tbody.innerHTML = "";
+                
                 snap.forEach(child => {
                     const d = child.val();
                     const cel = child.key;
                     
-                    let btnEstado = "";
-                    let claseEstado = "badge-bloqueado";
-
-                    if (d.estado === "pendiente") {
-                        btnEstado = `<button class="btn btn-active" onclick="cambiarEstado('${cel}', 'activo')">ACEPTAR</button>`;
-                        claseEstado = "badge-pendiente";
-                    } else if (d.estado === "activo") {
-                        btnEstado = `<button class="btn btn-block" onclick="cambiarEstado('${cel}', 'bloqueado')">BLOQUEAR</button>`;
-                        claseEstado = "badge-activo";
-                    } else {
-                        btnEstado = `<button class="btn btn-active" onclick="cambiarEstado('${cel}', 'activo')">ACTIVAR</button>`;
-                        claseEstado = "badge-bloqueado";
-                    }
-
-                    const deudaNum = parseFloat(d.deuda || 0);
-                    const colorDeuda = deudaNum > 0 ? "#dc3545" : "#28a745";
-
-                    // Indicadores visuales para saber si ya le subiste fotos
-                    const tieneFotoPerfil = d.foto_conductor ? '<span style="color:green; font-size:11px;">✅ Foto Perfil lista</span>' : '<span style="color:red; font-size:11px;">❌ Falta Perfil</span>';
-                    const tieneFotoCarro = d.foto_carro ? '<span style="color:green; font-size:11px;">✅ Foto Carro lista</span>' : '<span style="color:red; font-size:11px;">❌ Falta Carro</span>';
+                    const califs = d.calificaciones || {};
+                    let totalEstrellas = 0;
+                    let conteo = 0;
+                    Object.values(califs).forEach(c => {
+                        totalEstrellas += (parseFloat(c.estrellas) || 0);
+                        conteo++;
+                    });
+                    const promedio = conteo > 0 ? (totalEstrellas / conteo).toFixed(1) : "0.0";
+                    
+                    let btnEstado = d.estado === "pendiente" ? `<button class="btn btn-active" onclick="cambiarEstado('${cel}', 'activo')">ACEPTAR</button>` : `<button class="btn btn-block" onclick="cambiarEstado('${cel}', 'bloqueado')">BLOQUEAR</button>`;
+                    const claseEstado = d.estado === "pendiente" ? "badge-pendiente" : (d.estado === "activo" ? "badge-activo" : "badge-bloqueado");
+                    const tieneFotoPerfil = d.foto_conductor ? '<span style="color:green; font-size:10px;">✅ Perfil OK</span>' : '<span style="color:red; font-size:10px;">❌ Falta Perfil</span>';
+                    const tieneFotoCarro = d.foto_carro ? '<span style="color:green; font-size:10px;">✅ Carro OK</span>' : '<span style="color:red; font-size:10px;">❌ Falta Carro</span>';
 
                     tbody.innerHTML += `
                         <tr>
-                            <td style="font-weight: bold; color: #007bff;">${cel}</td>
+                            <td><strong>${cel}</strong></td>
                             <td>
                                 <strong>${d.nombre}</strong><br>
-                                ${tieneFotoPerfil}<br>
-                                ${tieneFotoCarro}
-                            </td>
-                            <td>${d.placa}</td>
-                            <td><span class="${claseEstado}">${(d.estado || 'pendiente').toUpperCase()}</span></td>
-                            <td style="color:${colorDeuda}; font-weight: bold;">B/. ${deudaNum.toFixed(2)}</td>
-                            <td>
-                                ${btnEstado}
-                                <button class="btn btn-reset" onclick="pagarDeuda('${cel}')">PAGÓ</button>
-                                
+                                ${tieneFotoPerfil}<br>${tieneFotoCarro}
                                 <div class="foto-controls">
                                     <input type="file" id="file-${cel}-perfil" accept="image/*">
                                     <button class="btn btn-info" onclick="subirImagen('${cel}', 'perfil')">Subir Perfil</button>
-                                    
-                                    <br><br>
-                                    
                                     <input type="file" id="file-${cel}-carro" accept="image/*">
                                     <button class="btn btn-info" onclick="subirImagen('${cel}', 'carro')">Subir Carro</button>
-                                    
-                                    <br>
-                                    <button class="btn btn-danger" onclick="eliminarConductor('${cel}')">❌ Eliminar Conductor</button>
                                 </div>
+                            </td>
+                            <td><span class="${claseEstado}">${(d.estado || 'pendiente').toUpperCase()}</span><br>B/. ${parseFloat(d.deuda || 0).toFixed(2)}</td>
+                            <td>
+                                <strong>${promedio} ★ (${conteo} viajes)</strong><br>
+                                <button class="btn btn-info" onclick="abrirModal('${cel}')">Ver Comentarios</button>
+                            </td>
+                            <td>
+                                ${btnEstado}
+                                <button class="btn btn-reset" onclick="pagarDeuda('${cel}')">PAGÓ</button>
+                                <button class="btn btn-danger" onclick="eliminarConductor('${cel}')">Eliminar</button>
                             </td>
                         </tr>`;
                 });
-                
-                filtrarConductores();
+            });
+        }
+
+        // --- Funciones del Modal ---
+        function abrirModal(cel) {
+            document.getElementById('modalComentarios').style.display = 'block';
+            const contenedor = document.getElementById('lista-detallada');
+            contenedor.innerHTML = "Cargando...";
+
+            db.ref('conductores/' + cel + '/calificaciones').once('value', snap => {
+                let html = "";
+                if (!snap.exists()) {
+                    html = "No hay comentarios registrados.";
+                } else {
+                    let listaComentarios = [];
+                    snap.forEach(c => { listaComentarios.push(c.val()); });
+                    
+                    // Ordenar: fecha más nueva primero
+                    listaComentarios.sort((a, b) => (b.fecha || 0) - (a.fecha || 0));
+
+                    listaComentarios.forEach(data => {
+                        const texto = data.comentario || data.comentario_pasajero || "Sin comentario";
+                        const fechaLegible = data.fecha ? new Date(data.fecha).toLocaleDateString() : "";
+                        html += `<div style="border-bottom:1px solid #eee; padding:10px;">
+                                    <strong>${data.estrellas} ★</strong> <span style="font-size:11px; color:#888;">${fechaLegible}</span><br>
+                                    <span style="font-size:14px;">${texto}</span>
+                                 </div>`;
+                    });
+                    html += `<hr><button class="btn btn-danger" style="width:100%" onclick="limpiarTextosComentarios('${cel}')">🗑️ Borrar SOLO textos (mantener estrellas)</button>`;
+                }
+                contenedor.innerHTML = html;
+            });
+        }
+
+        function cerrarModal() { document.getElementById('modalComentarios').style.display = 'none'; }
+
+        function limpiarTextosComentarios(cel) {
+            if(confirm("¿Seguro? Borrarás los textos pero mantendrás las estrellas.")) {
+                db.ref('conductores/' + cel + '/calificaciones').once('value', snap => {
+                    snap.forEach(child => {
+                        child.ref.update({ comentario: null, comentario_pasajero: null });
+                    });
+                    alert("Textos eliminados.");
+                    cerrarModal();
+                });
+            }
+        }
+
+        // --- Funciones existentes ---
+        function subirImagen(cel, tipo) {
+            const fileInput = document.getElementById(`file-${cel}-${tipo}`);
+            const file = fileInput.files[0];
+            if (!file) return alert("Selecciona un archivo");
+            const nombreCampoDB = tipo === 'perfil' ? 'foto_conductor' : 'foto_carro';
+            const storageRef = storage.ref(`conductores/${cel}/${tipo}.jpg`);
+            alert("Subiendo...");
+            storageRef.put(file).then(snapshot => {
+                snapshot.ref.getDownloadURL().then(url => {
+                    db.ref('conductores/' + cel).update({ [nombreCampoDB]: url });
+                    alert("¡Foto subida!");
+                });
+            });
+        }
+
+        function cambiarEstado(cel, nuevoEstado) { db.ref('conductores/' + cel).update({ estado: nuevoEstado }); }
+        function pagarDeuda(cel) { db.ref('conductores/' + cel).update({ deuda: 0, estado: 'activo' }); }
+        function eliminarConductor(cel) { if(confirm("¿Eliminar?")) db.ref('conductores/' + cel).remove(); }
+        
+        function corteDiario() {
+            db.ref('conductores').once('value', snap => {
+                snap.forEach(c => db.ref('conductores/' + c.key).update({ estado: 'bloqueado', deuda: 1.00 }));
+            });
+        }
+
+        function cierreSemanal() {
+            db.ref('viajes').remove();
+            db.ref('conductores').once('value', snap => {
+                snap.forEach(c => db.ref('conductores/' + c.key).update({ deuda: 0, estado: 'activo' }));
             });
         }
 
         function filtrarConductores() {
             const input = document.getElementById('buscador').value.toLowerCase();
-            const filas = document.querySelectorAll('#lista-conductores tr');
-            filas.forEach(fila => {
-                if (fila.textContent.toLowerCase().includes(input)) {
-                    fila.style.display = "";
-                } else {
-                    fila.style.display = "none";
-                }
+            document.querySelectorAll('#lista-conductores tr').forEach(fila => {
+                fila.style.display = fila.textContent.toLowerCase().includes(input) ? "" : "none";
             });
-        }
-
-        function cambiarEstado(cel, nuevoEstado) {
-            db.ref('conductores/' + cel).update({ estado: nuevoEstado });
-        }
-
-        function pagarDeuda(cel) {
-            if(confirm("¿Confirmar que este conductor pagó su deuda? Se pondrá en 0 y se ACTIVARÁ al instante.")) {
-                db.ref('conductores/' + cel).update({ 
-                    deuda: 0,
-                    estado: 'activo' 
-                });
-            }
-        }
-
-        function corteDiario() {
-            if(confirm("⚠️ ¿Estás seguro de BLOQUEAR a todos los conductores? Se les cargará B/. 1.00 de saldo.")) {
-                db.ref('conductores').once('value', snap => {
-                    snap.forEach(c => {
-                        db.ref('conductores/' + c.key).update({ estado: 'bloqueado', deuda: 1.00 });
-                    });
-                });
-                alert("Corte diario ejecutado. Todos los conductores han sido notificados en sus apps.");
-            }
-        }
-
-        function cierreSemanal() {
-            if(confirm("⚠️ ATENCIÓN: Se borrarán todos los viajes y se pondrán todas las deudas en 0. ¿Continuar?")) {
-                db.ref('viajes').remove();
-                db.ref('conductores').once('value', snap => {
-                    snap.forEach(c => {
-                        db.ref('conductores/' + c.key).update({ deuda: 0, estado: 'activo' });
-                    });
-                });
-            }
-        }
-
-        // --- NUEVAS FUNCIONES PARA FOTOS Y ELIMINACIÓN ---
-
-        function subirImagen(cel, tipo) {
-            const fileInput = document.getElementById(`file-${cel}-${tipo}`);
-            const file = fileInput.files[0];
-            
-            if (!file) {
-                return alert("⚠️ Por favor, selecciona un archivo de foto primero.");
-            }
-
-            // Si es 'perfil', lo guardamos como 'foto_conductor', si es 'carro' como 'foto_carro'
-            const nombreCampoDB = tipo === 'perfil' ? 'foto_conductor' : 'foto_carro';
-            const storageRef = storage.ref(`conductores/${cel}/${tipo}.jpg`);
-            
-            alert(`Subiendo foto de ${tipo}... Dale Aceptar y espera unos segundos.`);
-            
-            storageRef.put(file).then(snapshot => {
-                snapshot.ref.getDownloadURL().then(url => {
-                    db.ref('conductores/' + cel).update({ [nombreCampoDB]: url });
-                    alert(`✅ ¡Foto de ${tipo} subida correctamente!`);
-                    fileInput.value = ""; // Limpiar el selector
-                });
-            }).catch(error => {
-                alert("❌ Error al subir la foto: " + error.message);
-            });
-        }
-
-        function eliminarConductor(cel) {
-            if(confirm("🛑 ¿ESTÁS SEGURO? Vas a eliminar a este conductor DEFINITIVAMENTE. Perderá su acceso y liberarás su cupo.")) {
-                // 1. Borramos sus datos de la Realtime Database
-                db.ref('conductores/' + cel).remove().then(() => {
-                    
-                    // 2. Intentamos borrar sus fotos del Storage (no importa si no tenía, el catch lo ignora)
-                    storage.ref(`conductores/${cel}/perfil.jpg`).delete().catch(() => {});
-                    storage.ref(`conductores/${cel}/carro.jpg`).delete().catch(() => {});
-                    
-                    alert("🗑️ Conductor eliminado. El cupo está libre para alguien nuevo.");
-                }).catch(error => {
-                    alert("Error al eliminar: " + error.message);
-                });
-            }
         }
 
         window.onload = cargarDatos;

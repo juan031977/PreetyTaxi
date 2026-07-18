@@ -48,6 +48,16 @@
         #destino-seccion label { color: #25D366; }
         @keyframes slideIn { from { transform: translateX(400px); } to { transform: translateX(0); } }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 99999; justify-content: center; align-items: center; }
+        .modal-content { background: #222; padding: 25px; border-radius: 15px; border: 2px solid var(--gold); width: 85%; max-width: 350px; text-align: center; color: white; }
+        .estrellas { display: flex; justify-content: center; gap: 10px; margin: 15px 0; font-size: 35px; cursor: pointer; direction: rtl; }
+        .estrellas span { color: #555; transition: color 0.2s; }
+        .estrellas span:hover, .estrellas span:hover ~ span { color: var(--gold); }
+        .estrellas span.seleccionada, .estrellas span.seleccionada ~ span { color: var(--gold); }
+        .btn-enviar-cal { background: var(--gold); color: black; border: none; padding: 12px 20px; font-weight: bold; border-radius: 8px; cursor: pointer; width: 100%; margin-top: 10px; }
+        .btn-soporte { background: #dc3545; color: white; padding: 10px; border-radius: 8px; border: none; width: 100%; margin-top: 10px; font-weight: bold; cursor: pointer; }
+        textarea.reporte-input { width: 100%; height: 80px; background: #111; color: white; border: 1px solid #444; border-radius: 8px; padding: 10px; margin-top: 10px; resize: none; box-sizing: border-box;}
     </style>
 </head>
 <body>
@@ -66,7 +76,6 @@
             <button id="btn-interna" class="btn-modo" onclick="cambiarModo('interna')">Rutas Internas</button>
         </div>
 
-        <!-- ORIGEN COMPARTIDO PARA AMBOS MODOS -->
         <div class="seccion-interna" id="origen-seccion">
             <label style="margin-top:0;">Donde Te Buscamos</label>
             <div style="display:flex; gap:5px; flex-wrap:wrap; margin-top:8px;">
@@ -92,7 +101,6 @@
             <div id="origen-subcat-container"></div>
         </div>
 
-        <!-- DESTINO PARA RUTAS EXTERNAS (MAPA) -->
         <div id="panel-externo" style="display: block;">
             <div class="seccion-interna" style="border-color:#25D366; background: #0a1f14;">
                 <label style="margin-top:0; color:#25D366;">A DONDE VAS</label>
@@ -101,7 +109,6 @@
             </div>
         </div>
 
-        <!-- DESTINO PARA RUTAS INTERNAS (BOTONES) -->
         <div id="panel-interno" style="display: none;">
             <div class="seccion-interna" id="destino-seccion">
                 <label style="margin-top:0;">A DONDE VAS</label>
@@ -154,6 +161,33 @@
     </div>
 </div>
 
+<div id="modal-calificar" class="modal-overlay">
+    <div class="modal-content">
+        <h2 style="color:var(--gold); margin-top:0;">¡Llegaste a tu destino!</h2>
+        <p>¿Qué tal fue tu viaje con <strong id="nombre-conductor-cal">el conductor</strong>?</p>
+        <div class="estrellas" id="estrellas-cliente">
+            <span onclick="marcarEstrellas(5, 'cliente')">★</span>
+            <span onclick="marcarEstrellas(4, 'cliente')">★</span>
+            <span onclick="marcarEstrellas(3, 'cliente')">★</span>
+            <span onclick="marcarEstrellas(2, 'cliente')">★</span>
+            <span onclick="marcarEstrellas(1, 'cliente')">★</span>
+        </div>
+        <p id="texto-estrellas-cliente" style="font-size: 14px; color: #aaa; margin-bottom: 5px;">Selecciona una calificación</p>
+        <textarea id="comentario-cliente" class="reporte-input" placeholder="Escribe un comentario opcional sobre el conductor..."></textarea>
+        <button class="btn-enviar-cal" onclick="enviarCalificacionConductor()">Enviar Calificación</button>
+    </div>
+</div>
+
+<div id="modal-soporte" class="modal-overlay">
+    <div class="modal-content">
+        <h3 style="color:#dc3545; margin-top:0;">Servicio al Cliente</h3>
+        <p style="font-size:14px; color:#ccc;">¿Tuviste algún problema con el conductor o el viaje?</p>
+        <textarea id="texto-queja" class="reporte-input" placeholder="Escribe tu reporte o queja aquí..."></textarea>
+        <button class="btn-soporte" onclick="enviarQueja()">Enviar Reporte al Administrador</button>
+        <button style="background:transparent; color:#aaa; border:none; margin-top:15px; cursor:pointer;" onclick="cerrarSoporte()">Cancelar</button>
+    </div>
+</div>
+
 <script>
     const firebaseConfig = { apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
@@ -168,6 +202,9 @@
     let origenTipo = null, origenSeleccionado = null, origenPrecio = 0;
     let destinoTipo = null, destinoSeleccionado = null, destinoPrecio = 0;
     let relojPasajeroInterval = null; 
+    
+    let calificacionSeleccionada = 0;
+    let viajeCompletadoData = null; 
 
     const PRECIOS_PH = { 'PH La Riviera Colonial': 1.75, 'Brisas del Pacífico': 1.75, 'PH Brisas Point': 1.75, 'PH Brisas Heights': 1.75, 'PH Golf Gardens': 2.50, 'Club De Golf': 2.50, 'PH Alpes': 2.50, 'PH Everest': 2.50, 'PH Bejin': 2.50, 'PH Olimpus': 2.50, 'PH Mont Blanc': 2.50, 'PH Sierra Nevada': 2.50, 'PH Aventura': 3.00, 'PH Vallarta': 3.00, 'PH Noura': 3.00, 'PH Cavana': 3.00, 'Parque Rash': 3.00, 'PH Lagun': 1.50, 'PH Royal Village': 2.00, 'Oxford School': 3.00, 'Green City': 6.00, 'Golf Garden': 2.50, 'PH Ventura': 3.00 };
     const PRECIOS_VILLAS = { 'Lomas del Golf (Garita)': 1.50, 'Lomas del Golf (Adentro)': 1.75, 'Villas del Golf (Garita)': 1.50, 'Villas del Golf (Adentro)': 1.75, 'Monticello 1 (Garita)': 1.50, 'Monticello 1 (Adentro)': 1.75, 'Monticello 2 (Garita)': 1.50, 'Monticello 2 (Adentro)': 1.75, 'Villa Lido (Garita)': 1.50, 'Villa Lido (Adentro)': 1.75, 'Villa Alta (Garita)': 1.50, 'Villa Alta (Adentro)': 1.75, 'Villa Tivoli (Garita)': 1.50, 'Villa Tivoli (Adentro)': 1.75, 'Villa Navona (Garita)': 1.50, 'Villa Navona (Adentro)': 1.75, 'Villa Tiber (Garita)': 1.50, 'Villa Tiber (Adentro)': 1.75 };
@@ -204,7 +241,6 @@
         document.getElementById('panel-interno').style.display = modo === 'interna'? 'block' : 'none';
         document.getElementById('display-precio').innerText = "B/. 0.00";
         
-        // Refrescar botones de origen para ocultar o mostrar precios
         if(origenTipo) seleccionarOrigenTipo(origenTipo);
 
         if (modo === 'externa') {
@@ -215,7 +251,6 @@
         }
     }
 
-    // GENERADOR DINÁMICO DE BOTONES DE ORIGEN (Oculta precios si es ruta externa)
     function seleccionarOrigenTipo(tipo) {
         origenTipo = tipo;
         document.querySelectorAll('#origen-seccion .cat-interna-btn').forEach(b => b.classList.remove('active'));
@@ -226,7 +261,6 @@
         const generarBotones = (obj) => {
             let htmlTemp = '<div class="subcat-grid">';
             Object.keys(obj).forEach(nombre => {
-                // Solo pinta el precio si estamos en modo interno
                 const textoPrecio = modoActual === 'interna' ? `<br>B/. ${obj[nombre].toFixed(2)}` : '';
                 htmlTemp += `<button class="btn-subcat" onclick="seleccionarOrigenSubcat(this, '${nombre}', ${obj[nombre]})">${nombre}${textoPrecio}</button>`;
             });
@@ -281,7 +315,6 @@
         actualizarRuta(); 
     }
 
-    // DISPARADOR CENTRAL DE ACTUALIZACIÓN
     function actualizarRuta() {
         if (modoActual === 'interna') {
             calcularInterna();
@@ -323,22 +356,20 @@
         });
     }
 
-    // CALCULO DE RUTA EXTERNA DINAMICA BASADA EN EL ORIGEN SELECCIONADO
     function calcularRuta() {
         if (modoActual !== 'externa' || !destinoCoords) return;
 
         let origenTxtParaMapa = "";
         
-        // Armamos el texto exacto del origen para que Google Maps lo busque
         if (origenTipo === 'calle') {
             const calle = document.getElementById('calle-origen').value;
             const zona = document.getElementById('zona-origen').value;
-            if (!calle) return; // Espera a que escriba la calle
+            if (!calle) return; 
             origenTxtParaMapa = `Calle ${calle} ${zona}, Brisas del Golf, San Miguelito, Panamá`;
         } else if (origenSeleccionado) {
             origenTxtParaMapa = `${origenSeleccionado}, Brisas del Golf, San Miguelito, Panamá`;
         } else {
-            return; // No ha seleccionado origen
+            return; 
         }
 
         directionsService.route({ 
@@ -365,7 +396,6 @@
         const nombrePasajeroActual = document.getElementById('nombreUsuario').value || "Pasajero"; 
         const telefono = document.getElementById('telefono').value.replace(/[^0-9]/g, '');
         
-        // RECOGER EL ORIGEN SELECCIONADO (IGUAL PARA AMBOS MODOS)
         if (origenTipo === 'calle') { 
             const calle = document.getElementById('calle-origen').value; 
             const zona = document.getElementById('zona-origen').value; 
@@ -377,7 +407,6 @@
             return alert("Por favor selecciona dónde te buscamos"); 
         } 
         
-        // RECOGER EL DESTINO DEPENDIENDO DEL MODO
         if (modoActual === 'externa') {
             destinoFinal = document.getElementById('destino-input').value;
             if (!destinoFinal) return alert("Por favor completa el destino en el mapa");
@@ -513,12 +542,19 @@
             } 
             if (viaje.estado === 'viaje_iniciado') { 
                 if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
-                document.getElementById('estado-viaje-container').innerHTML = `<div class="card-conductor"><h3>🚗 Viaje en curso</h3><p style="color:#28a745; font-size:18px; margin:15px 0;">Buen viaje</p><p><strong>Conductor:</strong> ${viaje.conductorNombre}</p><p><strong>Tel:</strong> +${viaje.conductorCel}</p></div>`; 
+                document.getElementById('estado-viaje-container').innerHTML = `
+                    <div class="card-conductor">
+                        <h3>🚗 Viaje en curso</h3>
+                        <p style="color:#28a745; font-size:18px; margin:15px 0;">Buen viaje</p>
+                        <p><strong>Conductor:</strong> ${viaje.conductorNombre}</p>
+                        <p><strong>Tel:</strong> +${viaje.conductorCel}</p>
+                        <button class="btn-soporte" onclick="abrirSoporte()">🎧 Reportar Problema</button>
+                    </div>`; 
             } 
             if (viaje.estado === 'completado') { 
                 if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
                 localStorage.removeItem('viajeActivoID');
-                mostrarViajeFinalizado(viaje); 
+                mostrarModalCalificacionConductor(viaje); 
                 db.ref('viajes/' + id).off(); 
             } 
             if (viaje.estado === 'cancelado') { 
@@ -559,6 +595,68 @@
         btnSolicitar.innerText = "SOLICITAR TAXI"; 
         document.getElementById('estado-viaje-container').innerHTML = ""; 
     } 
+
+    function marcarEstrellas(valor, tipo) {
+        calificacionSeleccionada = valor;
+        const estrellas = document.querySelectorAll(`#estrellas-${tipo} span`);
+        estrellas.forEach(e => e.classList.remove('seleccionada'));
+        event.target.classList.add('seleccionada');
+        
+        const textos = {1: "Muy Malo 😠", 2: "Malo 😕", 3: "Regular 😐", 4: "Bueno 🙂", 5: "Excelente 🤩"};
+        document.getElementById(`texto-estrellas-${tipo}`).innerText = textos[valor];
+    }
+
+    function mostrarModalCalificacionConductor(viaje) {
+        viajeCompletadoData = viaje;
+        document.getElementById('nombre-conductor-cal').innerText = viaje.conductorNombre || 'el conductor';
+        document.getElementById('modal-calificar').style.display = 'flex';
+    }
+
+    function enviarCalificacionConductor() {
+        if (calificacionSeleccionada === 0) return alert("Por favor selecciona una estrella.");
+        
+        const comentario = document.getElementById('comentario-cliente').value || "Sin comentario";
+        
+        // 1. Guardamos en el nodo de viajes (para que el Admin lo vea)
+        db.ref('viajes/' + viajeID).update({
+            calificacion_conductor: calificacionSeleccionada,
+            comentario_pasajero: comentario 
+        });
+
+        // 2. Guardamos en el perfil del conductor (para tu histórico)
+        if (viajeCompletadoData && viajeCompletadoData.conductorCel) {
+            db.ref('conductores/' + viajeCompletadoData.conductorCel + '/calificaciones/' + viajeID).set({
+                estrellas: calificacionSeleccionada,
+                comentario: comentario,
+                fecha: new Date().toISOString()
+            });
+        }
+
+        document.getElementById('modal-calificar').style.display = 'none';
+        mostrarViajeFinalizado(viajeCompletadoData);
+    }
+
+    function abrirSoporte() { document.getElementById('modal-soporte').style.display = 'flex'; }
+    function cerrarSoporte() { document.getElementById('modal-soporte').style.display = 'none'; }
+
+    function enviarQueja() {
+        const texto = document.getElementById('texto-queja').value;
+        if (!texto) return alert("Escribe un comentario.");
+        
+        const quejaID = Date.now();
+        db.ref('quejas/' + quejaID).set({
+            viajeID: viajeID || 'Sin viaje activo',
+            pasajero: localStorage.getItem('nombre_pasajero') || 'Anónimo',
+            telefono_pasajero: localStorage.getItem('telefono_pasajero') || '',
+            mensaje: texto,
+            fecha: new Date().toLocaleString(),
+            estado: 'pendiente_revision'
+        }).then(() => {
+            alert("Tu reporte ha sido enviado a la administración.");
+            cerrarSoporte();
+            document.getElementById('texto-queja').value = '';
+        });
+    }
 </script>
 </body>
 </html>

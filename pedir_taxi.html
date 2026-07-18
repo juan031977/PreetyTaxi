@@ -31,7 +31,7 @@
         .btn-whatsapp { display: block; background: #25D366; color: white; padding: 12px; border-radius: 10px; font-weight: bold; margin: 10px auto 0 auto; width: 85%; box-sizing: border-box; border: none; cursor: pointer; }
         .btn-cancelar-viaje { background: #dc3545; color: white; width: 85%; padding: 12px; border: none; border-radius: 10px; font-weight: bold; margin-top: 10px; cursor: pointer; display: block; margin-left: auto; margin-right: auto;}
         .notificacion-llegada { position: fixed; top: 20px; right: 20px; background: #28a745; color: white; padding: 20px; border-radius: 12px; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.3); animation: slideIn 0.3s; max-width: 300px; }
-        .toggle-modos { display: flex; gap: 10px; margin-top: 15px; }
+        .toggle-modos { display: flex; gap: 10px; margin-top: 15px; margin-bottom: 15px; }
         .btn-modo { flex: 1; background: #333; color: white; border: 1px solid #555; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; }
         .btn-modo.active { background: var(--gold); color: black; border-color: var(--gold); }
         .btn-volver { position: absolute; top: 20px; left: 15px; background: transparent; color: #aaa; border: none; font-size: 14px; font-weight: bold; cursor: pointer; z-index: 20; }
@@ -66,40 +66,43 @@
             <button id="btn-interna" class="btn-modo" onclick="cambiarModo('interna')">Rutas Internas</button>
         </div>
 
-        <div id="panel-externo">
-            <label>¿Dónde te buscamos?</label>
-            <input type="text" id="origen" placeholder="Ej: Plaza del Golf">
-            <label>¿A dónde vas?</label>
-            <input type="text" id="destino-input" placeholder="Ej: Río Abajo">
-            <div id="mapa-destino"></div>
+        <!-- ORIGEN COMPARTIDO PARA AMBOS MODOS -->
+        <div class="seccion-interna" id="origen-seccion">
+            <label style="margin-top:0;">Donde Te Buscamos</label>
+            <div style="display:flex; gap:5px; flex-wrap:wrap; margin-top:8px;">
+                <button class="cat-interna-btn" id="origen-cat-calle" onclick="seleccionarOrigenTipo('calle')">Calles Brisas</button>
+                <button class="cat-interna-btn" id="origen-cat-mall" onclick="seleccionarOrigenTipo('mall')">SuperMercados/Mall</button>
+                <button class="cat-interna-btn" id="origen-cat-ph" onclick="seleccionarOrigenTipo('ph')">PH</button>
+                <button class="cat-interna-btn" id="origen-cat-villas" onclick="seleccionarOrigenTipo('villas')">Villas Del Golf</button>
+                <button class="cat-interna-btn" id="origen-cat-escuelas" onclick="seleccionarOrigenTipo('escuelas')">Escuelas</button>
+                <button class="cat-interna-btn" id="origen-cat-otros" onclick="seleccionarOrigenTipo('otros')">Otras Zonas</button>
+                <button class="cat-interna-btn" id="origen-cat-estacion" onclick="seleccionarOrigenTipo('estacion')">Estación Línea 2</button>
+            </div>
+            <div id="origen-calle-input" style="display:none; margin-top:10px;">
+                <input type="number" id="calle-origen" placeholder="N° Calle (Ej: 34)" oninput="actualizarRuta()">
+                <select id="zona-origen" onchange="actualizarRuta()" style="margin-top:8px;">
+                    <option value="Asur">Asur</option>
+                    <option value="Occidente">Occidente</option>
+                    <option value="Norte">Norte</option>
+                    <option value="Sur">Sur</option>
+                    <option value="Oeste">Oeste</option>
+                    <option value="Este">Este</option>
+                </select>
+            </div>
+            <div id="origen-subcat-container"></div>
         </div>
 
-        <div id="panel-interno" style="display: none;">
-            <div class="seccion-interna" id="origen-seccion">
-                <label style="margin-top:0;">Donde Te Buscamos</label>
-                <div style="display:flex; gap:5px; flex-wrap:wrap; margin-top:8px;">
-                    <button class="cat-interna-btn" id="origen-cat-calle" onclick="seleccionarOrigenTipo('calle')">Calles Brisas</button>
-                    <button class="cat-interna-btn" id="origen-cat-mall" onclick="seleccionarOrigenTipo('mall')">SuperMercados/Mall</button>
-                    <button class="cat-interna-btn" id="origen-cat-ph" onclick="seleccionarOrigenTipo('ph')">PH</button>
-                    <button class="cat-interna-btn" id="origen-cat-villas" onclick="seleccionarOrigenTipo('villas')">Villas Del Golf</button>
-                    <button class="cat-interna-btn" id="origen-cat-escuelas" onclick="seleccionarOrigenTipo('escuelas')">Escuelas</button>
-                    <button class="cat-interna-btn" id="origen-cat-otros" onclick="seleccionarOrigenTipo('otros')">Otras Zonas</button>
-                    <button class="cat-interna-btn" id="origen-cat-estacion" onclick="seleccionarOrigenTipo('estacion')">Estación Línea 2</button>
-                </div>
-                <div id="origen-calle-input" style="display:none; margin-top:10px;">
-                    <input type="number" id="calle-origen" placeholder="N° Calle (Ej: 34)" oninput="calcularInterna()">
-                    <select id="zona-origen" onchange="calcularInterna()" style="margin-top:8px;">
-                        <option value="Asur">Asur</option>
-                        <option value="Occidente">Occidente</option>
-                        <option value="Norte">Norte</option>
-                        <option value="Sur">Sur</option>
-                        <option value="Oeste">Oeste</option>
-                        <option value="Este">Este</option>
-                    </select>
-                </div>
-                <div id="origen-subcat-container"></div>
+        <!-- DESTINO PARA RUTAS EXTERNAS (MAPA) -->
+        <div id="panel-externo" style="display: block;">
+            <div class="seccion-interna" style="border-color:#25D366; background: #0a1f14;">
+                <label style="margin-top:0; color:#25D366;">A DONDE VAS</label>
+                <input type="text" id="destino-input" placeholder="Ej: Río Abajo">
+                <div id="mapa-destino"></div>
             </div>
+        </div>
 
+        <!-- DESTINO PARA RUTAS INTERNAS (BOTONES) -->
+        <div id="panel-interno" style="display: none;">
             <div class="seccion-interna" id="destino-seccion">
                 <label style="margin-top:0;">A DONDE VAS</label>
                 <div style="display:flex; gap:5px; flex-wrap:wrap; margin-top:8px;">
@@ -112,8 +115,8 @@
                     <button class="cat-interna-btn" id="dest-cat-estacion" onclick="seleccionarDestinoTipo('estacion')">Estación Línea 2</button>
                 </div>
                 <div id="destino-calle-input" style="display:none; margin-top:10px;">
-                    <input type="number" id="calle-destino" placeholder="N° Calle (Ej: 36)" oninput="calcularInterna()">
-                    <select id="zona-destino" onchange="calcularInterna()" style="margin-top:8px;">
+                    <input type="number" id="calle-destino" placeholder="N° Calle (Ej: 36)" oninput="actualizarRuta()">
+                    <select id="zona-destino" onchange="actualizarRuta()" style="margin-top:8px;">
                         <option value="Asur">Asur</option>
                         <option value="Occidente">Occidente</option>
                         <option value="Norte">Norte</option>
@@ -157,8 +160,8 @@
     const db = firebase.database();
     
     let mapa, directionsService, directionsRenderer;
-    let origenCoords = null, destinoCoords = null;
-    let autoOrigen, autoDestino;
+    let destinoCoords = null;
+    let autoDestino; 
     let viajeID = null;
     let modoActual = 'externa';
 
@@ -200,34 +203,58 @@
         document.getElementById('panel-externo').style.display = modo === 'externa'? 'block' : 'none';
         document.getElementById('panel-interno').style.display = modo === 'interna'? 'block' : 'none';
         document.getElementById('display-precio').innerText = "B/. 0.00";
-        if (modo === 'interna') {
-            if (autoOrigen) {
-                google.maps.event.clearInstanceListeners(document.getElementById('origen'));
-                autoOrigen = null;
-            }
-        } else {
-            if (!autoOrigen) initAutocomplete();
+        
+        // Refrescar botones de origen para ocultar o mostrar precios
+        if(origenTipo) seleccionarOrigenTipo(origenTipo);
+
+        if (modo === 'externa') {
+            if (!autoDestino) initAutocomplete();
             calcularRuta();
+        } else {
+            calcularInterna();
         }
     }
 
+    // GENERADOR DINÁMICO DE BOTONES DE ORIGEN (Oculta precios si es ruta externa)
     function seleccionarOrigenTipo(tipo) {
         origenTipo = tipo;
         document.querySelectorAll('#origen-seccion .cat-interna-btn').forEach(b => b.classList.remove('active'));
         document.getElementById('origen-cat-' + tipo).classList.add('active');
         origenSeleccionado = null; origenPrecio = 0;
         document.getElementById('origen-calle-input').style.display = tipo === 'calle'? 'block' : 'none';
+        
+        const generarBotones = (obj) => {
+            let htmlTemp = '<div class="subcat-grid">';
+            Object.keys(obj).forEach(nombre => {
+                // Solo pinta el precio si estamos en modo interno
+                const textoPrecio = modoActual === 'interna' ? `<br>B/. ${obj[nombre].toFixed(2)}` : '';
+                htmlTemp += `<button class="btn-subcat" onclick="seleccionarOrigenSubcat(this, '${nombre}', ${obj[nombre]})">${nombre}${textoPrecio}</button>`;
+            });
+            return htmlTemp + '</div>';
+        };
+
         let html = '';
-        if (tipo === 'mall') { html = '<div class="subcat-grid">'; Object.keys(PRECIOS_MALL).forEach(nombre => { html += `<button class="btn-subcat" onclick="seleccionarOrigenSubcat(this, '${nombre}', ${PRECIOS_MALL[nombre]})">${nombre}<br>B/. ${PRECIOS_MALL[nombre].toFixed(2)}</button>`; }); html += '</div>'; } 
-        else if (tipo === 'ph') { html = '<div class="subcat-grid">'; Object.keys(PRECIOS_PH).forEach(nombre => { html += `<button class="btn-subcat" onclick="seleccionarOrigenSubcat(this, '${nombre}', ${PRECIOS_PH[nombre]})">${nombre}<br>B/. ${PRECIOS_PH[nombre].toFixed(2)}</button>`; }); html += '</div>'; } 
-        else if (tipo === 'villas') { html = '<div class="subcat-grid">'; Object.keys(PRECIOS_VILLAS).forEach(nombre => { html += `<button class="btn-subcat" onclick="seleccionarOrigenSubcat(this, '${nombre}', ${PRECIOS_VILLAS[nombre]})">${nombre}<br>B/. ${PRECIOS_VILLAS[nombre].toFixed(2)}</button>`; }); html += '</div>'; } 
-        else if (tipo === 'escuelas') { html = '<div class="subcat-grid">'; Object.keys(PRECIOS_ESCUELAS).forEach(nombre => { html += `<button class="btn-subcat" onclick="seleccionarOrigenSubcat(this, '${nombre}', ${PRECIOS_ESCUELAS[nombre]})">${nombre}<br>B/. ${PRECIOS_ESCUELAS[nombre].toFixed(2)}</button>`; }); html += '</div>'; } 
-        else if (tipo === 'otros') { html = '<div class="subcat-grid">'; Object.keys(PRECIOS_OTROS).forEach(nombre => { html += `<button class="btn-subcat" onclick="seleccionarOrigenSubcat(this, '${nombre}', ${PRECIOS_OTROS[nombre]})">${nombre}<br>B/. ${PRECIOS_OTROS[nombre].toFixed(2)}</button>`; }); html += '</div>'; } 
-        else if (tipo === 'estacion') { seleccionarOrigenSubcat(null, 'Estación Brisas del Golf Línea 2', 0); html = '<p style="color:#aaa; font-size:12px; margin-top:10px;">Origen seleccionado. Elige destino abajo.</p>'; }
-        document.getElementById('origen-subcat-container').innerHTML = html; calcularInterna();
+        if (tipo === 'mall') html = generarBotones(PRECIOS_MALL);
+        else if (tipo === 'ph') html = generarBotones(PRECIOS_PH);
+        else if (tipo === 'villas') html = generarBotones(PRECIOS_VILLAS);
+        else if (tipo === 'escuelas') html = generarBotones(PRECIOS_ESCUELAS);
+        else if (tipo === 'otros') html = generarBotones(PRECIOS_OTROS);
+        else if (tipo === 'estacion') { 
+            seleccionarOrigenSubcat(null, 'Estación Brisas del Golf Línea 2', 0); 
+            html = '<p style="color:#aaa; font-size:12px; margin-top:10px;">Origen seleccionado.</p>'; 
+        }
+        
+        document.getElementById('origen-subcat-container').innerHTML = html; 
+        actualizarRuta();
     }
 
-    function seleccionarOrigenSubcat(btn, nombre, precio) { origenSeleccionado = nombre; origenPrecio = precio; document.querySelectorAll('#origen-subcat-container .btn-subcat').forEach(b => b.classList.remove('active')); if(btn) btn.classList.add('active'); calcularInterna(); }
+    function seleccionarOrigenSubcat(btn, nombre, precio) { 
+        origenSeleccionado = nombre; 
+        origenPrecio = precio; 
+        document.querySelectorAll('#origen-subcat-container .btn-subcat').forEach(b => b.classList.remove('active')); 
+        if(btn) btn.classList.add('active'); 
+        actualizarRuta(); 
+    }
     
     function seleccionarDestinoTipo(tipo) {
         destinoTipo = tipo;
@@ -241,11 +268,27 @@
         else if (tipo === 'villas') { html = '<div class="subcat-grid">'; Object.keys(PRECIOS_VILLAS).forEach(nombre => { html += `<button class="btn-subcat" onclick="seleccionarDestinoSubcat(this, '${nombre}', ${PRECIOS_VILLAS[nombre]})">${nombre}<br>B/. ${PRECIOS_VILLAS[nombre].toFixed(2)}</button>`; }); html += '</div>'; } 
         else if (tipo === 'escuelas') { html = '<div class="subcat-grid">'; Object.keys(PRECIOS_ESCUELAS).forEach(nombre => { html += `<button class="btn-subcat" onclick="seleccionarDestinoSubcat(this, '${nombre}', ${PRECIOS_ESCUELAS[nombre]})">${nombre}<br>B/. ${PRECIOS_ESCUELAS[nombre].toFixed(2)}</button>`; }); html += '</div>'; } 
         else if (tipo === 'otros') { html = '<div class="subcat-grid">'; Object.keys(PRECIOS_OTROS).forEach(nombre => { html += `<button class="btn-subcat" onclick="seleccionarDestinoSubcat(this, '${nombre}', ${PRECIOS_OTROS[nombre]})">${nombre}<br>B/. ${PRECIOS_OTROS[nombre].toFixed(2)}</button>`; }); html += '</div>'; } 
-        else if (tipo === 'estacion') { seleccionarDestinoSubcat(null, 'Estación Brisas del Golf Línea 2', 0); html = '<p style="color:#aaa; font-size:12px; margin-top:10px;">Destino seleccionado. Elige origen arriba.</p>'; }
-        document.getElementById('destino-subcat-container').innerHTML = html; calcularInterna();
+        else if (tipo === 'estacion') { seleccionarDestinoSubcat(null, 'Estación Brisas del Golf Línea 2', 0); html = '<p style="color:#aaa; font-size:12px; margin-top:10px;">Destino seleccionado.</p>'; }
+        document.getElementById('destino-subcat-container').innerHTML = html; 
+        actualizarRuta();
     }
 
-    function seleccionarDestinoSubcat(btn, nombre, precio) { destinoSeleccionado = nombre; destinoPrecio = precio; document.querySelectorAll('#destino-subcat-container .btn-subcat').forEach(b => b.classList.remove('active')); if(btn) btn.classList.add('active'); calcularInterna(); }
+    function seleccionarDestinoSubcat(btn, nombre, precio) { 
+        destinoSeleccionado = nombre; 
+        destinoPrecio = precio; 
+        document.querySelectorAll('#destino-subcat-container .btn-subcat').forEach(b => b.classList.remove('active')); 
+        if(btn) btn.classList.add('active'); 
+        actualizarRuta(); 
+    }
+
+    // DISPARADOR CENTRAL DE ACTUALIZACIÓN
+    function actualizarRuta() {
+        if (modoActual === 'interna') {
+            calcularInterna();
+        } else {
+            calcularRuta();
+        }
+    }
 
     function calcularInterna() {
         if (modoActual!== 'interna') return;
@@ -266,19 +309,43 @@
         document.getElementById('display-precio').innerText = "B/. " + precio.toFixed(2);
     }
 
-    function initMap() { mapa = new google.maps.Map(document.getElementById('mapa-destino'), { zoom: 13, center: { lat: 8.98, lng: -79.52 } }); directionsService = new google.maps.DirectionsService(); directionsRenderer = new google.maps.DirectionsRenderer({ map: mapa }); }
+    function initMap() { mapa = new google.maps.Map(document.getElementById('mapa-destino'), { zoom: 13, center: { lat: 9.0729, lng: -79.4451 } }); directionsService = new google.maps.DirectionsService(); directionsRenderer = new google.maps.DirectionsRenderer({ map: mapa }); }
     
     function initAutocomplete() {
-        if (autoOrigen) return;
-        autoOrigen = new google.maps.places.Autocomplete(document.getElementById('origen'), { componentRestrictions: { country: 'pa' } });
+        if (autoDestino) return;
         autoDestino = new google.maps.places.Autocomplete(document.getElementById('destino-input'), { componentRestrictions: { country: 'pa' } });
-        autoOrigen.addListener('place_changed', () => { const place = autoOrigen.getPlace(); if (place.geometry) { origenCoords = place.geometry.location; if(modoActual === 'externa') calcularRuta(); } });
-        autoDestino.addListener('place_changed', () => { const place = autoDestino.getPlace(); if (place.geometry) { destinoCoords = place.geometry.location; if(modoActual === 'externa') calcularRuta(); } });
+        autoDestino.addListener('place_changed', () => { 
+            const place = autoDestino.getPlace(); 
+            if (place.geometry) { 
+                destinoCoords = place.geometry.location; 
+                actualizarRuta(); 
+            } 
+        });
     }
 
+    // CALCULO DE RUTA EXTERNA DINAMICA BASADA EN EL ORIGEN SELECCIONADO
     function calcularRuta() {
-        if (!origenCoords ||!destinoCoords || modoActual!== 'externa') return;
-        directionsService.route({ origin: origenCoords, destination: destinoCoords, travelMode: 'DRIVING' }, (response, status) => {
+        if (modoActual !== 'externa' || !destinoCoords) return;
+
+        let origenTxtParaMapa = "";
+        
+        // Armamos el texto exacto del origen para que Google Maps lo busque
+        if (origenTipo === 'calle') {
+            const calle = document.getElementById('calle-origen').value;
+            const zona = document.getElementById('zona-origen').value;
+            if (!calle) return; // Espera a que escriba la calle
+            origenTxtParaMapa = `Calle ${calle} ${zona}, Brisas del Golf, San Miguelito, Panamá`;
+        } else if (origenSeleccionado) {
+            origenTxtParaMapa = `${origenSeleccionado}, Brisas del Golf, San Miguelito, Panamá`;
+        } else {
+            return; // No ha seleccionado origen
+        }
+
+        directionsService.route({ 
+            origin: origenTxtParaMapa, 
+            destination: destinoCoords, 
+            travelMode: 'DRIVING' 
+        }, (response, status) => {
             if (status === 'OK') {
                 directionsRenderer.setDirections(response);
                 const distanceKm = response.routes[0].legs[0].distance.value / 1000;
@@ -298,40 +365,37 @@
         const nombrePasajeroActual = document.getElementById('nombreUsuario').value || "Pasajero"; 
         const telefono = document.getElementById('telefono').value.replace(/[^0-9]/g, '');
         
+        // RECOGER EL ORIGEN SELECCIONADO (IGUAL PARA AMBOS MODOS)
+        if (origenTipo === 'calle') { 
+            const calle = document.getElementById('calle-origen').value; 
+            const zona = document.getElementById('zona-origen').value; 
+            if (!calle) return alert("Por favor ingresa el número de calle de donde te buscamos"); 
+            origenFinal = `Calle ${calle} ${zona}`; 
+        } else if (origenSeleccionado) { 
+            origenFinal = origenSeleccionado; 
+        } else { 
+            return alert("Por favor selecciona dónde te buscamos"); 
+        } 
+        
+        // RECOGER EL DESTINO DEPENDIENDO DEL MODO
         if (modoActual === 'externa') {
-            origenFinal = document.getElementById('origen').value;
             destinoFinal = document.getElementById('destino-input').value;
-            if (!origenFinal || !destinoFinal) return alert("Por favor completa origen y destino en el mapa");
+            if (!destinoFinal) return alert("Por favor completa el destino en el mapa");
         } else {
-            let origenTxt = ""; 
-            if (origenTipo === 'calle') { 
-                const calle = document.getElementById('calle-origen').value; 
-                const zona = document.getElementById('zona-origen').value; 
-                if (!calle) return alert("Por favor ingresa el número de calle de origen"); 
-                origenTxt = `Calle ${calle} ${zona}`; 
-            } else if (origenSeleccionado) { 
-                origenTxt = origenSeleccionado; 
-            } else { 
-                return alert("Selecciona un origen interno"); 
-            } 
-
-            let destinoTxt = ""; 
             if (destinoTipo === 'calle') { 
                 const calle = document.getElementById('calle-destino').value; 
                 const zona = document.getElementById('zona-destino').value; 
                 if (!calle) return alert("Por favor ingresa el número de calle de destino"); 
-                destinoTxt = `Calle ${calle} ${zona}`; 
+                destinoFinal = `Calle ${calle} ${zona}`; 
             } else if (destinoSeleccionado) { 
-                destinoTxt = destinoSeleccionado; 
+                destinoFinal = destinoSeleccionado; 
             } else {
                 return alert("Selecciona un destino interno"); 
             } 
-            origenFinal = origenTxt;
-            destinoFinal = destinoTxt;
         } 
         
         if (!telefono || telefono.length < 8) return alert("Por favor ingresa tu número de WhatsApp"); 
-        if (precio === "B/. 0.00") return alert("Por favor espera a que se calcule la tarifa."); 
+        if (precio === "B/. 0.00") return alert("Por favor espera a que se calcule la tarifa completa de origen a destino."); 
         
         localStorage.setItem('telefono_pasajero', telefono); 
         localStorage.setItem('nombre_pasajero', nombrePasajeroActual); 
@@ -386,7 +450,6 @@
             if (!viaje) return; 
             
             if (viaje.estado === 'conductor_asignado') { 
-                // CORRECCIÓN: SE ELIMINÓ LA ESCRITURA FORZADA DE TIEMPO. SOLO LEEMOS EL DATO.
                 const numeroConductor = viaje.conductorCel || 'Sin número'; 
                 
                 db.ref('conductores/' + numeroConductor).once('value').then(snap => {
@@ -421,7 +484,7 @@
 
                     if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
                     relojPasajeroInterval = setInterval(() => {
-                        if(!viaje.tiempoAsignacion) return; // Esperar a que el dato llegue
+                        if(!viaje.tiempoAsignacion) return; 
                         let ahora = Date.now();
                         let limite = 7 * 60 * 1000;
                         let tiempoTranscurrido = ahora - viaje.tiempoAsignacion;

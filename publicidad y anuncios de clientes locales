@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Publicidad - PreetyTaxi</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 15px; }
+        .container { max-width: 900px; margin: auto; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h2 { text-align: center; margin-top:0; }
+        input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box; font-size:14px; }
+        .btn { padding: 10px 14px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .btn-add { background: #ffc107; color: black; width: 100%; font-size: 16px; padding: 14px; }
+        .btn-active { background: #28a745; color: white; }
+        .btn-block { background: #dc3545; color: white; }
+        .btn-del { background: #6c757d; color: white; font-size:12px; }
+        .pub-item { display:flex; gap:12px; background:white; padding:12px; border-radius:10px; margin-bottom:12px; align-items:center; box-shadow: 0 2px 5px rgba(0,0,0,0.08); }
+        .pub-item img { width: 90px; height: 60px; object-fit: cover; border-radius: 6px; border:1px solid #ddd; }
+        .pub-info { flex:1; }
+        .badge-activa { color: #28a745; font-weight: bold; font-size:13px; }
+        .badge-desactivada { color: #dc3545; font-weight: bold; font-size:13px; }
+        #status { text-align:center; margin-top:10px; font-weight:bold; font-size:14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h2>📢 Admin Publicidad PreetyTaxi</h2>
+            <p style="text-align:center; font-size:13px; color:#666;">Sube la foto, el sistema te da el link automático y la guarda. Si no paga, solo DESACTIVA.</p>
+            
+            <input type="text" id="nombre" placeholder="Nombre: Ej Pizzeria Leonardo">
+            <input type="text" id="link" placeholder="Link: https://wa.me/50760000000 o Instagram">
+            <input type="file" id="foto" accept="image/*">
+            <button class="btn btn-add" onclick="guardar()">💾 Guardar Publicidad</button>
+            <div id="status"></div>
+        </div>
+
+        <div class="card">
+            <h3 style="margin-top:0;">Publicidades guardadas (<span id="contador">0</span>)</h3>
+            <div id="lista"></div>
+        </div>
+    </div>
+
+<script>
+    const firebaseConfig = { 
+        apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", 
+        authDomain: "preetytaxiapp.firebaseapp.com",
+        projectId: "preetytaxiapp",
+        storageBucket: "preetytaxiapp.firebasestorage.app"
+    };
+    
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const firestore = firebase.firestore();
+    const storage = firebase.storage();
+
+    function guardar() {
+        const nombre = document.getElementById('nombre').value.trim();
+        const link = document.getElementById('link').value.trim();
+        const file = document.getElementById('foto').files[0];
+        const status = document.getElementById('status');
+
+        if(!nombre || !link || !file) return alert("Falta nombre, link o foto");
+
+        status.innerHTML = "⏳ Subiendo foto...";
+        status.style.color = "blue";
+
+        const nombreArchivo = Date.now() + "_" + file.name.replace(/\s/g, "-");
+        const ref = storage.ref('publicidad/' + nombreArchivo);
+
+        ref.put(file).then(snap => {
+            snap.ref.getDownloadURL().then(url => {
+                status.innerHTML = "⏳ Guardando...";
+                firestore.collection('publicidad').add({
+                    nombre: nombre,
+                    link: link,
+                    img: url,
+                    activo: true,
+                    fecha: firebase.firestore.FieldValue.serverTimestamp()
+                }).then(() => {
+                    status.innerHTML = "✅ Guardada!";
+                    status.style.color = "green";
+                    document.getElementById('nombre').value = "";
+                    document.getElementById('link').value = "";
+                    document.getElementById('foto').value = "";
+                    setTimeout(()=> status.innerHTML="", 3000);
+                });
+            });
+        }).catch(err => {
+            status.innerHTML = "❌ Error: " + err.message;
+            status.style.color = "red";
+        });
+    }
+
+    function cargar() {
+        firestore.collection('publicidad').orderBy('fecha','desc').onSnapshot(snap => {
+            const lista = document.getElementById('lista');
+            const contador = document.getElementById('contador');
+            lista.innerHTML = "";
+            contador.innerText = snap.size;
+
+            if(snap.empty) {
+                lista.innerHTML = "<p style='text-align:center; color:#999;'>No hay publicidades aún</p>";
+                return;
+            }
+
+            snap.forEach(doc => {
+                const d = doc.data();
+                const id = doc.id;
+                const estado = d.activo ? `<span class="badge-activa">ACTIVA ✅ Sale en la app</span>` : `<span class="badge-desactivada">DESACTIVADA ❌ No sale</span>`;
+                const btn = d.activo 
+                    ? `<button class="btn btn-block" onclick="toggle('${id}', true)">DESACTIVAR (No pagó)</button>`
+                    : `<button class="btn btn-active" onclick="toggle('${id}', false)">ACTIVAR (Pagó)</button>`;
+
+                lista.innerHTML += `
+                <div class="pub-item">
+                    <img src="${d.img}" onerror="this.src='https://via.placeholder.com/90x60?text=No+Img'">
+                    <div class="pub-info">
+                        <strong>${d.nombre}</strong><br>
+                        <a href="${d.link}" target="_blank" style="font-size:11px; word-break:break-all;">${d.link}</a><br>
+                        ${estado}
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:5px;">
+                        ${btn}
+                        <button class="btn btn-del" onclick="eliminar('${id}')">Eliminar</button>
+                    </div>
+                </div>`;
+            });
+        });
+    }
+
+    function toggle(id, actual) {
+        firestore.collection('publicidad').doc(id).update({ activo: !actual });
+    }
+
+    function eliminar(id) {
+        if(confirm("¿Borrar esta publicidad para siempre?")) {
+            firestore.collection('publicidad').doc(id).delete();
+        }
+    }
+
+    window.onload = cargar;
+</script>
+</body>
+</html>

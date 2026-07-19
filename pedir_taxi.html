@@ -473,6 +473,25 @@
         }
     };
 
+    // Nueva función añadida: Rechaza y busca otro al instante sin mostrar el mensaje de "demora"
+    window.rechazarConductorLocal = function(id) {
+        if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
+        db.ref('viajes/' + id).update({
+            estado: 'pendiente',
+            conductorCel: null,
+            conductorNombre: null,
+            conductorVehiculo: null,
+            conductorColor: null,
+            conductorPlaca: null,
+            tiempoAsignacion: null,
+            conductorLlego: null
+        });
+        document.getElementById('estado-viaje-container').innerHTML = `
+            <div style="text-align:center; color:#ffc107; font-weight:bold; margin-top:20px; font-size:16px; animation: pulse 2s infinite;">⏳ Relanzando búsqueda...</div>
+            <button class="btn-cancelar-viaje" onclick="cancelarViajeCliente('${id}')" style="margin-top: 15px; width: 100%;">❌ Cancelar Búsqueda</button>
+        `;
+    };
+
     function escucharEstadoViaje(id) { 
         db.ref('viajes/' + id).on('value', (snapshot) => { 
             const viaje = snapshot.val(); 
@@ -486,8 +505,43 @@
                     const fotoPerfil = datosConductor.foto_conductor || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png';
                     const fotoCarro = datosConductor.foto_carro || 'https://cdn-icons-png.flaticon.com/512/3204/3204121.png';
 
+                    // Calcular el promedio de estrellas del conductor
+                    let estrellasPromedio = "Nuevo";
+                    if (datosConductor.calificaciones) {
+                        let suma = 0, cantidad = 0;
+                        Object.values(datosConductor.calificaciones).forEach(c => {
+                            suma += parseFloat(c.estrellas);
+                            cantidad++;
+                        });
+                        if (cantidad > 0) estrellasPromedio = (suma / cantidad).toFixed(1) + " ⭐ (" + cantidad + " viajes)";
+                    } else {
+                        estrellasPromedio = "5.0 ⭐ (Nuevo)";
+                    }
+
+                    // Se renderizan 2 vistas ocultas: la Driver Card inicial y luego si acepta, se muestra la interfaz normal
                     document.getElementById('estado-viaje-container').innerHTML = `
-                        <div class="card-conductor">
+                        <!-- VISTA: DRIVER CARD (ELEGIR) -->
+                        <div id="ui-driver-card" class="card-conductor" style="padding: 0; overflow: hidden; background: #fff; color: #000; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
+                            <div style="background: #000; color: #fff; padding: 12px; font-weight: bold; font-size: 18px; text-align: center;">Driver Card</div>
+                            <h3 style="color: #000; margin-top: 15px; margin-bottom: 5px;">${viaje.conductorNombre}</h3>
+                            
+                            <div style="display: flex; justify-content: center; gap: 10px; margin: 15px;">
+                                <img src="${fotoPerfil}" style="width: 100px; height: 100px; border-radius: 8px; object-fit: cover; border: 1px solid #ccc;">
+                                <img src="${fotoCarro}" style="width: 140px; height: 100px; border-radius: 8px; object-fit: cover; border: 1px solid #ccc;">
+                            </div>
+                            
+                            <p style="font-size: 16px; font-weight: bold; margin: 5px 0;">${estrellasPromedio}</p>
+                            <p style="color: #555; font-size: 13px; margin: 5px 0; padding: 0 10px;">${viaje.conductorVehiculo} ${viaje.conductorColor} - ${viaje.conductorPlaca}</p>
+                            
+                            <div style="padding: 15px;">
+                                <button onclick="document.getElementById('ui-driver-card').style.display='none'; document.getElementById('ui-taxi-camino').style.display='block';" style="background: #28a745; color: white; width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer;">ACEPTAR VIAJE</button>
+                                <button onclick="rechazarConductorLocal('${id}')" style="background: #ffc107; color: black; width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin-top: 10px; cursor: pointer;">NO, BUSCAR OTRO</button>
+                                <button class="btn-cancelar-viaje" onclick="cancelarViajeCliente('${id}')" style="margin-top: 10px;">❌ Cancelar Viaje</button>
+                            </div>
+                        </div>
+
+                        <!-- VISTA: VIAJE ACEPTADO (OCULTO HASTA QUE SE PRESIONE ACEPTAR) -->
+                        <div id="ui-taxi-camino" class="card-conductor" style="display: none;">
                             <h3>✅ ¡Taxi en Camino!</h3>
                             <div style="text-align: center; margin-top: 15px; margin-bottom: 10px;">
                                 <img src="${fotoPerfil}" style="width: 90px; height: 90px; border-radius: 50%; border: 3px solid #ffc107; object-fit: cover;">

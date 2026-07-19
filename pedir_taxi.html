@@ -58,6 +58,29 @@
         .btn-enviar-cal { background: var(--gold); color: black; border: none; padding: 12px 20px; font-weight: bold; border-radius: 8px; cursor: pointer; width: 100%; margin-top: 10px; }
         .btn-soporte { background: #dc3545; color: white; padding: 10px; border-radius: 8px; border: none; width: 100%; margin-top: 10px; font-weight: bold; cursor: pointer; }
         textarea.reporte-input { width: 100%; height: 80px; background: #111; color: white; border: 1px solid #444; border-radius: 8px; padding: 10px; margin-top: 10px; resize: none; box-sizing: border-box;}
+
+        /* === NUEVO SISTEMA DE BANNERS PUBLICIDAD === */
+        .banner-container { margin-top: 20px; display: none; }
+        .banner-container.activo { display: block; animation: slideInBanner 0.4s ease; }
+        @keyframes slideInBanner { from { opacity:0; transform:translateY(20px);} to { opacity:1; transform:translateY(0);} }
+        .banner-card { background: #1a1a1a; border: 1px solid #333; border-radius: 15px; overflow: hidden; position: relative; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
+        .banner-header { background: #000; padding: 6px 12px; display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #888; letter-spacing: 1px; }
+        .banner-content { display: flex; align-items: center; padding: 12px; gap: 12px; }
+        .banner-img { width: 75px; height: 75px; border-radius: 12px; object-fit: cover; flex-shrink: 0; border: 1px solid #333; }
+        .banner-text { flex: 1; text-align: left; }
+        .banner-title { font-weight: bold; color: white; font-size: 14px; margin: 0; line-height: 1.2; }
+        .banner-promo { color: #ccc; font-size: 12px; margin: 5px 0 0 0; line-height: 1.3; }
+        .banner-badge { background: var(--gold); color: black; font-size: 9px; padding: 3px 8px; border-radius: 20px; font-weight: bold; margin-top: 6px; display: inline-block; }
+        .banner-dots { display: flex; gap: 5px; justify-content: center; padding: 8px; background: #111; }
+        .banner-dot { width: 6px; height: 6px; border-radius: 50%; background: #444; transition: 0.3s; }
+        .banner-dot.active { background: var(--gold); width: 18px; border-radius: 10px; }
+        .banner-close { background: #222; border: none; color: #888; cursor: pointer; font-size: 14px; padding: 2px 6px; border-radius: 50%; }
+        .banner-cta { background: #25D366; color: white; border: none; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; margin-top: 6px; cursor: pointer; }
+        .banner-small { margin-top: 12px; background: #111; border: 1px dashed #333; border-radius: 10px; padding: 10px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+        .banner-small img { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; }
+        .banner-small-text { flex: 1; text-align: left; }
+        .banner-small-title { font-size: 12px; font-weight: bold; color: white; margin: 0; }
+        .banner-small-sub { font-size: 10px; color: #888; margin: 2px 0 0 0; }
     </style>
 </head>
 <body>
@@ -142,7 +165,7 @@
         </div>
 
         <div class="tarifa-nota">
-            <span>ℹ️ Información de Tarifas</span>
+            <span>ℹ Información de Tarifas</span>
             <p>• <strong>Feriados y Domingos:</strong> + B/. 0.25 al total.<br>
                • <strong>Pasajero adicional:</strong> + B/. 0.50 c/u.</p>
             <small>*Estos recargos aplican al momento de abordar.</small>
@@ -158,6 +181,38 @@
 
         <button class="btn-pedir" id="btn-solicitar" onclick="pedirTaxi()">SOLICITAR TAXI</button>
         <div id="estado-viaje-container"></div>
+
+        <!-- BANNER PEQUEÑO ANTES DE PEDIR (siempre visible) -->
+        <div id="banner-preview" class="banner-small" onclick="clickBannerActual()">
+            <img id="banner-preview-img" src="https://images.unsplash.com/photo-1560066984-138dadb4c035?w=100" alt="promo">
+            <div class="banner-small-text">
+                <p class="banner-small-title" id="banner-preview-title">Salón Glam Brisas - 20% OFF Keratina</p>
+                <p class="banner-small-sub">Toca para ver promo • Publicidad</p>
+            </div>
+            <span style="color:#ffc107; font-weight:bold;">›</span>
+        </div>
+
+        <!-- BANNER GRANDE DURANTE VIAJE (se activa al pedir taxi) -->
+        <div id="banner-container" class="banner-container">
+            <div class="banner-card" onclick="clickBannerActual()">
+                <div class="banner-header">
+                    <span>📢 PUBLICIDAD LOCAL - BRISAS DEL GOLF</span>
+                    <button class="banner-close" onclick="event.stopPropagation(); cerrarBanners()">✕</button>
+                </div>
+                <div class="banner-content">
+                    <img id="banner-img" class="banner-img" src="" alt="promo">
+                    <div class="banner-text">
+                        <p id="banner-title" class="banner-title"></p>
+                        <p id="banner-promo" class="banner-promo"></p>
+                        <span id="banner-badge" class="banner-badge"></span>
+                        <br>
+                        <button class="banner-cta">Ver Promo 💬</button>
+                    </div>
+                </div>
+                <div class="banner-dots" id="banner-dots"></div>
+            </div>
+        </div>
+
     </div>
 </div>
 
@@ -212,9 +267,120 @@
     const PRECIOS_OTROS = { 'Cerro Viento Rural': 1.75, 'Las Trancas': 1.50 };
     const PRECIOS_MALL = { 'Super 99 Brisas del Golf': 1.50, 'Machetazo': 1.50, 'Riba Smith': 1.50, 'Super Xtra': 1.50, 'El Rey Brisas del Golf': 1.50, 'Brisas Capital': 1.50, 'Kennedy Golf Plaza': 1.50, 'Signature': 1.50, 'Premier Plaza': 1.50, 'Plaza Point': 1.50, 'Plaza Caja de Ahorro': 1.50, 'Brisas Mall': 1.50, 'Plaza Mcdonalds': 1.50, 'Paseo Drive': 2.50, 'Northside Galleries': 2.00, 'Yappy Park': 3.50 };
 
+    // === CONFIGURACION DE BANNERS - TU EDITAS AQUI TUS PUBLICIDADES ===
+    // Cambia imagen, titulo, promo y link de WhatsApp / Instagram
+    const BANNERS_PUBLICIDAD = [
+        {
+            id: 'salon',
+            titulo: 'Salón Glam Brisas',
+            promo: '¡20% OFF en Keratina + Lavado Gratis! Solo esta semana en Brisas del Golf',
+            img: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=300&h=300&fit=crop',
+            badge: 'BELLEZA',
+            link: 'https://wa.me/50760000000?text=Hola%20Salon%20Glam%2C%20vi%20tu%20promo%20en%20ClickGoTaxi'
+        },
+        {
+            id: 'mcdonalds',
+            titulo: "McDonald's Brisas del Golf",
+            promo: 'McCombo Grande desde B/. 4.99 - Delivery gratis en Brisas',
+            img: 'https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=300&h=300&fit=crop',
+            badge: 'COMIDA',
+            link: 'https://wa.me/50760000000?text=Hola%20McDonalds%20Brisas'
+        },
+        {
+            id: 'barberia',
+            titulo: 'Barbería El Jefe',
+            promo: 'Corte + Barba B/. 8.00 - Estamos al lado de Super 99',
+            img: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=300&h=300&fit=crop',
+            badge: 'BARBERIA',
+            link: 'https://wa.me/50760000000?text=Hola%20Barberia%20El%20Jefe'
+        },
+        {
+            id: 'nails',
+            titulo: 'Nails Spa Brisas',
+            promo: 'Uñas acrílicas + Gel B/. 15 - Agenda tu cita hoy',
+            img: 'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=300&h=300&fit=crop',
+            badge: 'UÑAS',
+            link: 'https://www.instagram.com/'
+        }
+    ];
+
+    let bannerIndex = 0;
+    let bannerInterval = null;
+    let bannersActivos = false;
+
+    function mostrarBanner(idx) {
+        if (!BANNERS_PUBLICIDAD[idx]) return;
+        const b = BANNERS_PUBLICIDAD[idx];
+        document.getElementById('banner-img').src = b.img;
+        document.getElementById('banner-title').innerText = b.titulo;
+        document.getElementById('banner-promo').innerText = b.promo;
+        document.getElementById('banner-badge').innerText = b.badge;
+
+        // Preview pequeño también
+        const previewImg = document.getElementById('banner-preview-img');
+        const previewTitle = document.getElementById('banner-preview-title');
+        if (previewImg) previewImg.src = b.img;
+        if (previewTitle) previewTitle.innerText = b.titulo + ' - ' + b.promo.substring(0,30) + '...';
+
+        // Dots
+        const dotsContainer = document.getElementById('banner-dots');
+        dotsContainer.innerHTML = '';
+        BANNERS_PUBLICIDAD.forEach((_, i) => {
+            const dot = document.createElement('div');
+            dot.className = 'banner-dot' + (i === idx ? ' active' : '');
+            dot.onclick = (e) => { e.stopPropagation(); bannerIndex = i; mostrarBanner(i); };
+            dotsContainer.appendChild(dot);
+        });
+    }
+
+    function iniciarBanners() {
+        if (bannersActivos) return;
+        bannersActivos = true;
+        const container = document.getElementById('banner-container');
+        container.classList.add('activo');
+        document.getElementById('banner-preview').style.display = 'none';
+        bannerIndex = 0;
+        mostrarBanner(bannerIndex);
+        bannerInterval = setInterval(() => {
+            bannerIndex = (bannerIndex + 1) % BANNERS_PUBLICIDAD.length;
+            mostrarBanner(bannerIndex);
+        }, 5000);
+    }
+
+    function cerrarBanners() {
+        document.getElementById('banner-container').classList.remove('activo');
+        document.getElementById('banner-preview').style.display = 'flex';
+        bannersActivos = false;
+        if (bannerInterval) clearInterval(bannerInterval);
+    }
+
+    function clickBannerActual() {
+        const b = BANNERS_PUBLICIDAD[bannerIndex];
+        if (b && b.link) {
+            window.open(b.link, '_blank');
+        }
+    }
+
+    // Iniciar preview rotando incluso antes de pedir taxi
+    function iniciarPreviewRotativo() {
+        let previewIdx = 0;
+        setInterval(() => {
+            previewIdx = (previewIdx + 1) % BANNERS_PUBLICIDAD.length;
+            const b = BANNERS_PUBLICIDAD[previewIdx];
+            const img = document.getElementById('banner-preview-img');
+            const title = document.getElementById('banner-preview-title');
+            if (img && title && !bannersActivos) {
+                img.src = b.img;
+                title.innerText = b.titulo + ' - ' + b.badge;
+            }
+            bannerIndex = previewIdx;
+        }, 4000);
+    }
+
     window.onload = function() {
         initMap(); 
         initAutocomplete();
+        iniciarPreviewRotativo();
         const savedCel = localStorage.getItem('userCel');
         const savedName = localStorage.getItem('userName');
         if (savedCel && savedName) {
@@ -230,6 +396,7 @@
             document.getElementById('btn-solicitar').disabled = true;
             document.getElementById('btn-solicitar').innerText = "RECUPERANDO VIAJE...";
             escucharEstadoViaje(viajeID);
+            iniciarBanners();
         }
     };
 
@@ -438,6 +605,8 @@
             <button class="btn-cancelar-viaje" onclick="cancelarViajeCliente('${Date.now()}')" style="margin-top: 15px; width: 100%;">❌ Cancelar Búsqueda</button>
         `; 
         
+        iniciarBanners();
+
         viajeID = Date.now();
         localStorage.setItem('viajeActivoID', viajeID);
         db.ref('viajes/' + viajeID).set({ 
@@ -473,7 +642,6 @@
         }
     };
 
-    // Nueva función añadida: Rechaza y busca otro al instante sin mostrar el mensaje de "demora"
     window.rechazarConductorLocal = function(id) {
         if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
         db.ref('viajes/' + id).update({
@@ -505,7 +673,6 @@
                     const fotoPerfil = datosConductor.foto_conductor || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png';
                     const fotoCarro = datosConductor.foto_carro || 'https://cdn-icons-png.flaticon.com/512/3204/3204121.png';
 
-                    // Calcular el promedio de estrellas del conductor
                     let estrellasPromedio = "Nuevo";
                     if (datosConductor.calificaciones) {
                         let suma = 0, cantidad = 0;
@@ -518,9 +685,7 @@
                         estrellasPromedio = "5.0 ⭐ (Nuevo)";
                     }
 
-                    // Se renderizan 2 vistas ocultas: la Driver Card inicial y luego si acepta, se muestra la interfaz normal
                     document.getElementById('estado-viaje-container').innerHTML = `
-                        <!-- VISTA: DRIVER CARD (ELEGIR) -->
                         <div id="ui-driver-card" class="card-conductor" style="padding: 0; overflow: hidden; background: #fff; color: #000; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
                             <div style="background: #000; color: #fff; padding: 12px; font-weight: bold; font-size: 18px; text-align: center;">Driver Card</div>
                             <h3 style="color: #000; margin-top: 15px; margin-bottom: 5px;">${viaje.conductorNombre}</h3>
@@ -540,7 +705,6 @@
                             </div>
                         </div>
 
-                        <!-- VISTA: VIAJE ACEPTADO (OCULTO HASTA QUE SE PRESIONE ACEPTAR) -->
                         <div id="ui-taxi-camino" class="card-conductor" style="display: none;">
                             <h3>✅ ¡Taxi en Camino!</h3>
                             <div style="text-align: center; margin-top: 15px; margin-bottom: 10px;">
@@ -555,7 +719,7 @@
                             </div>
                             ${viaje.metodo_pago ? `<p><strong>Pago:</strong> ${viaje.metodo_pago.toUpperCase()}</p>` : ''}
                             <div id="contenedor-reloj-pasajero" style="background: #111; padding: 10px; border-radius: 8px; margin: 15px 0; border: 1px solid #444;">
-                                 <p style="color: #ffc107; font-weight: bold; margin: 0; font-size: 14px;" id="texto-reloj-pasajero">⏱️ Calculando tiempo...</p>
+                                 <p style="color: #ffc107; font-weight: bold; margin: 0; font-size: 14px;" id="texto-reloj-pasajero">⏱ Calculando tiempo...</p>
                                  <div id="opciones-demora" style="display:none; margin-top: 10px;">
                                      <p style="color: #dc3545; font-size: 12px; margin-bottom: 8px;">El conductor ha excedido los 7 minutos.</p>
                                      <button style="background: #ffc107; color: black; padding: 10px; border: none; border-radius: 5px; width: 100%; font-weight: bold; cursor: pointer;" onclick="revertirViaje('${id}')">🔄 BUSCAR OTRO TAXI</button>
@@ -578,7 +742,7 @@
                         if (tiempoRestante > 0) {
                             let mins = Math.floor(tiempoRestante / 60000);
                             let secs = Math.floor((tiempoRestante % 60000) / 1000);
-                            elTextoReloj.innerText = `⏱️ Tiempo de llegada: ${mins}:${secs < 10 ? '0'+secs : secs}`;
+                            elTextoReloj.innerText = `⏱ Tiempo de llegada: ${mins}:${secs < 10 ? '0'+secs : secs}`;
                         } else {
                             elTextoReloj.innerText = `🚨 Tiempo expirado (7 min)`;
                             elTextoReloj.style.color = '#dc3545';
@@ -607,12 +771,14 @@
             } 
             if (viaje.estado === 'completado') { 
                 if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
+                cerrarBanners();
                 localStorage.removeItem('viajeActivoID');
                 mostrarModalCalificacionConductor(viaje); 
                 db.ref('viajes/' + id).off(); 
             } 
             if (viaje.estado === 'cancelado') { 
                 if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
+                cerrarBanners();
                 alert("El viaje ha sido cancelado."); 
                 resetFormularioUI(); 
                 db.ref('viajes/' + id).off(); 
@@ -635,6 +801,7 @@
     function cancelarViajeCliente(id) { 
         if (confirm("¿Estás seguro de que deseas cancelar este viaje?")) { 
             if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
+            cerrarBanners();
             localStorage.removeItem('viajeActivoID');
             db.ref('viajes/' + id).off(); 
             db.ref('viajes/' + id).update({ estado: 'cancelado' }).then(() => { resetFormularioUI(); }); 
@@ -648,6 +815,7 @@
         btnSolicitar.disabled = false; 
         btnSolicitar.innerText = "SOLICITAR TAXI"; 
         document.getElementById('estado-viaje-container').innerHTML = ""; 
+        cerrarBanners();
     } 
 
     function marcarEstrellas(valor, tipo) {
@@ -671,13 +839,11 @@
         
         const comentario = document.getElementById('comentario-cliente').value || "Sin comentario";
         
-        // 1. Guardamos en el nodo de viajes (para que el Admin lo vea)
         db.ref('viajes/' + viajeID).update({
             calificacion_conductor: calificacionSeleccionada,
             comentario_pasajero: comentario 
         });
 
-        // 2. Guardamos en el perfil del conductor (para tu histórico)
         if (viajeCompletadoData && viajeCompletadoData.conductorCel) {
             db.ref('conductores/' + viajeCompletadoData.conductorCel + '/calificaciones/' + viajeID).set({
                 estrellas: calificacionSeleccionada,

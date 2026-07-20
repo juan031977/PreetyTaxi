@@ -5,187 +5,50 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ClickGoTaxi</title>
     <style>
-        :root { 
-            --gold: #ffc107; 
-            --dark: #0b0b0b; 
-            --card: #1a1a1a; 
-            --gray-text: #a0a0a0;
-        }
-        
-        body { 
-            font-family: 'Arial', sans-serif; 
-            background: var(--dark); 
-            color: white; 
-            margin: 0; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            min-height: 100vh; 
-            text-align: center;
-            touch-action: manipulation;
-        }
-
-        .container { 
-            width: 90%; 
-            max-width: 400px; 
-            padding: 20px 0;
-        }
-
-        h1 { 
-            color: var(--gold); 
-            font-size: 38px; 
-            margin: 0 0 5px 0; 
-            font-weight: 800;
-            letter-spacing: -1px;
-            text-shadow: 0px 4px 15px rgba(0,0,0,0.6); 
-        }
-
-        .tagline { 
-            color: var(--gray-text); 
-            font-size: 14px; 
-            margin-top: 0;
-            margin-bottom: 35px; 
-        }
-        
-        .role-selector {
-            background: #222;
-            border: 1px solid #333;
-            padding: 5px;
-            border-radius: 30px;
-            display: flex;
-            margin-bottom: 30px;
-            position: relative;
-        }
-
-        .role-btn {
-            flex: 1;
-            padding: 12px 0;
-            border: none;
-            background: transparent;
-            color: var(--gray-text);
-            font-weight: bold;
-            font-size: 15px;
-            cursor: pointer;
-            border-radius: 25px;
-            transition: all 0.3s ease;
-            z-index: 2;
-        }
-
-        .role-btn.active {
-            color: black;
-            background: var(--gold);
-            box-shadow: 0 4px 10px rgba(255, 193, 7, 0.3);
-        }
-
-        .card { 
-            background: var(--card); 
-            padding: 30px 25px; 
-            border-radius: 24px; 
-            border: 1px solid #2a2a2a; 
-            margin-bottom: 20px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
-            display: none;
-            animation: fadeIn 0.4s ease;
-        }
-
-        .card.active {
-            display: block;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        h3 { 
-            margin-top: 0; 
-            margin-bottom: 20px;
-            color: #fff; 
-            font-size: 20px; 
-            letter-spacing: 0.5px;
-        }
-        
-        .btn { 
-            display: block; 
-            padding: 16px; 
-            margin-top: 12px; 
-            border-radius: 14px; 
-            text-decoration: none; 
-            font-weight: bold; 
-            font-size: 16px;
-            transition: all 0.2s ease; 
-            box-sizing: border-box;
-        }
-
-        .btn-gold { 
-            background: var(--gold); 
-            color: black; 
-            box-shadow: 0 4px 12px rgba(255, 193, 7, 0.2);
-        }
-
-        .btn-outline { 
-            border: 2px solid var(--gold); 
-            color: var(--gold); 
-        }
-
-        .btn:active { 
-            transform: scale(0.96); 
-        }
-
-        .footer-text {
-            font-size: 11px; 
-            color: #333;
-            margin-top: 40px;
-            letter-spacing: 1px;
-        }
-
-        /* === SOLO ESTO ES NUEVO - VIDEO INTRO === */
-        #intro-video {
-            position: fixed;
-            inset: 0;
-            background: #0b0b0b;
-            z-index: 999999;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        #intro-video video {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
+        :root { --gold: #ffc107; --dark: #0b0b0b; --card: #1a1a1a; --gray-text: #a0a0a0; }
+        body { font-family: 'Arial', sans-serif; background: var(--dark); color: white; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; text-align: center; }
+        .container { width: 90%; max-width: 400px; padding: 20px 0; }
+        h1 { color: var(--gold); font-size: 38px; margin: 0 0 5px 0; font-weight: 800; }
+        .tagline { color: var(--gray-text); font-size: 14px; margin-bottom: 35px; }
+        .role-selector { background: #222; border: 1px solid #333; padding: 5px; border-radius: 30px; display: flex; margin-bottom: 30px; }
+        .role-btn { flex: 1; padding: 12px 0; border: none; background: transparent; color: var(--gray-text); font-weight: bold; font-size: 15px; cursor: pointer; border-radius: 25px; }
+        .role-btn.active { color: black; background: var(--gold); }
+        .card { background: var(--card); padding: 30px 25px; border-radius: 24px; border: 1px solid #2a2a2a; margin-bottom: 20px; display: none; }
+        .card.active { display: block; }
+        h3 { margin-top: 0; margin-bottom: 20px; color: #fff; font-size: 20px; }
+        .btn { display: block; padding: 16px; margin-top: 12px; border-radius: 14px; text-decoration: none; font-weight: bold; font-size: 16px; }
+        .btn-gold { background: var(--gold); color: black; }
+        .btn-outline { border: 2px solid var(--gold); color: var(--gold); }
+        .footer-text { font-size: 11px; color: #333; margin-top: 40px; }
+        #intro-video { position: fixed; inset: 0; background: #0b0b0b; z-index: 999999; display: flex; align-items: center; justify-content: center; }
+        #intro-video video { width: 100%; height: 100%; object-fit: contain; background:#0b0b0b; }
     </style>
 </head>
 <body>
 
-<!-- VIDEO INTRO FUSIONADO - NUEVO -->
 <div id="intro-video">
     <video id="vIntro" autoplay muted playsinline webkit-playsinline preload="auto">
-        <source src="logo-fusionado.mp4" type="video/mp4">
+        <source src="logo-fusionado.mp4?v=3" type="video/mp4">
     </video>
 </div>
 
 <div class="container">
     <h1>Click & Go 🚕</h1>
     <p class="tagline">¡Tu transporte en Panamá!</p>
-
     <div class="role-selector">
         <button id="btn-pasajero" class="role-btn active" onclick="switchRole('pasajero')">PASAJERO</button>
         <button id="btn-conductor" class="role-btn" onclick="switchRole('conductor')">CONDUCTOR</button>
     </div>
-
     <div id="card-pasajero" class="card active">
         <h3>¿A dónde vamos hoy? 👋</h3>
         <a href="login_pasajero.html" class="btn btn-gold">INGRESAR A PEDIR</a>
         <a href="registro_pasajero.html" class="btn btn-outline">CREAR CUENTA NUEVA</a>
     </div>
-
     <div id="card-conductor" class="card">
         <h3>Genera ingresos en tu ruta 💰</h3>
         <a href="login_conductor.html" class="btn btn-gold">EMPEZAR A TRABAJAR</a>
         <a href="registro_conductor.html" class="btn btn-outline">POSTULARSE AQUÍ</a>
     </div>
-
     <p class="footer-text">CLICK & GO TAXI APP © 2026</p>
 </div>
 
@@ -195,7 +58,6 @@
         document.getElementById('btn-conductor').classList.remove('active');
         document.getElementById('card-pasajero').classList.remove('active');
         document.getElementById('card-conductor').classList.remove('active');
-
         if(role === 'pasajero') {
             document.getElementById('btn-pasajero').classList.add('active');
             document.getElementById('card-pasajero').classList.add('active');
@@ -204,19 +66,27 @@
             document.getElementById('card-conductor').classList.add('active');
         }
     }
-
-    // === LOGICA NUEVA PARA EL VIDEO ===
     const v = document.getElementById('vIntro');
     const intro = document.getElementById('intro-video');
+    let cerrado = false;
     function cerrarIntro(){
-        intro.style.transition = 'opacity 0.6s ease';
-        intro.style.opacity = '0';
-        setTimeout(()=>{ intro.style.display='none'; }, 600);
+        if(cerrado) return;
+        cerrado=true;
+        intro.style.transition='opacity 0.6s ease';
+        intro.style.opacity='0';
+        setTimeout(()=>{ intro.remove(); }, 600);
     }
-    v.onended = cerrarIntro;
-    v.onerror = cerrarIntro;
-    setTimeout(cerrarIntro, 7000);
+    function playVideo(){
+        v.muted=true;
+        v.play().catch(()=>{});
+    }
+    window.addEventListener('load', playVideo);
+    document.addEventListener('touchstart', playVideo, {once:true});
+    document.addEventListener('click', playVideo, {once:true});
+    intro.addEventListener('click', cerrarIntro);
+    v.addEventListener('ended', cerrarIntro);
+    v.addEventListener('error', cerrarIntro);
+    setTimeout(cerrarIntro, 6000);
 </script>
-
 </body>
 </html>

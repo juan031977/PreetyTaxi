@@ -22,14 +22,16 @@
         .footer-text { font-size: 11px; color: #333; margin-top: 40px; }
         #intro-video { position: fixed; inset: 0; background: #0b0b0b; z-index: 999999; display: flex; align-items: center; justify-content: center; }
         #intro-video video { width: 100%; height: 100%; object-fit: contain; background:#0b0b0b; }
+        #tap-to-play { position: absolute; bottom: 30px; background: rgba(255,193,7,0.9); color: black; padding: 10px 20px; border-radius: 20px; font-weight: bold; font-size: 12px; }
     </style>
 </head>
 <body>
 
 <div id="intro-video">
-    <video id="vIntro" autoplay muted playsinline webkit-playsinline preload="auto">
-        <source src="logo-fusionado.mp4?v=3" type="video/mp4">
+    <video id="vIntro" muted playsinline webkit-playsinline preload="auto">
+        <source src="logo-fusionado.mp4?v=4" type="video/mp4">
     </video>
+    <div id="tap-to-play">TOCA PARA INICIAR</div>
 </div>
 
 <div class="container">
@@ -66,9 +68,13 @@
             document.getElementById('card-conductor').classList.add('active');
         }
     }
+
     const v = document.getElementById('vIntro');
     const intro = document.getElementById('intro-video');
+    const tapText = document.getElementById('tap-to-play');
+    let iniciado = false;
     let cerrado = false;
+
     function cerrarIntro(){
         if(cerrado) return;
         cerrado=true;
@@ -76,17 +82,28 @@
         intro.style.opacity='0';
         setTimeout(()=>{ intro.remove(); }, 600);
     }
-    function playVideo(){
+    function iniciarVideo(){
+        if(iniciado) return;
+        iniciado=true;
+        tapText.style.display='none';
         v.muted=true;
-        v.play().catch(()=>{});
+        v.currentTime=0;
+        v.play().then(()=>{
+            // Se reproduce bien
+        }).catch(()=>{
+            // Si falla, cierra directo
+            cerrarIntro();
+        });
     }
-    window.addEventListener('load', playVideo);
-    document.addEventListener('touchstart', playVideo, {once:true});
-    document.addEventListener('click', playVideo, {once:true});
-    intro.addEventListener('click', cerrarIntro);
+    // El primer toque en CUALQUIER parte inicia el video, ya no necesitas flecha atrás
+    intro.addEventListener('touchstart', iniciarVideo);
+    intro.addEventListener('click', iniciarVideo);
+    document.addEventListener('touchstart', iniciarVideo, {once:true});
+    
     v.addEventListener('ended', cerrarIntro);
     v.addEventListener('error', cerrarIntro);
-    setTimeout(cerrarIntro, 6000);
+    // Si en 7 segundos no hace nada, cierra solo
+    setTimeout(cerrarIntro, 7000);
 </script>
 </body>
 </html>

@@ -48,7 +48,6 @@
         #destino-seccion label { color: #25D366; }
         @keyframes slideIn { from { transform: translateX(400px); } to { transform: translateX(0); } }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
-        
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 99999; justify-content: center; align-items: center; }
         .modal-content { background: #222; padding: 25px; border-radius: 15px; border: 2px solid var(--gold); width: 85%; max-width: 350px; text-align: center; color: white; }
         .estrellas { display: flex; justify-content: center; gap: 10px; margin: 15px 0; font-size: 35px; cursor: pointer; direction: rtl; }
@@ -58,29 +57,43 @@
         .btn-enviar-cal { background: var(--gold); color: black; border: none; padding: 12px 20px; font-weight: bold; border-radius: 8px; cursor: pointer; width: 100%; margin-top: 10px; }
         .btn-soporte { background: #dc3545; color: white; padding: 10px; border-radius: 8px; border: none; width: 100%; margin-top: 10px; font-weight: bold; cursor: pointer; }
         textarea.reporte-input { width: 100%; height: 80px; background: #111; color: white; border: 1px solid #444; border-radius: 8px; padding: 10px; margin-top: 10px; resize: none; box-sizing: border-box;}
+    
+        .banner-preview-pro { margin-top: 18px; background: linear-gradient(135deg, #1a1a1a, #0f0f0f); border: 1px solid #2a2a2a; border-radius: 16px; padding: 10px 14px; display: flex; align-items: center; gap: 12px; cursor: pointer; position: relative; overflow: hidden; }
+        .banner-preview-pro img { width: 48px; height: 48px; border-radius: 12px; object-fit: cover; border: 1px solid #333; }
+        .banner-preview-info { flex: 1; text-align: left; }
+        .banner-preview-info b { font-size: 13px; color: white; display: block; }
+        .banner-preview-info span { font-size: 11px; color: #888; }
+        .banner-preview-badge { background: #ffc107; color: black; font-size: 8px; font-weight: bold; padding: 2px 6px; border-radius: 10px; position: absolute; top: 8px; right: 35px; }
+        .banner-container-pro { margin-top: 18px; display: none; }
+        .banner-container-pro.activo { display: block; animation: slideUp 0.5s; }
+        @keyframes slideUp { from { opacity:0; transform: translateY(30px); } to { opacity:1; transform: translateY(0); } }
+        .banner-card-pro { background: #111; border: 1px solid #333; border-radius: 20px; overflow: hidden; }
+        .banner-top { padding: 8px 14px; display: flex; justify-content: space-between; background: rgba(0,0,0,0.4); font-size:10px; color:#666; }
+        .banner-body-pro { display: flex; padding: 14px; gap: 14px; cursor: pointer; }
+        .banner-img-pro { width: 92px; height: 92px; border-radius: 16px; object-fit: cover; }
+        .banner-text-pro { flex: 1; text-align: left; }
+        .banner-title-pro { font-size: 15px; font-weight: 800; color: white; margin: 0; }
+        .banner-promo-pro { font-size: 12px; color: #aaa; margin-top: 6px; }
+        .tag { font-size: 9px; font-weight: bold; padding: 3px 8px; border-radius: 20px; }
+        .tag-gold { background: #ffc107; color: black; }
+        .banner-dots-pro { display: flex; gap: 6px; justify-content: center; padding: 10px; background: #0a0a0a; }
+        .banner-dot-pro { width: 5px; height: 5px; border-radius: 50%; background: #333; }
+        .banner-dot-pro.active { background: #ffc107; width: 22px; border-radius: 10px; }
+        .banner-actions-pro { display: flex; gap: 8px; padding: 0 14px 14px 14px; }
+        .btn-banner-action { flex: 1; padding: 10px; border-radius: 12px; font-size: 12px; font-weight: bold; border: none; cursor: pointer; }
+        .btn-wa { background: #25D366; color: white; }
+        .btn-ig { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); color: white; }
+        .btn-img { background: #222; color: white; border: 1px solid #333; }
+        #modal-promo { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 999999; justify-content: center; align-items: center; padding: 20px; }
+        #modal-promo.activo { display: flex; }
+        .modal-promo-card { background: #111; border-radius: 24px; overflow: hidden; max-width: 380px; width: 100%; border: 1px solid #2a2a2a; max-height: 90vh; overflow-y: auto; }
+        .modal-promo-img { width: 100%; height: 320px; object-fit: cover; }
+        .modal-promo-body { padding: 18px; text-align: left; }
+        .modal-promo-title { font-size: 20px; font-weight: 900; margin: 0; color: white; }
+        .modal-promo-desc { font-size: 13px; color: #aaa; margin-top: 8px; }
+        .modal-promo-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+        .modal-promo-actions .full { grid-column: span 2; }
 
-        /* === NUEVO SISTEMA DE BANNERS PUBLICIDAD === */
-        .banner-container { margin-top: 20px; display: none; }
-        .banner-container.activo { display: block; animation: slideInBanner 0.4s ease; }
-        @keyframes slideInBanner { from { opacity:0; transform:translateY(20px);} to { opacity:1; transform:translateY(0);} }
-        .banner-card { background: #1a1a1a; border: 1px solid #333; border-radius: 15px; overflow: hidden; position: relative; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
-        .banner-header { background: #000; padding: 6px 12px; display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #888; letter-spacing: 1px; }
-        .banner-content { display: flex; align-items: center; padding: 12px; gap: 12px; }
-        .banner-img { width: 75px; height: 75px; border-radius: 12px; object-fit: cover; flex-shrink: 0; border: 1px solid #333; }
-        .banner-text { flex: 1; text-align: left; }
-        .banner-title { font-weight: bold; color: white; font-size: 14px; margin: 0; line-height: 1.2; }
-        .banner-promo { color: #ccc; font-size: 12px; margin: 5px 0 0 0; line-height: 1.3; }
-        .banner-badge { background: var(--gold); color: black; font-size: 9px; padding: 3px 8px; border-radius: 20px; font-weight: bold; margin-top: 6px; display: inline-block; }
-        .banner-dots { display: flex; gap: 5px; justify-content: center; padding: 8px; background: #111; }
-        .banner-dot { width: 6px; height: 6px; border-radius: 50%; background: #444; transition: 0.3s; }
-        .banner-dot.active { background: var(--gold); width: 18px; border-radius: 10px; }
-        .banner-close { background: #222; border: none; color: #888; cursor: pointer; font-size: 14px; padding: 2px 6px; border-radius: 50%; }
-        .banner-cta { background: #25D366; color: white; border: none; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; margin-top: 6px; cursor: pointer; }
-        .banner-small { margin-top: 12px; background: #111; border: 1px dashed #333; border-radius: 10px; padding: 10px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
-        .banner-small img { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; }
-        .banner-small-text { flex: 1; text-align: left; }
-        .banner-small-title { font-size: 12px; font-weight: bold; color: white; margin: 0; }
-        .banner-small-sub { font-size: 10px; color: #888; margin: 2px 0 0 0; }
     </style>
 </head>
 <body>
@@ -93,12 +106,10 @@
         <input type="text" id="nombreUsuario" placeholder="Tu Nombre">
         <label>Tu número de WhatsApp</label>
         <input type="tel" id="telefono" placeholder="Ej: 50760000000">
-
         <div class="toggle-modos">
             <button id="btn-externa" class="btn-modo active" onclick="cambiarModo('externa')">Rutas Externas</button>
             <button id="btn-interna" class="btn-modo" onclick="cambiarModo('interna')">Rutas Internas</button>
         </div>
-
         <div class="seccion-interna" id="origen-seccion">
             <label style="margin-top:0;">Donde Te Buscamos</label>
             <div style="display:flex; gap:5px; flex-wrap:wrap; margin-top:8px;">
@@ -123,7 +134,6 @@
             </div>
             <div id="origen-subcat-container"></div>
         </div>
-
         <div id="panel-externo" style="display: block;">
             <div class="seccion-interna" style="border-color:#25D366; background: #0a1f14;">
                 <label style="margin-top:0; color:#25D366;">A DONDE VAS</label>
@@ -131,7 +141,6 @@
                 <div id="mapa-destino"></div>
             </div>
         </div>
-
         <div id="panel-interno" style="display: none;">
             <div class="seccion-interna" id="destino-seccion">
                 <label style="margin-top:0;">A DONDE VAS</label>
@@ -158,19 +167,16 @@
                 <div id="destino-subcat-container"></div>
             </div>
         </div>
-
         <div class="price-display">
             <small style="color:#888">TARIFA ESTIMADA</small><br>
             <span id="display-precio">B/. 0.00</span>
         </div>
-
         <div class="tarifa-nota">
             <span>ℹ Información de Tarifas</span>
             <p>• <strong>Feriados y Domingos:</strong> + B/. 0.25 al total.<br>
                • <strong>Pasajero adicional:</strong> + B/. 0.50 c/u.</p>
             <small>*Estos recargos aplican al momento de abordar.</small>
         </div>
-
         <div style="margin: 20px 0 15px 0;">
             <label style="color:#ffc107; font-weight:bold;">Forma de Pago</label>
             <select id="metodoPago" style="width:100%; padding:14px; border-radius:12px; background:#222; color:white; border:1px solid #444; font-size:16px;">
@@ -178,41 +184,57 @@
                 <option value="yappy">📱 Yappy</option>
             </select>
         </div>
-
         <button class="btn-pedir" id="btn-solicitar" onclick="pedirTaxi()">SOLICITAR TAXI</button>
         <div id="estado-viaje-container"></div>
 
-        <!-- BANNER PEQUEÑO ANTES DE PEDIR (siempre visible) -->
-        <div id="banner-preview" class="banner-small" onclick="clickBannerActual()">
-            <img id="banner-preview-img" src="https://images.unsplash.com/photo-1560066984-138dadb4c035?w=100" alt="promo">
-            <div class="banner-small-text">
-                <p class="banner-small-title" id="banner-preview-title">Salón Glam Brisas - 20% OFF Keratina</p>
-                <p class="banner-small-sub">Toca para ver promo • Publicidad</p>
+        <div id="banner-preview" class="banner-preview-pro" onclick="abrirModalPromo()">
+            <img id="banner-preview-img" src="https://images.unsplash.com/photo-1560066984-138dadb4c035?w=200" alt="promo">
+            <div class="banner-preview-info">
+                <b id="banner-preview-title">Salon Glam - 20% OFF</b>
+                <span>Patrocinado - Toca para ver</span>
             </div>
-            <span style="color:#ffc107; font-weight:bold;">›</span>
+            <span class="banner-preview-badge" id="banner-preview-badge">PROMO</span>
+            <span style="color:#444;">›</span>
         </div>
-
-        <!-- BANNER GRANDE DURANTE VIAJE (se activa al pedir taxi) -->
-        <div id="banner-container" class="banner-container">
-            <div class="banner-card" onclick="clickBannerActual()">
-                <div class="banner-header">
-                    <span>📢 PUBLICIDAD LOCAL - BRISAS DEL GOLF</span>
-                    <button class="banner-close" onclick="event.stopPropagation(); cerrarBanners()">✕</button>
-                </div>
-                <div class="banner-content">
-                    <img id="banner-img" class="banner-img" src="" alt="promo">
-                    <div class="banner-text">
-                        <p id="banner-title" class="banner-title"></p>
-                        <p id="banner-promo" class="banner-promo"></p>
-                        <span id="banner-badge" class="banner-badge"></span>
-                        <br>
-                        <button class="banner-cta">Ver Promo 💬</button>
+        <div id="banner-container" class="banner-container-pro">
+            <div class="banner-card-pro">
+                <div class="banner-top"><div>PATROCINADO • BRISAS</div><button onclick="cerrarBanners()" style="background:transparent;border:none;color:#555;cursor:pointer;">X</button></div>
+                <div class="banner-body-pro" onclick="abrirModalPromo()">
+                    <img id="banner-img" class="banner-img-pro" src="" alt="promo">
+                    <div class="banner-text-pro">
+                        <p id="banner-title" class="banner-title-pro"></p>
+                        <p id="banner-promo" class="banner-promo-pro"></p>
+                        <span id="banner-badge" class="tag tag-gold"></span>
                     </div>
                 </div>
-                <div class="banner-dots" id="banner-dots"></div>
+                <div class="banner-actions-pro">
+                    <button class="btn-banner-action btn-wa" onclick="abrirWhatsApp()">WhatsApp</button>
+                    <button class="btn-banner-action btn-ig" onclick="abrirInstagram()">Instagram</button>
+                    <button class="btn-banner-action btn-img" onclick="abrirModalPromo()">Ver Imagen</button>
+                </div>
+                <div class="banner-dots-pro" id="banner-dots"></div>
             </div>
         </div>
 
+    </div>
+</div>
+
+<div id="modal-promo" onclick="if(event.target===this) cerrarModalPromo()">
+    <div class="modal-promo-card">
+        <div style="position:relative;">
+            <img id="modal-promo-img" class="modal-promo-img" src="" alt="promo">
+            <button onclick="cerrarModalPromo()" style="position:absolute;top:12px;right:12px;background:rgba(0,0,0,0.6);color:white;width:36px;height:36px;border-radius:50%;border:none;cursor:pointer;">X</button>
+            <div style="position:absolute;bottom:12px;left:12px;"><span id="modal-promo-badge" class="tag tag-gold"></span></div>
+        </div>
+        <div class="modal-promo-body">
+            <h3 id="modal-promo-title" class="modal-promo-title"></h3>
+            <p id="modal-promo-desc" class="modal-promo-desc"></p>
+            <div class="modal-promo-actions">
+                <button class="btn-banner-action btn-wa full" onclick="abrirWhatsApp()" style="padding:14px;">Pedir por WhatsApp</button>
+                <button class="btn-banner-action btn-ig" onclick="abrirInstagram()">Ver Instagram</button>
+                <button class="btn-banner-action btn-img" onclick="compartirPromo()">Compartir</button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -232,7 +254,6 @@
         <button class="btn-enviar-cal" onclick="enviarCalificacionConductor()">Enviar Calificación</button>
     </div>
 </div>
-
 <div id="modal-soporte" class="modal-overlay">
     <div class="modal-content">
         <h3 style="color:#dc3545; margin-top:0;">Servicio al Cliente</h3>
@@ -242,141 +263,25 @@
         <button style="background:transparent; color:#aaa; border:none; margin-top:15px; cursor:pointer;" onclick="cerrarSoporte()">Cancelar</button>
     </div>
 </div>
-
 <script>
     const firebaseConfig = { apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    
     let mapa, directionsService, directionsRenderer;
     let destinoCoords = null;
     let autoDestino; 
     let viajeID = null;
     let modoActual = 'externa';
-
     let origenTipo = null, origenSeleccionado = null, origenPrecio = 0;
     let destinoTipo = null, destinoSeleccionado = null, destinoPrecio = 0;
     let relojPasajeroInterval = null; 
-    
     let calificacionSeleccionada = 0;
     let viajeCompletadoData = null; 
-
     const PRECIOS_PH = { 'PH La Riviera Colonial': 1.75, 'Brisas del Pacífico': 1.75, 'PH Brisas Point': 1.75, 'PH Brisas Heights': 1.75, 'PH Golf Gardens': 2.50, 'Club De Golf': 2.50, 'PH Alpes': 2.50, 'PH Everest': 2.50, 'PH Bejin': 2.50, 'PH Olimpus': 2.50, 'PH Mont Blanc': 2.50, 'PH Sierra Nevada': 2.50, 'PH Aventura': 3.00, 'PH Vallarta': 3.00, 'PH Noura': 3.00, 'PH Cavana': 3.00, 'Parque Rash': 3.00, 'PH Lagun': 1.50, 'PH Royal Village': 2.00, 'Oxford School': 3.00, 'Green City': 6.00, 'Golf Garden': 2.50, 'PH Ventura': 3.00 };
     const PRECIOS_VILLAS = { 'Lomas del Golf (Garita)': 1.50, 'Lomas del Golf (Adentro)': 1.75, 'Villas del Golf (Garita)': 1.50, 'Villas del Golf (Adentro)': 1.75, 'Monticello 1 (Garita)': 1.50, 'Monticello 1 (Adentro)': 1.75, 'Monticello 2 (Garita)': 1.50, 'Monticello 2 (Adentro)': 1.75, 'Villa Lido (Garita)': 1.50, 'Villa Lido (Adentro)': 1.75, 'Villa Alta (Garita)': 1.50, 'Villa Alta (Adentro)': 1.75, 'Villa Tivoli (Garita)': 1.50, 'Villa Tivoli (Adentro)': 1.75, 'Villa Navona (Garita)': 1.50, 'Villa Navona (Adentro)': 1.75, 'Villa Tiber (Garita)': 1.50, 'Villa Tiber (Adentro)': 1.75 };
     const PRECIOS_ESCUELAS = { 'El IJA': 2.50, 'La Internacional': 2.50, 'Panamerican School': 2.50, 'Saint George': 1.75, 'SAP': 1.50, 'Smart Academy': 1.50, 'Preparatory High School': 1.50, 'AIP': 1.50, 'Oxford School': 3.00, 'Metropolitan School of Panama': 6.00 };
     const PRECIOS_OTROS = { 'Cerro Viento Rural': 1.75, 'Las Trancas': 1.50 };
     const PRECIOS_MALL = { 'Super 99 Brisas del Golf': 1.50, 'Machetazo': 1.50, 'Riba Smith': 1.50, 'Super Xtra': 1.50, 'El Rey Brisas del Golf': 1.50, 'Brisas Capital': 1.50, 'Kennedy Golf Plaza': 1.50, 'Signature': 1.50, 'Premier Plaza': 1.50, 'Plaza Point': 1.50, 'Plaza Caja de Ahorro': 1.50, 'Brisas Mall': 1.50, 'Plaza Mcdonalds': 1.50, 'Paseo Drive': 2.50, 'Northside Galleries': 2.00, 'Yappy Park': 3.50 };
-
-    // === CONFIGURACION DE BANNERS - TU EDITAS AQUI TUS PUBLICIDADES ===
-    // Cambia imagen, titulo, promo y link de WhatsApp / Instagram
-    const BANNERS_PUBLICIDAD = [
-        {
-            id: 'salon',
-            titulo: 'Salón Glam Brisas',
-            promo: '¡20% OFF en Keratina + Lavado Gratis! Solo esta semana en Brisas del Golf',
-            img: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=300&h=300&fit=crop',
-            badge: 'BELLEZA',
-            link: 'https://wa.me/50760000000?text=Hola%20Salon%20Glam%2C%20vi%20tu%20promo%20en%20ClickGoTaxi'
-        },
-        {
-            id: 'Pizzeria',
-            titulo: "Leonardo Pizzas",
-            promo: 'Pizza Familiar 3 ingredientes a 5.99',
-            img: 'https://firebasestorage.googleapis.com/v0/b/preetytaxiapp.firebasestorage.app/o/publicidad%2Fpromocion%20leonardo.jpg?alt=media&token=379a1b00-7f3c-40a7-ae61-3ed06136849e',
-            badge: 'COMIDA',
-            link: 'https://www.instagram.com/leonardo_pizzapty_?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw=='
-        },
-        {
-            id: 'barberia',
-            titulo: 'Barbería El Jefe',
-            promo: 'Corte + Barba B/. 8.00 - Estamos al lado de Super 99',
-            img: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=300&h=300&fit=crop',
-            badge: 'BARBERIA',
-            link: 'https://wa.me/50760000000?text=Hola%20Barberia%20El%20Jefe'
-        },
-        {
-            id: 'nails',
-            titulo: 'Nails Spa Brisas',
-            promo: 'Uñas acrílicas + Gel B/. 15 - Agenda tu cita hoy',
-            img: 'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=300&h=300&fit=crop',
-            badge: 'UÑAS',
-            link: 'https://www.instagram.com/'
-        }
-    ];
-
-    let bannerIndex = 0;
-    let bannerInterval = null;
-    let bannersActivos = false;
-
-    function mostrarBanner(idx) {
-        if (!BANNERS_PUBLICIDAD[idx]) return;
-        const b = BANNERS_PUBLICIDAD[idx];
-        document.getElementById('banner-img').src = b.img;
-        document.getElementById('banner-title').innerText = b.titulo;
-        document.getElementById('banner-promo').innerText = b.promo;
-        document.getElementById('banner-badge').innerText = b.badge;
-
-        // Preview pequeño también
-        const previewImg = document.getElementById('banner-preview-img');
-        const previewTitle = document.getElementById('banner-preview-title');
-        if (previewImg) previewImg.src = b.img;
-        if (previewTitle) previewTitle.innerText = b.titulo + ' - ' + b.promo.substring(0,30) + '...';
-
-        // Dots
-        const dotsContainer = document.getElementById('banner-dots');
-        dotsContainer.innerHTML = '';
-        BANNERS_PUBLICIDAD.forEach((_, i) => {
-            const dot = document.createElement('div');
-            dot.className = 'banner-dot' + (i === idx ? ' active' : '');
-            dot.onclick = (e) => { e.stopPropagation(); bannerIndex = i; mostrarBanner(i); };
-            dotsContainer.appendChild(dot);
-        });
-    }
-
-    function iniciarBanners() {
-        if (bannersActivos) return;
-        bannersActivos = true;
-        const container = document.getElementById('banner-container');
-        container.classList.add('activo');
-        document.getElementById('banner-preview').style.display = 'none';
-        bannerIndex = 0;
-        mostrarBanner(bannerIndex);
-        bannerInterval = setInterval(() => {
-            bannerIndex = (bannerIndex + 1) % BANNERS_PUBLICIDAD.length;
-            mostrarBanner(bannerIndex);
-        }, 5000);
-    }
-
-    function cerrarBanners() {
-        document.getElementById('banner-container').classList.remove('activo');
-        document.getElementById('banner-preview').style.display = 'flex';
-        bannersActivos = false;
-        if (bannerInterval) clearInterval(bannerInterval);
-    }
-
-    function clickBannerActual() {
-        const b = BANNERS_PUBLICIDAD[bannerIndex];
-        if (b && b.link) {
-            window.open(b.link, '_blank');
-        }
-    }
-
-    // Iniciar preview rotando incluso antes de pedir taxi
-    function iniciarPreviewRotativo() {
-        let previewIdx = 0;
-        setInterval(() => {
-            previewIdx = (previewIdx + 1) % BANNERS_PUBLICIDAD.length;
-            const b = BANNERS_PUBLICIDAD[previewIdx];
-            const img = document.getElementById('banner-preview-img');
-            const title = document.getElementById('banner-preview-title');
-            if (img && title && !bannersActivos) {
-                img.src = b.img;
-                title.innerText = b.titulo + ' - ' + b.badge;
-            }
-            bannerIndex = previewIdx;
-        }, 4000);
-    }
-
     window.onload = function() {
         initMap(); 
         initAutocomplete();
@@ -389,17 +294,14 @@
             if(telInput) { telInput.value = savedCel; telInput.readOnly = true; }
             if(nomInput) { nomInput.value = savedName; nomInput.readOnly = true; }
         }
-        
         const viajeRecuperado = localStorage.getItem('viajeActivoID');
         if (viajeRecuperado) {
             viajeID = viajeRecuperado;
             document.getElementById('btn-solicitar').disabled = true;
             document.getElementById('btn-solicitar').innerText = "RECUPERANDO VIAJE...";
             escucharEstadoViaje(viajeID);
-            iniciarBanners();
         }
     };
-
     function cambiarModo(modo) {
         modoActual = modo;
         document.getElementById('btn-externa').classList.toggle('active', modo === 'externa');
@@ -407,9 +309,7 @@
         document.getElementById('panel-externo').style.display = modo === 'externa'? 'block' : 'none';
         document.getElementById('panel-interno').style.display = modo === 'interna'? 'block' : 'none';
         document.getElementById('display-precio').innerText = "B/. 0.00";
-        
         if(origenTipo) seleccionarOrigenTipo(origenTipo);
-
         if (modo === 'externa') {
             if (!autoDestino) initAutocomplete();
             calcularRuta();
@@ -417,14 +317,12 @@
             calcularInterna();
         }
     }
-
     function seleccionarOrigenTipo(tipo) {
         origenTipo = tipo;
         document.querySelectorAll('#origen-seccion .cat-interna-btn').forEach(b => b.classList.remove('active'));
         document.getElementById('origen-cat-' + tipo).classList.add('active');
         origenSeleccionado = null; origenPrecio = 0;
         document.getElementById('origen-calle-input').style.display = tipo === 'calle'? 'block' : 'none';
-        
         const generarBotones = (obj) => {
             let htmlTemp = '<div class="subcat-grid">';
             Object.keys(obj).forEach(nombre => {
@@ -433,7 +331,6 @@
             });
             return htmlTemp + '</div>';
         };
-
         let html = '';
         if (tipo === 'mall') html = generarBotones(PRECIOS_MALL);
         else if (tipo === 'ph') html = generarBotones(PRECIOS_PH);
@@ -444,11 +341,9 @@
             seleccionarOrigenSubcat(null, 'Estación Brisas del Golf Línea 2', 0); 
             html = '<p style="color:#aaa; font-size:12px; margin-top:10px;">Origen seleccionado.</p>'; 
         }
-        
         document.getElementById('origen-subcat-container').innerHTML = html; 
         actualizarRuta();
     }
-
     function seleccionarOrigenSubcat(btn, nombre, precio) { 
         origenSeleccionado = nombre; 
         origenPrecio = precio; 
@@ -456,7 +351,6 @@
         if(btn) btn.classList.add('active'); 
         actualizarRuta(); 
     }
-    
     function seleccionarDestinoTipo(tipo) {
         destinoTipo = tipo;
         document.querySelectorAll('#destino-seccion .cat-interna-btn').forEach(b => b.classList.remove('active'));
@@ -473,7 +367,6 @@
         document.getElementById('destino-subcat-container').innerHTML = html; 
         actualizarRuta();
     }
-
     function seleccionarDestinoSubcat(btn, nombre, precio) { 
         destinoSeleccionado = nombre; 
         destinoPrecio = precio; 
@@ -481,7 +374,6 @@
         if(btn) btn.classList.add('active'); 
         actualizarRuta(); 
     }
-
     function actualizarRuta() {
         if (modoActual === 'interna') {
             calcularInterna();
@@ -489,7 +381,6 @@
             calcularRuta();
         }
     }
-
     function calcularInterna() {
         if (modoActual!== 'interna') return;
         let precio = 0; let origenCalle = null; let destinoCalle = null;
@@ -508,9 +399,106 @@
         else if (origenSeleccionado && destinoSeleccionado) precio = Math.max(origenPrecio, destinoPrecio);
         document.getElementById('display-precio').innerText = "B/. " + precio.toFixed(2);
     }
+    
+    const BANNERS_PUBLICIDAD = [
+        {
+            id: 'salon',
+            titulo: 'Salon Glam Brisas',
+            promo: '20% OFF en Keratina + Lavado Gratis! Solo esta semana.',
+            img: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=600&h=600&fit=crop',
+            badge: 'BELLEZA',
+            whatsapp: 'https://wa.me/50760000000?text=Hola%20Salon%20Glam%20vi%20promo%20ClickGoTaxi',
+            instagram: 'https://instagram.com/'
+        },
+        {
+            id: 'leonardo',
+            titulo: 'Leonardo Pizzas',
+            promo: 'Pizza Familiar 3 ingredientes a B/. 5.99',
+            img: 'https://firebasestorage.googleapis.com/v0/b/preetytaxiapp.firebasestorage.app/o/publicidad%2Fpromocion%20leonardo.jpg?alt=media&token=379a1b00-7f3c-40a7-ae61-3ed06136849e',
+            badge: 'COMIDA',
+            whatsapp: 'https://wa.me/50760000000?text=Hola%20Leonardo',
+            instagram: 'https://instagram.com/leonardo_pizzapty_'
+        }
+    ];
+    let bannerIndex = 0;
+    let bannerInterval = null;
+    let bannersActivos = false;
+    function mostrarBanner(idx) {
+        if (!BANNERS_PUBLICIDAD[idx]) return;
+        const b = BANNERS_PUBLICIDAD[idx];
+        document.getElementById('banner-img').src = b.img;
+        document.getElementById('banner-title').innerText = b.titulo;
+        document.getElementById('banner-promo').innerText = b.promo;
+        document.getElementById('banner-badge').innerText = b.badge;
+        document.getElementById('banner-preview-img').src = b.img;
+        document.getElementById('banner-preview-title').innerText = b.titulo;
+        document.getElementById('banner-preview-badge').innerText = b.badge;
+        document.getElementById('modal-promo-img').src = b.img;
+        document.getElementById('modal-promo-title').innerText = b.titulo;
+        document.getElementById('modal-promo-desc').innerText = b.promo;
+        document.getElementById('modal-promo-badge').innerText = b.badge;
+        const dots = document.getElementById('banner-dots');
+        dots.innerHTML = '';
+        BANNERS_PUBLICIDAD.forEach((_, i) => {
+            const dot = document.createElement('div');
+            dot.className = 'banner-dot-pro' + (i === idx ? ' active' : '');
+            dot.onclick = (e) => { e.stopPropagation(); bannerIndex = i; mostrarBanner(i); };
+            dots.appendChild(dot);
+        });
+    }
+    function iniciarBanners() {
+        if (bannersActivos) return;
+        bannersActivos = true;
+        document.getElementById('banner-container').classList.add('activo');
+        document.getElementById('banner-preview').style.display = 'none';
+        mostrarBanner(bannerIndex);
+        if (bannerInterval) clearInterval(bannerInterval);
+        bannerInterval = setInterval(() => {
+            bannerIndex = (bannerIndex + 1) % BANNERS_PUBLICIDAD.length;
+            mostrarBanner(bannerIndex);
+        }, 5000);
+    }
+    function cerrarBanners() {
+        document.getElementById('banner-container').classList.remove('activo');
+        document.getElementById('banner-preview').style.display = 'flex';
+        bannersActivos = false;
+        if (bannerInterval) clearInterval(bannerInterval);
+    }
+    function abrirModalPromo() {
+        document.getElementById('modal-promo').classList.add('activo');
+        document.body.style.overflow = 'hidden';
+    }
+    function cerrarModalPromo() {
+        document.getElementById('modal-promo').classList.remove('activo');
+        document.body.style.overflow = '';
+    }
+    function abrirWhatsApp() {
+        const b = BANNERS_PUBLICIDAD[bannerIndex];
+        if (b && b.whatsapp) window.open(b.whatsapp, '_blank');
+    }
+    function abrirInstagram() {
+        const b = BANNERS_PUBLICIDAD[bannerIndex];
+        if (b && b.instagram) window.open(b.instagram, '_blank');
+    }
+    function compartirPromo() {
+        const b = BANNERS_PUBLICIDAD[bannerIndex];
+        if (navigator.share) {
+            navigator.share({ title: b.titulo, text: b.promo, url: b.instagram || b.whatsapp });
+        } else {
+            alert('Copia: ' + (b.instagram || b.whatsapp));
+        }
+    }
+    function iniciarPreviewRotativo() {
+        mostrarBanner(0);
+        setInterval(() => {
+            if (!bannersActivos) {
+                bannerIndex = (bannerIndex + 1) % BANNERS_PUBLICIDAD.length;
+                mostrarBanner(bannerIndex);
+            }
+        }, 4000);
+    }
 
     function initMap() { mapa = new google.maps.Map(document.getElementById('mapa-destino'), { zoom: 13, center: { lat: 9.0729, lng: -79.4451 } }); directionsService = new google.maps.DirectionsService(); directionsRenderer = new google.maps.DirectionsRenderer({ map: mapa }); }
-    
     function initAutocomplete() {
         if (autoDestino) return;
         autoDestino = new google.maps.places.Autocomplete(document.getElementById('destino-input'), { componentRestrictions: { country: 'pa' } });
@@ -522,12 +510,9 @@
             } 
         });
     }
-
     function calcularRuta() {
         if (modoActual !== 'externa' || !destinoCoords) return;
-
         let origenTxtParaMapa = "";
-        
         if (origenTipo === 'calle') {
             const calle = document.getElementById('calle-origen').value;
             const zona = document.getElementById('zona-origen').value;
@@ -538,7 +523,6 @@
         } else {
             return; 
         }
-
         directionsService.route({ 
             origin: origenTxtParaMapa, 
             destination: destinoCoords, 
@@ -555,14 +539,12 @@
             }
         });
     }
-    
     function pedirTaxi() {
         let destinoFinal = "";
         let origenFinal = ""; 
         const precio = document.getElementById('display-precio').innerText;
         const nombrePasajeroActual = document.getElementById('nombreUsuario').value || "Pasajero"; 
         const telefono = document.getElementById('telefono').value.replace(/[^0-9]/g, '');
-        
         if (origenTipo === 'calle') { 
             const calle = document.getElementById('calle-origen').value; 
             const zona = document.getElementById('zona-origen').value; 
@@ -573,7 +555,6 @@
         } else { 
             return alert("Por favor selecciona dónde te buscamos"); 
         } 
-        
         if (modoActual === 'externa') {
             destinoFinal = document.getElementById('destino-input').value;
             if (!destinoFinal) return alert("Por favor completa el destino en el mapa");
@@ -589,24 +570,18 @@
                 return alert("Selecciona un destino interno"); 
             } 
         } 
-        
         if (!telefono || telefono.length < 8) return alert("Por favor ingresa tu número de WhatsApp"); 
         if (precio === "B/. 0.00") return alert("Por favor espera a que se calcule la tarifa completa de origen a destino."); 
-        
         localStorage.setItem('telefono_pasajero', telefono); 
         localStorage.setItem('nombre_pasajero', nombrePasajeroActual); 
-
         const btnSolicitar = document.getElementById('btn-solicitar'); 
         btnSolicitar.disabled = true; 
         btnSolicitar.innerText = "BUSCANDO TAXI..."; 
-        
+        iniciarBanners();
         document.getElementById('estado-viaje-container').innerHTML = `
             <div style="text-align:center; color:#ffc107; font-weight:bold; margin-top:20px; font-size:16px; animation: pulse 2s infinite;">⏳ Buscando conductor disponible...</div>
             <button class="btn-cancelar-viaje" onclick="cancelarViajeCliente('${Date.now()}')" style="margin-top: 15px; width: 100%;">❌ Cancelar Búsqueda</button>
         `; 
-        
-        iniciarBanners();
-
         viajeID = Date.now();
         localStorage.setItem('viajeActivoID', viajeID);
         db.ref('viajes/' + viajeID).set({ 
@@ -621,7 +596,6 @@
             tipo_ruta: modoActual 
         }).then(() => { escucharEstadoViaje(viajeID); }); 
     } 
-
     window.revertirViaje = function(id) {
         if (confirm("¿El conductor demoró mucho? Vamos a quitarle el viaje y a buscarte otro taxi cercano.")) {
             if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
@@ -641,7 +615,6 @@
             `;
         }
     };
-
     window.rechazarConductorLocal = function(id) {
         if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
         db.ref('viajes/' + id).update({
@@ -654,25 +627,22 @@
             tiempoAsignacion: null,
             conductorLlego: null
         });
+        iniciarBanners();
         document.getElementById('estado-viaje-container').innerHTML = `
             <div style="text-align:center; color:#ffc107; font-weight:bold; margin-top:20px; font-size:16px; animation: pulse 2s infinite;">⏳ Relanzando búsqueda...</div>
             <button class="btn-cancelar-viaje" onclick="cancelarViajeCliente('${id}')" style="margin-top: 15px; width: 100%;">❌ Cancelar Búsqueda</button>
         `;
     };
-
     function escucharEstadoViaje(id) { 
         db.ref('viajes/' + id).on('value', (snapshot) => { 
             const viaje = snapshot.val(); 
             if (!viaje) return; 
-            
             if (viaje.estado === 'conductor_asignado') { 
                 const numeroConductor = viaje.conductorCel || 'Sin número'; 
-                
                 db.ref('conductores/' + numeroConductor).once('value').then(snap => {
                     const datosConductor = snap.val() || {};
                     const fotoPerfil = datosConductor.foto_conductor || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png';
                     const fotoCarro = datosConductor.foto_carro || 'https://cdn-icons-png.flaticon.com/512/3204/3204121.png';
-
                     let estrellasPromedio = "Nuevo";
                     if (datosConductor.calificaciones) {
                         let suma = 0, cantidad = 0;
@@ -684,27 +654,22 @@
                     } else {
                         estrellasPromedio = "5.0 ⭐ (Nuevo)";
                     }
-
                     document.getElementById('estado-viaje-container').innerHTML = `
                         <div id="ui-driver-card" class="card-conductor" style="padding: 0; overflow: hidden; background: #fff; color: #000; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
                             <div style="background: #000; color: #fff; padding: 12px; font-weight: bold; font-size: 18px; text-align: center;">Driver Card</div>
                             <h3 style="color: #000; margin-top: 15px; margin-bottom: 5px;">${viaje.conductorNombre}</h3>
-                            
                             <div style="display: flex; justify-content: center; gap: 10px; margin: 15px;">
                                 <img src="${fotoPerfil}" style="width: 100px; height: 100px; border-radius: 8px; object-fit: cover; border: 1px solid #ccc;">
                                 <img src="${fotoCarro}" style="width: 140px; height: 100px; border-radius: 8px; object-fit: cover; border: 1px solid #ccc;">
                             </div>
-                            
                             <p style="font-size: 16px; font-weight: bold; margin: 5px 0;">${estrellasPromedio}</p>
                             <p style="color: #555; font-size: 13px; margin: 5px 0; padding: 0 10px;">${viaje.conductorVehiculo} ${viaje.conductorColor} - ${viaje.conductorPlaca}</p>
-                            
                             <div style="padding: 15px;">
                                 <button onclick="document.getElementById('ui-driver-card').style.display='none'; document.getElementById('ui-taxi-camino').style.display='block';" style="background: #28a745; color: white; width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer;">ACEPTAR VIAJE</button>
                                 <button onclick="rechazarConductorLocal('${id}')" style="background: #ffc107; color: black; width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin-top: 10px; cursor: pointer;">NO, BUSCAR OTRO</button>
                                 <button class="btn-cancelar-viaje" onclick="cancelarViajeCliente('${id}')" style="margin-top: 10px;">❌ Cancelar Viaje</button>
                             </div>
                         </div>
-
                         <div id="ui-taxi-camino" class="card-conductor" style="display: none;">
                             <h3>✅ ¡Taxi en Camino!</h3>
                             <div style="text-align: center; margin-top: 15px; margin-bottom: 10px;">
@@ -728,7 +693,6 @@
                             <button class="btn-whatsapp" onclick="event.stopPropagation(); window.open('https://wa.me/${numeroConductor}?text=Hola ${viaje.conductorNombre}, soy ${viaje.pasajero_nombre}', '_blank')">💬 Enviar WhatsApp</button>
                             <button class="btn-cancelar-viaje" onclick="cancelarViajeCliente('${id}')">❌ Cancelar Viaje</button>
                         </div>`;
-
                     if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
                     relojPasajeroInterval = setInterval(() => {
                         if(!viaje.tiempoAsignacion) return; 
@@ -785,19 +749,16 @@
             } 
         }); 
     } 
-
     function mostrarNotificacionLlegada(viaje) { 
         if (document.getElementById('notif-llegada')) return; 
         const html = `<div id="notif-llegada" class="notificacion-llegada"><h4 style="margin:0 0 10px;">🎉 ¡Tu conductor llegó!</h4><p style="margin:5px 0;">${viaje.conductorNombre} está en el punto de recogida</p><p style="margin:5px 0; font-size:14px;">${viaje.conductorVehiculo} ${viaje.conductorColor} - ${viaje.conductorPlaca}</p><button onclick="window.open('https://wa.me/${viaje.conductorCel}?text=Hola ${viaje.conductorNombre}, soy ${viaje.pasajero_nombre}, ya estoy saliendo', '_blank')" style="background:white; color:#28a745; padding:8px 16px; border-radius:6px; text-decoration:none; display:inline-block; margin-top:10px; font-weight:bold; cursor:pointer;">💬 WhatsApp</button></div>`; 
         document.body.insertAdjacentHTML('beforeend', html); 
         setTimeout(() => document.getElementById('notif-llegada')?.remove(), 15000); 
     } 
-
     function mostrarViajeFinalizado(viaje) { 
         const html = `<div style="position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:30px; border-radius:12px; z-index:10000; box-shadow:0 10px 40px rgba(0,0,0,0.3); text-align:center; max-width:400px;"><h3 style="color:#28a745; margin:0 0 15px;">Viaje Finalizado</h3><p style="color:#666;">Gracias por viajar con ClickGoTaxi</p><p style="font-size:24px; font-weight:bold; color:#333; margin:15px 0;">Total: B/. ${viaje.precio_numerico.toFixed(2)}</p><button onclick="location.reload()" style="background:#FFC107; color:#000; border:none; padding:12px 30px; border-radius:6px; cursor:pointer; font-weight:bold; margin-top:10px;">Nuevo Viaje</button></div>`; 
         document.body.insertAdjacentHTML('beforeend', html); 
     } 
-
     function cancelarViajeCliente(id) { 
         if (confirm("¿Estás seguro de que deseas cancelar este viaje?")) { 
             if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
@@ -807,43 +768,35 @@
             db.ref('viajes/' + id).update({ estado: 'cancelado' }).then(() => { resetFormularioUI(); }); 
         } 
     } 
-
     function resetFormularioUI() { 
+        cerrarBanners();
         localStorage.removeItem('viajeActivoID');
         viajeID = null; 
         const btnSolicitar = document.getElementById('btn-solicitar'); 
         btnSolicitar.disabled = false; 
         btnSolicitar.innerText = "SOLICITAR TAXI"; 
         document.getElementById('estado-viaje-container').innerHTML = ""; 
-        cerrarBanners();
     } 
-
     function marcarEstrellas(valor, tipo) {
         calificacionSeleccionada = valor;
         const estrellas = document.querySelectorAll(`#estrellas-${tipo} span`);
         estrellas.forEach(e => e.classList.remove('seleccionada'));
         event.target.classList.add('seleccionada');
-        
         const textos = {1: "Muy Malo 😠", 2: "Malo 😕", 3: "Regular 😐", 4: "Bueno 🙂", 5: "Excelente 🤩"};
         document.getElementById(`texto-estrellas-${tipo}`).innerText = textos[valor];
     }
-
     function mostrarModalCalificacionConductor(viaje) {
         viajeCompletadoData = viaje;
         document.getElementById('nombre-conductor-cal').innerText = viaje.conductorNombre || 'el conductor';
         document.getElementById('modal-calificar').style.display = 'flex';
     }
-
     function enviarCalificacionConductor() {
         if (calificacionSeleccionada === 0) return alert("Por favor selecciona una estrella.");
-        
         const comentario = document.getElementById('comentario-cliente').value || "Sin comentario";
-        
         db.ref('viajes/' + viajeID).update({
             calificacion_conductor: calificacionSeleccionada,
             comentario_pasajero: comentario 
         });
-
         if (viajeCompletadoData && viajeCompletadoData.conductorCel) {
             db.ref('conductores/' + viajeCompletadoData.conductorCel + '/calificaciones/' + viajeID).set({
                 estrellas: calificacionSeleccionada,
@@ -851,18 +804,14 @@
                 fecha: new Date().toISOString()
             });
         }
-
         document.getElementById('modal-calificar').style.display = 'none';
         mostrarViajeFinalizado(viajeCompletadoData);
     }
-
     function abrirSoporte() { document.getElementById('modal-soporte').style.display = 'flex'; }
     function cerrarSoporte() { document.getElementById('modal-soporte').style.display = 'none'; }
-
     function enviarQueja() {
         const texto = document.getElementById('texto-queja').value;
         if (!texto) return alert("Escribe un comentario.");
-        
         const quejaID = Date.now();
         db.ref('quejas/' + quejaID).set({
             viajeID: viajeID || 'Sin viaje activo',

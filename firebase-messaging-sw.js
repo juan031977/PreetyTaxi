@@ -18,13 +18,14 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
   const notificationTitle = payload.notification?.title || '¡Nuevo Viaje Disponible!';
   
-  // URL absoluta para asegurar que el navegador cargue el icono sin errores
+  // URLs absolutas para asegurar que el navegador cargue los iconos sin errores
   const iconUrl = self.location.origin + '/icon-192.png';
+  const badgeUrl = self.location.origin + '/badge.png';
 
   const notificationOptions = {
     body: payload.notification?.body || 'Un pasajero ha solicitado un servicio.',
     icon: iconUrl,     // Imagen grande que se despliega al bajar la barra
-    badge: iconUrl,    // Icono pequeño en la parte superior izquierda (como WhatsApp)
+    badge: badgeUrl,   // Silueta blanca pequeña en la parte superior izquierda (como WhatsApp)
     vibrate: [300, 100, 300, 100, 300],
     tag: 'cgt-notificacion-viaje'
   };

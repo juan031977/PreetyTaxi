@@ -27,10 +27,10 @@
 </head>
 <body>
 
-<!-- Si la página se recarga por el botón atrás, este contenedor se oculta de inmediato vía JS -->
 <div id="intro-video">
+    <!-- El enlace directo de Firebase que copiaste -->
     <video id="vIntro" muted playsinline webkit-playsinline preload="auto">
-        <source src="logo-fusionado.mp4?v=4" type="video/mp4">
+        <source src="https://firebasestorage.googleapis.com/v0/b/preetytaxiapp.firebasestorage.app/o/logo-fusionado.mp4?alt=media&token=7e80f188-9aef-466e-8119-c2411924c38a" type="video/mp4">
     </video>
     <div id="tap-to-play">TOCA PARA INICIAR</div>
 </div>
@@ -56,10 +56,9 @@
 </div>
 
 <script>
-    // Solución al problema de caché (net::ERR_CACHE_MISS) al presionar "Atrás" en móviles
+    // Evita bloqueos de caché si el usuario regresa con el botón atrás
     window.addEventListener('pageshow', function (event) {
         if (event.persisted) {
-            // Si la página se cargó desde la memoria caché del navegador, eliminamos el intro de golpe
             const introDiv = document.getElementById('intro-video');
             if (introDiv) introDiv.remove();
         }
@@ -117,8 +116,8 @@
         v.addEventListener('error', cerrarIntro);
     }
     
-    // Seguridad de tiempo máximo
-    setTimeout(cerrarIntro, 7000);
+    // Si el video tarda más de 5 segundos en cargar por la red, se quita solo para que NUNCA salga el "Oops"
+    setTimeout(cerrarIntro, 5000);
 </script>
 </body>
 </html>

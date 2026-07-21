@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ClickGoTaxi</title>
+    <title>Click & Go Taxi</title>
     <style>
         :root { --gold: #ffc107; --dark: #0b0b0b; --card: #1a1a1a; --gray-text: #a0a0a0; }
-        body { font-family: 'Arial', sans-serif; background: var(--dark); color: white; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; text-align: center; }
+        body { font-family: 'Arial', sans-serif; background: var(--dark); color: white; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; text-align: center; overflow: hidden; }
+        
         .container { width: 90%; max-width: 400px; padding: 20px 0; }
         h1 { color: var(--gold); font-size: 38px; margin: 0 0 5px 0; font-weight: 800; }
         .tagline { color: var(--gray-text); font-size: 14px; margin-bottom: 35px; }
@@ -20,19 +21,120 @@
         .btn-gold { background: var(--gold); color: black; }
         .btn-outline { border: 2px solid var(--gold); color: var(--gold); }
         .footer-text { font-size: 11px; color: #333; margin-top: 40px; }
-        #intro-video { position: fixed; inset: 0; background: #0b0b0b; z-index: 999999; display: flex; align-items: center; justify-content: center; }
-        #intro-video video { width: 100%; height: 100%; object-fit: contain; background:#0b0b0b; }
-        #tap-to-play { position: absolute; bottom: 30px; background: rgba(255,193,7,0.9); color: black; padding: 10px 20px; border-radius: 20px; font-weight: bold; font-size: 12px; }
+
+        /* --- INTRO CINEMÁTICA EN CSS (Réplica exacta de tu video) --- */
+        #intro-cine {
+            position: fixed;
+            inset: 0;
+            background: #0b0b0b;
+            z-index: 999999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            animation: cerrarIntro 0.5s ease 4s forwards;
+        }
+
+        /* ESCENA 1: El Taxi y Neones (Primeros 2 segundos) */
+        .escena-1 {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            animation: desvanecerEscena1 0.5s ease 2s forwards;
+        }
+
+        .taxi-neon-box {
+            font-size: 60px;
+            margin-bottom: 15px;
+            filter: drop-shadow(0 0 15px #00e5ff) drop-shadow(0 0 25px #ff007f);
+            animation: flotarTaxi 1.5s infinite alternate ease-in-out;
+        }
+
+        .titulo-neon {
+            color: var(--gold);
+            font-size: 32px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-shadow: 0 0 15px rgba(255, 193, 7, 0.6);
+        }
+
+        /* ESCENA 2: El logotipo CGT y Eslogan final (Del segundo 2 al 4) */
+        .escena-2 {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            opacity: 0;
+            animation: mostrarEscena2 0.5s ease 2s forwards;
+        }
+
+        .cgt-circulo {
+            width: 110px;
+            height: 110px;
+            border: 3px solid white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: 900;
+            color: white;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+            margin-bottom: 15px;
+            letter-spacing: 2px;
+        }
+
+        .titulo-cgt {
+            color: white;
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            margin: 0;
+        }
+
+        .eslogan-cgt {
+            color: var(--gold);
+            font-size: 13px;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-top: 8px;
+            font-weight: 600;
+        }
+
+        /* Animaciones de la línea de tiempo */
+        @keyframes flotarTaxi {
+            0% { transform: scale(0.95) translateY(0); }
+            100% { transform: scale(1.05) translateY(-6px); }
+        }
+
+        @keyframes desvanecerEscena1 {
+            to { opacity: 0; visibility: hidden; pointer-events: none; }
+        }
+
+        @keyframes mostrarEscena2 {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        @keyframes cerrarIntro {
+            to { opacity: 0; visibility: hidden; pointer-events: none; }
+        }
     </style>
 </head>
 <body>
 
-<div id="intro-video">
-    <!-- El enlace directo de Firebase que copiaste -->
-    <video id="vIntro" muted playsinline webkit-playsinline preload="auto">
-        <source src="https://firebasestorage.googleapis.com/v0/b/preetytaxiapp.firebasestorage.app/o/logo-fusionado.mp4?alt=media&token=7e80f188-9aef-466e-8119-c2411924c38a" type="video/mp4">
-    </video>
-    <div id="tap-to-play">TOCA PARA INICIAR</div>
+<div id="intro-cine">
+    <div class="escena-1">
+        <div class="taxi-neon-box">🚕</div>
+        <div class="titulo-neon">CLICK & GO TAXI</div>
+    </div>
+
+    <div class="escena-2">
+        <div class="cgt-circulo">CGT</div>
+        <div class="titulo-cgt">CLICK & GO TAXI</div>
+        <div class="eslogan-cgt">Tu destino a un clic</div>
+    </div>
 </div>
 
 <div class="container">
@@ -56,14 +158,6 @@
 </div>
 
 <script>
-    // Evita bloqueos de caché si el usuario regresa con el botón atrás
-    window.addEventListener('pageshow', function (event) {
-        if (event.persisted) {
-            const introDiv = document.getElementById('intro-video');
-            if (introDiv) introDiv.remove();
-        }
-    });
-
     function switchRole(role) {
         document.getElementById('btn-pasajero').classList.remove('active');
         document.getElementById('btn-conductor').classList.remove('active');
@@ -77,47 +171,6 @@
             document.getElementById('card-conductor').classList.add('active');
         }
     }
-
-    const v = document.getElementById('vIntro');
-    const intro = document.getElementById('intro-video');
-    const tapText = document.getElementById('tap-to-play');
-    let iniciado = false;
-    let cerrado = false;
-
-    function cerrarIntro(){
-        if(cerrado) return;
-        cerrado = true;
-        if(intro) {
-            intro.style.transition = 'opacity 0.6s ease';
-            intro.style.opacity = '0';
-            setTimeout(() => { intro.remove(); }, 600);
-        }
-    }
-
-    function iniciarVideo(){
-        if(iniciado || cerrado) return;
-        iniciado = true;
-        if(tapText) tapText.style.display = 'none';
-        v.muted = true;
-        v.currentTime = 0;
-        v.play().catch(() => {
-            cerrarIntro();
-        });
-    }
-
-    if (intro) {
-        intro.addEventListener('touchstart', iniciarVideo);
-        intro.addEventListener('click', iniciarVideo);
-    }
-    document.addEventListener('touchstart', iniciarVideo, {once:true});
-    
-    if (v) {
-        v.addEventListener('ended', cerrarIntro);
-        v.addEventListener('error', cerrarIntro);
-    }
-    
-    // Si el video tarda más de 5 segundos en cargar por la red, se quita solo para que NUNCA salga el "Oops"
-    setTimeout(cerrarIntro, 5000);
 </script>
 </body>
 </html>

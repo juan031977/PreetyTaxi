@@ -1,4 +1,4 @@
-const CACHE_NAME = 'clickgotaxi-v1';
+const CACHE_NAME = 'clickgotaxi-v2';
 const urlsToCache = [
   './',
   './index.html',
@@ -22,7 +22,7 @@ self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
-        cacheNames.map(cacheName => {
+        cachenames.map(cacheName => {
           if (cacheName !== CACHE_NAME) {
             return caches.delete(cacheName);
           }

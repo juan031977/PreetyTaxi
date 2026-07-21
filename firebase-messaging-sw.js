@@ -17,11 +17,16 @@ const messaging = firebase.messaging();
 // Manejar alertas cuando la app está cerrada o en segundo plano
 messaging.onBackgroundMessage((payload) => {
   const notificationTitle = payload.notification?.title || '¡Nuevo Viaje Disponible!';
+  
+  // URL absoluta para asegurar que el navegador cargue el icono sin errores
+  const iconUrl = self.location.origin + '/icon-192.png';
+
   const notificationOptions = {
     body: payload.notification?.body || 'Un pasajero ha solicitado un servicio.',
-    icon: './icon-192.png',
-    badge: './icon-192.png',
-    vibrate: [300, 100, 300, 100, 300]
+    icon: iconUrl,     // Imagen grande que se despliega al bajar la barra
+    badge: iconUrl,    // Icono pequeño en la parte superior izquierda (como WhatsApp)
+    vibrate: [300, 100, 300, 100, 300],
+    tag: 'cgt-notificacion-viaje'
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);

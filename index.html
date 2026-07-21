@@ -27,6 +27,7 @@
 </head>
 <body>
 
+<!-- Si la página se recarga por el botón atrás, este contenedor se oculta de inmediato vía JS -->
 <div id="intro-video">
     <video id="vIntro" muted playsinline webkit-playsinline preload="auto">
         <source src="logo-fusionado.mp4?v=4" type="video/mp4">
@@ -55,6 +56,15 @@
 </div>
 
 <script>
+    // Solución al problema de caché (net::ERR_CACHE_MISS) al presionar "Atrás" en móviles
+    window.addEventListener('pageshow', function (event) {
+        if (event.persisted) {
+            // Si la página se cargó desde la memoria caché del navegador, eliminamos el intro de golpe
+            const introDiv = document.getElementById('intro-video');
+            if (introDiv) introDiv.remove();
+        }
+    });
+
     function switchRole(role) {
         document.getElementById('btn-pasajero').classList.remove('active');
         document.getElementById('btn-conductor').classList.remove('active');
@@ -77,32 +87,37 @@
 
     function cerrarIntro(){
         if(cerrado) return;
-        cerrado=true;
-        intro.style.transition='opacity 0.6s ease';
-        intro.style.opacity='0';
-        setTimeout(()=>{ intro.remove(); }, 600);
+        cerrado = true;
+        if(intro) {
+            intro.style.transition = 'opacity 0.6s ease';
+            intro.style.opacity = '0';
+            setTimeout(() => { intro.remove(); }, 600);
+        }
     }
+
     function iniciarVideo(){
-        if(iniciado) return;
-        iniciado=true;
-        tapText.style.display='none';
-        v.muted=true;
-        v.currentTime=0;
-        v.play().then(()=>{
-            // Se reproduce bien
-        }).catch(()=>{
-            // Si falla, cierra directo
+        if(iniciado || cerrado) return;
+        iniciado = true;
+        if(tapText) tapText.style.display = 'none';
+        v.muted = true;
+        v.currentTime = 0;
+        v.play().catch(() => {
             cerrarIntro();
         });
     }
-    // El primer toque en CUALQUIER parte inicia el video, ya no necesitas flecha atrás
-    intro.addEventListener('touchstart', iniciarVideo);
-    intro.addEventListener('click', iniciarVideo);
+
+    if (intro) {
+        intro.addEventListener('touchstart', iniciarVideo);
+        intro.addEventListener('click', iniciarVideo);
+    }
     document.addEventListener('touchstart', iniciarVideo, {once:true});
     
-    v.addEventListener('ended', cerrarIntro);
-    v.addEventListener('error', cerrarIntro);
-    // Si en 7 segundos no hace nada, cierra solo
+    if (v) {
+        v.addEventListener('ended', cerrarIntro);
+        v.addEventListener('error', cerrarIntro);
+    }
+    
+    // Seguridad de tiempo máximo
     setTimeout(cerrarIntro, 7000);
 </script>
 </body>

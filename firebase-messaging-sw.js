@@ -1,4 +1,4 @@
-// Service Worker para Notificaciones Push - Click&GoTaxi
+// Service Worker para Notificaciones Push - Click&GoTaxi (Firebase v8)
 importScripts('https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js');
 importScripts('https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js');
 
@@ -14,23 +14,22 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// Manejar alertas cuando la app está cerrada o en segundo plano
-messaging.onBackgroundMessage((payload) => {
+// Manejar alertas cuando la app está en segundo plano o cerrada (Especial para SDK v8)
+messaging.setBackgroundMessageHandler((payload) => {
   const notificationTitle = payload.notification?.title || '¡Nuevo Viaje Disponible!';
   
-  // URLs absolutas para asegurar que el navegador cargue los iconos sin errores
   const iconUrl = self.location.origin + '/icon-192.png';
   const badgeUrl = self.location.origin + '/badge.png';
 
   const notificationOptions = {
     body: payload.notification?.body || 'Un pasajero ha solicitado un servicio.',
-    icon: iconUrl,     // Imagen grande que se despliega al bajar la barra
-    badge: badgeUrl,   // Silueta blanca pequeña en la parte superior izquierda (como WhatsApp)
+    icon: iconUrl,     
+    badge: badgeUrl,   
     vibrate: [300, 100, 300, 100, 300],
     tag: 'cgt-notificacion-viaje'
   };
 
-  self.registration.showNotification(notificationTitle, notificationOptions);
+  return self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
 // Acción al hacer clic en la notificación para abrir la app

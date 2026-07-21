@@ -9,6 +9,10 @@
     <meta name="theme-color" content="#ffc107">
     <link rel="apple-touch-icon" href="icon-192.png">
 
+    <!-- Firebase SDK (Versión 8.10.1) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
+
     <style>
         :root { --gold: #ffc107; --dark: #0b0b0b; --card: #1a1a1a; --gray-text: #a0a0a0; }
         body { font-family: 'Arial', sans-serif; background: var(--dark); color: white; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; text-align: center; touch-action: manipulation; }
@@ -79,6 +83,21 @@
 </div>
 
 <script>
+    // Configuración de Firebase y Cloud Messaging
+    const firebaseConfig = {
+        apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg",
+        authDomain: "preetytaxiapp.firebaseapp.com",
+        databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com",
+        projectId: "preetytaxiapp",
+        storageBucket: "preetytaxiapp.firebasestorage.app",
+        messagingSenderId: "1083536462057",
+        appId: "1:1083536462057:web:abcdef"
+    };
+
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+
     window.switchRole = function(role) {
         const btnPasajero = document.getElementById('btn-pasajero');
         const btnConductor = document.getElementById('btn-conductor');
@@ -110,11 +129,33 @@
         }
     }, 4000);
 
-    // INICIAR EL SERVICE WORKER PARA PWABUILDER
+    // INICIAR SERVICE WORKER Y CLOUD MESSAGING
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('sw.js').then((registration) => {
                 console.log('Service Worker registrado con éxito:', registration.scope);
+
+                // Inicializar Cloud Messaging y solicitar permisos automáticamente
+                try {
+                    const messaging = firebase.messaging();
+                    
+                    messaging.getToken({
+                        vapidKey: 'BBUHPimNFxcFynE28L8yDonGLzDqi8P7x2L5sKlFPpqoId-_Lkl6WURXgPHH4lTTQVtlpa_WRNO9-Sq4SSxHFn0',
+                        serviceWorkerRegistration: registration
+                    }).then((currentToken) => {
+                        if (currentToken) {
+                            console.log('Token FCM obtenido con éxito:', currentToken);
+                        } else {
+                            console.log('No se pudo encontrar un token de registro FCM.');
+                        }
+                    }).catch((err) => {
+                        console.error('Error al recuperar el token de mensajería:', err);
+                    });
+
+                } catch (e) {
+                    console.error('Error configurando Firebase Messaging:', e);
+                }
+
             }).catch((error) => {
                 console.log('Fallo al registrar el Service Worker:', error);
             });

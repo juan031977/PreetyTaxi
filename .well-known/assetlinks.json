@@ -1,9 +1,8 @@
-
 [{
       "relation": ["delegate_permission/common.handle_all_urls"],
       "target": {
         "namespace": "android_app",
-        "package_name": "com.juan031977.clickgotaxi",
-        "sha256_cert_fingerprints": ["0A:62:00:85:C2:65:A0:84:9C:8A:3F:27:55:FD:48:F2:6E:B1:E5:C1:4A:7D:07:5F:3F:C8:DD:C2:CF:DF:36:41"]
+        "package_name": "io.github.juan031977.twa",
+        "sha256_cert_fingerprints": ["32:AA:6A:BC:90:C9:E1:54:98:E0:DD:68:19:C7:DD:EF:C1:BC:B5:00:68:0D:01:0D:8E:9F:FA:E6:3A:1D:93:FE"]
       }
     }]

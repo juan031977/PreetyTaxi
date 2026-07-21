@@ -1,0 +1,18 @@
+{
+  "name": "ClickGoTaxi - Brisas del Golf",
+  "short_name": "ClickGoTaxi",
+  "description": "Pide tu taxi en Brisas del Golf r\u00e1pido y seguro",
+  "start_url": "/PreetyTaxi/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#ffc107",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://firebasestorage.googleapis.com/v0/b/preetytaxiapp.firebasestorage.app/o/taxi%20banner.jpg?alt=media&token=7433caf7-edf1-4fa3-b413-083f5066f90d",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}

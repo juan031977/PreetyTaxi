@@ -4,8 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ClickGoTaxi</title>
-    <link rel="manifest" href="data:application/json;base64,ewogICJpZCI6ICIvUHJlZXR5VGF4aS8iLAogICJuYW1lIjogIkNsaWNrR29UYXhpIC0gQnJpc2FzIGRlbCBHb2xmIiwKICAic2hvcnRfbmFtZSI6ICJDbGlja0dvVGF4aSIsCiAgImRlc2NyaXB0aW9uIjogIlBpZGUgdHUgdGF4aSBlbiBCcmlzYXMgZGVsIEdvbGYgclx1MDBlMXBpZG8geSBzZWd1cm8iLAogICJzdGFydF91cmwiOiAiL1ByZWV0eVRheGkvIiwKICAic2NvcGUiOiAiL1ByZWV0eVRheGkvIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjMDAwMDAwIiwKICAidGhlbWVfY29sb3IiOiAiI2ZmYzEwNyIsCiAgIm9yaWVudGF0aW9uIjogInBvcnRyYWl0IiwKICAiaWNvbnMiOiBbCiAgICB7CiAgICAgICJzcmMiOiAiaWNvbi0xOTIucG5nIiwKICAgICAgInNpemVzIjogIjE5MngxOTIiLAogICAgICAidHlwZSI6ICJpbWFnZS9wbmciLAogICAgICAicHVycG9zZSI6ICJhbnkgbWFza2FibGUiCiAgICB9LAogICAgewogICAgICAic3JjIjogImljb24tNTEyLnBuZyIsCiAgICAgICJzaXplcyI6ICI1MTJ4NTEyIiwKICAgICAgInR5cGUiOiAiaW1hZ2UvcG5nIiwKICAgICAgInB1cnBvc2UiOiAiYW55IG1hc2thYmxlIgogICAgfQogIF0sCiAgInNjcmVlbnNob3RzIjogWwogICAgewogICAgICAic3JjIjogImljb24tNTEyLnBuZyIsCiAgICAgICJzaXplcyI6ICI1MTJ4NTEyIiwKICAgICAgInR5cGUiOiAiaW1hZ2UvcG5nIiwKICAgICAgImZvcm1fZmFjdG9yIjogIndpZGUiCiAgICB9CiAgXQp9">
+    
+    <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ffc107">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
     <style>
         :root { --gold: #ffc107; --dark: #0b0b0b; --card: #1a1a1a; --gray-text: #a0a0a0; }
         body { font-family: 'Arial', sans-serif; background: var(--dark); color: white; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; text-align: center; touch-action: manipulation; }
@@ -26,16 +29,7 @@
         .footer-text { font-size: 11px; color: #333; margin-top: 40px; letter-spacing: 1px; }
 
         /* INTRO CINEMÁTICA EN CSS */
-        #intro-cine {
-            position: fixed;
-            inset: 0;
-            background: #0b0b0b;
-            z-index: 999999;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
+        #intro-cine { position: fixed; inset: 0; background: #0b0b0b; z-index: 999999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .escena-1 { position: absolute; display: flex; flex-direction: column; align-items: center; animation: desvanecerEscena1 0.5s ease 2s forwards; }
         .taxi-neon-box { font-size: 60px; margin-bottom: 15px; filter: drop-shadow(0 0 15px #00e5ff) drop-shadow(0 0 25px #ff007f); animation: flotarTaxi 1.5s infinite alternate ease-in-out; }
         .titulo-neon { color: var(--gold); font-size: 32px; font-weight: 900; letter-spacing: 2px; text-shadow: 0 0 15px rgba(255, 193, 7, 0.6); }
@@ -116,9 +110,14 @@
         }
     }, 4000);
 
+    // INICIAR EL SERVICE WORKER PARA PWABUILDER
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('sw.js').catch(() => console.log('Sin SW aún.'));
+            navigator.serviceWorker.register('sw.js').then((registration) => {
+                console.log('Service Worker registrado con éxito:', registration.scope);
+            }).catch((error) => {
+                console.log('Fallo al registrar el Service Worker:', error);
+            });
         });
     }
 </script>

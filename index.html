@@ -9,6 +9,7 @@
     <meta name="theme-color" content="#ffc107">
     <link rel="apple-touch-icon" href="icon-192.png">
 
+    <!-- Firebase SDK (Versión 8.10.1) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
 
@@ -17,10 +18,10 @@
         body { font-family: 'Arial', sans-serif; background: var(--dark); color: white; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; text-align: center; touch-action: manipulation; }
         .container { width: 90%; max-width: 400px; padding: 20px 0; }
         
-        /* TÍTULO RESPONSIVO PARA QUE NO SE ROMPA EN CELULAR */
+        /* TÍTULO RESPONSIVO PARA PC Y CELULAR */
         h1 { 
             color: var(--gold); 
-            font-size: clamp(26px, 7vw, 38px); /* Se adapta automáticamente a la pantalla del celular */
+            font-size: clamp(26px, 7.5vw, 36px); 
             margin: 0 0 5px 0; 
             font-weight: 800; 
             letter-spacing: -1px; 
@@ -28,7 +29,7 @@
             display: flex; 
             align-items: center; 
             justify-content: center; 
-            white-space: nowrap; /* Fuerza a que todo quede en una sola línea */
+            white-space: format; 
         }
 
         .tagline { color: var(--gray-text); font-size: 14px; margin-top: 0; margin-bottom: 35px; }
@@ -45,16 +46,18 @@
         .btn:active { transform: scale(0.96); }
         .footer-text { font-size: 11px; color: #333; margin-top: 40px; letter-spacing: 1px; }
 
-        /* IMAGEN ESCALADA PROPORCIONALMENTE AL TEXTO */
-        .taxi-moderno {
-            height: 1.1em; /* Crece o se reduce de la mano con el texto del título */
-            width: auto;  
-            margin-left: 10px;
+        /* ESTILO PARA TU IMAGEN PNG ORIGINAL (60x80) */
+        .taxi-png-icon {
+            width: 45px;  /* Ancho proporcional adaptado al título */
+            height: 60px; /* Mantiene la proporción de tus medidas originales 60x80 */
+            object-fit: contain;
+            margin-left: 12px;
             vertical-align: middle;
             filter: drop-shadow(0px 4px 10px rgba(255, 193, 7, 0.5));
-            animation: flotarModerno 2s infinite alternate ease-in-out;
+            animation: flotarPng 2.5s infinite alternate ease-in-out;
         }
-        @keyframes flotarModerno { 
+        
+        @keyframes flotarPng { 
             0% { transform: translateY(0px); } 
             100% { transform: translateY(-4px); } 
         }
@@ -96,8 +99,9 @@
 </div>
 
 <div class="container">
+    <!-- TÍTULO CON TU IMAGEN PNG ORIGINAL -->
     <h1>Click & Go 
-        <img src="taxi-logo.png" alt="Taxi" class="taxi-moderno">
+        <img src="taxi-logo.png" alt="Taxi Logo" class="taxi-png-icon" onerror="this.style.display='none';">
     </h1>
     
     <p class="tagline">¡Tu transporte en Panamá!</p>
@@ -121,6 +125,7 @@
 </div>
 
 <script>
+    // Configuración de Firebase y Cloud Messaging
     const firebaseConfig = {
         apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg",
         authDomain: "preetytaxiapp.firebaseapp.com",
@@ -157,15 +162,17 @@
         }
     };
 
+    // Soluciona el bloqueo de clics de la intro cinemática
     setTimeout(() => {
         const intro = document.getElementById('intro-cine');
         if(intro) {
-            intro.style.pointerEvents = 'none';
+            intro.style.pointerEvents = 'none'; 
             intro.style.opacity = '0';
             setTimeout(() => intro.remove(), 500);
         }
     }, 4000);
 
+    // INICIAR SERVICE WORKER Y CLOUD MESSAGING
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('sw.js').then((registration) => {

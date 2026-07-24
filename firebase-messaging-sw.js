@@ -12,7 +12,6 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// ESTO ES LO QUE HACE QUE SALGA ARRIBA A LA IZQ COMO WHATSAPP AUNQUE ESTÉS EN OTRA APP
 messaging.onBackgroundMessage(function(payload) {
   console.log('[FCM SW] Mensaje recibido en segundo plano:', payload);
   
@@ -21,12 +20,11 @@ messaging.onBackgroundMessage(function(payload) {
   
   const options = {
     body: body,
-    icon: './icon-192.png', // El icono cuadrado normal al centro
-    badge: './badge.png',   // LA CLAVE: Tu silueta blanca en PNG transparente para la barra superior
-    vibrate: [200, 100, 200, 100, 200],
-    sound: 'default',
-    requireInteraction: true, // Se queda arriba hasta que le den clic
-    tag: 'viaje-nuevo', // Si llega otro viaje, reemplaza el anterior
+    icon: '/icon-192.png', // Ruta absoluta para evitar que falle en segundo plano
+    badge: '/badge.png',   // Ruta absoluta para evitar que falle en segundo plano
+    vibrate: [300, 100, 300, 100, 300],
+    requireInteraction: true, 
+    tag: 'viaje-nuevo', 
     renotify: true,
     data: {
       url: payload.data?.url || payload.fcmOptions?.link || "./panel_trabajo.html",
@@ -37,7 +35,6 @@ messaging.onBackgroundMessage(function(payload) {
   return self.registration.showNotification(title, options);
 });
 
-// CUANDO LE DAS CLIC A LA NOTIFICACION ARRIBA A LA IZQ SE ENFOCA EL PANEL
 self.addEventListener('notificationclick', function(event) {
   console.log('[FCM SW] Click en notificacion:', event);
   event.notification.close();
@@ -46,13 +43,11 @@ self.addEventListener('notificationclick', function(event) {
   
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
-      // Si el panel de trabajo ya está abierto en segundo plano, lo trae al frente
       for (let client of windowClients) {
         if (client.url.includes('panel_trabajo') && 'focus' in client) {
           return client.focus();
         }
       }
-      // Si la app estaba cerrada por completo, la abre
       if (clients.openWindow) {
         return clients.openWindow(urlToOpen);
       }

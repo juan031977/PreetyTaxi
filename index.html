@@ -18,7 +18,7 @@
         body { font-family: 'Arial', sans-serif; background: var(--dark); color: white; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; text-align: center; touch-action: manipulation; }
         .container { width: 90%; max-width: 400px; padding: 20px 0; }
         
-        /* TÍTULO RESPONSIVO PARA PC Y CELULAR */
+        /* TÍTULO RESPONSIVO CORREGIDO PARA CELULAR Y PC */
         h1 { 
             color: var(--gold); 
             font-size: clamp(26px, 7.5vw, 36px); 
@@ -29,7 +29,7 @@
             display: flex; 
             align-items: center; 
             justify-content: center; 
-            white-space: format; 
+            white-space: nowrap; /* Corregido: valor válido para mantener todo en una línea */
         }
 
         .tagline { color: var(--gray-text); font-size: 14px; margin-top: 0; margin-bottom: 35px; }
@@ -46,13 +46,16 @@
         .btn:active { transform: scale(0.96); }
         .footer-text { font-size: 11px; color: #333; margin-top: 40px; letter-spacing: 1px; }
 
-        /* ESTILO PARA TU IMAGEN PNG ORIGINAL (60x80) */
+        /* TU IMAGEN PNG ORIGINAL (Forzada a mostrarse visible y con su proporción 60x80) */
         .taxi-png-icon {
-            width: 45px;  /* Ancho proporcional adaptado al título */
-            height: 60px; /* Mantiene la proporción de tus medidas originales 60x80 */
+            width: 36px;  /* Ancho adaptado para que luzca bien en celular */
+            height: 48px; /* Mantiene exactamente la proporción de tu diseño original */
             object-fit: contain;
-            margin-left: 12px;
+            margin-left: 10px;
             vertical-align: middle;
+            display: inline-block !important; /* Fuerza visibilidad en móviles */
+            visibility: visible !important;
+            opacity: 1 !important;
             filter: drop-shadow(0px 4px 10px rgba(255, 193, 7, 0.5));
             animation: flotarPng 2.5s infinite alternate ease-in-out;
         }
@@ -99,9 +102,9 @@
 </div>
 
 <div class="container">
-    <!-- TÍTULO CON TU IMAGEN PNG ORIGINAL -->
+    <!-- TÍTULO CON TU IMAGEN PNG -->
     <h1>Click & Go 
-        <img src="taxi-logo.png" alt="Taxi Logo" class="taxi-png-icon" onerror="this.style.display='none';">
+        <img src="taxi-logo.png" alt="Taxi Logo" class="taxi-png-icon">
     </h1>
     
     <p class="tagline">¡Tu transporte en Panamá!</p>
@@ -125,7 +128,6 @@
 </div>
 
 <script>
-    // Configuración de Firebase y Cloud Messaging
     const firebaseConfig = {
         apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg",
         authDomain: "preetytaxiapp.firebaseapp.com",
@@ -162,7 +164,6 @@
         }
     };
 
-    // Soluciona el bloqueo de clics de la intro cinemática
     setTimeout(() => {
         const intro = document.getElementById('intro-cine');
         if(intro) {
@@ -172,35 +173,17 @@
         }
     }, 4000);
 
-    // INICIAR SERVICE WORKER Y CLOUD MESSAGING
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('sw.js').then((registration) => {
-                console.log('Service Worker registrado con éxito:', registration.scope);
-
                 try {
                     const messaging = firebase.messaging();
-                    
                     messaging.getToken({
                         vapidKey: 'BBUHPimNFxcFynE28L8yDonGLzDqi8P7x2L5sKlFPpqoId-_Lkl6WURXgPHH4lTTQVtlpa_WRNO9-Sq4SSxHFn0',
                         serviceWorkerRegistration: registration
-                    }).then((currentToken) => {
-                        if (currentToken) {
-                            console.log('Token FCM obtenido con éxito:', currentToken);
-                        } else {
-                            console.log('No se pudo encontrar un token de registro FCM.');
-                        }
-                    }).catch((err) => {
-                        console.error('Error al recuperar el token de mensajería:', err);
-                    });
-
-                } catch (e) {
-                    console.error('Error configurando Firebase Messaging:', e);
-                }
-
-            }).catch((error) => {
-                console.log('Fallo al registrar el Service Worker:', error);
-            });
+                    }).catch((err) => {});
+                } catch (e) {}
+            }).catch((error) => {});
         });
     }
 </script>

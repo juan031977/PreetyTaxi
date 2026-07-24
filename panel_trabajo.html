@@ -4,8 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de Trabajo - Click$GoTaxi</title>
-    <link rel="manifest" href="./manifest.json"> <!-- Importante para la PWA -->
-    <style>
+    <link rel="manifest" href="./manifest.json"> <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; background: #000; color: #fff; padding: 20px; transition: background 0.3s; }
         
@@ -29,7 +28,6 @@
         .btn-editar { background: #444; color: white; padding: 8px; font-size: 14px; width: auto; border-radius: 5px; margin-top: 10px; }
         .btn-volver { position: absolute; top: 5px; left: 15px; background: transparent; color: #aaa; border: none; font-size: 14px; font-weight: bold; cursor: pointer; z-index: 20; width: auto; padding: 0; margin: 0; }
     </style>
-    <!-- Agregado el script de Firebase Messaging -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
@@ -45,6 +43,10 @@
     <audio id="sonidoNotificacion" preload="auto">
         <source src="https://cdn.jsdelivr.net/gh/juan031977/PreetyTaxi@main/silbido.mp3" type="audio/mpeg">
         <source src="https://assets.mixkit.co/sfx/preview/2320/2320-preview.mp3" type="audio/mpeg">
+    </audio>
+
+    <audio id="audioLlego" preload="auto">
+        <source src="https://raw.githubusercontent.com/juan031977/PreetyTaxi/main/su%20taxi%20llego.mp3" type="audio/mpeg">
     </audio>
 
     <button class="btn-volver" onclick="window.history.back()">⬅ Volver</button>
@@ -87,6 +89,7 @@
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         const audio = document.getElementById('sonidoNotificacion');
+        const audioLlego = document.getElementById('audioLlego');
 
         function iniciarApp() {
             audio.play().then(() => {
@@ -315,6 +318,12 @@
         }
 
         window.actualizar = (id, estado) => {
+            if (estado === 'conductor_llego') {
+                if (audioLlego) {
+                    audioLlego.currentTime = 0;
+                    audioLlego.play().catch(e => console.log("Error al reproducir audio llegó:", e));
+                }
+            }
             db.ref('viajes/' + id).update({ estado: estado }).then(() => {
                 if(estado === 'completado') {
                     document.getElementById('contenedor').innerHTML = '';

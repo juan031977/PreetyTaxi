@@ -46,16 +46,21 @@
         .btn:active { transform: scale(0.96); }
         .footer-text { font-size: 11px; color: #333; margin-top: 40px; letter-spacing: 1px; }
 
-        /* ESTILO PARA EL ICONO ESTÁNDAR */
-        .taxi-icon {
-            margin-left: 12px;
-            font-size: 0.9em;
-            display: inline-block;
-            filter: drop-shadow(0px 4px 8px rgba(255, 193, 7, 0.4));
-            animation: flotarIcono 2s infinite alternate ease-in-out;
+        /* ESTILO PARA TU IMAGEN PNG DESDE GITHUB */
+        .taxi-png-icon {
+            width: 36px;
+            height: 48px;
+            object-fit: contain;
+            margin-left: 10px;
+            vertical-align: middle;
+            display: inline-block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            filter: drop-shadow(0px 4px 10px rgba(255, 193, 7, 0.5));
+            animation: flotarPng 2.5s infinite alternate ease-in-out;
         }
         
-        @keyframes flotarIcono { 
+        @keyframes flotarPng { 
             0% { transform: translateY(0px); } 
             100% { transform: translateY(-4px); } 
         }
@@ -97,8 +102,10 @@
 </div>
 
 <div class="container">
-    <!-- TÍTULO CON ICONO ESTÁNDAR INFALIBLE -->
-    <h1>Click & Go <span class="taxi-icon">🚖</span></h1>
+    <!-- TÍTULO CON TU PNG DESDE GITHUB -->
+    <h1>Click & Go 
+        <img src="https://raw.githubusercontent.com/juan031977/PreetyTaxi/main/taxi-logo.png" alt="Taxi Logo" class="taxi-png-icon">
+    </h1>
     
     <p class="tagline">¡Tu transporte en Panamá!</p>
     

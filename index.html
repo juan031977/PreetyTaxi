@@ -32,16 +32,47 @@
         .btn:active { transform: scale(0.96); }
         .footer-text { font-size: 11px; color: #333; margin-top: 40px; letter-spacing: 1px; }
 
-        /* INTRO CINEMÁTICA EN CSS */
-        #intro-cine { position: fixed; inset: 0; background: #0b0b0b; z-index: 999999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        /* INTRO CINEMÁTICA EN CSS CON POSICIÓN APILADA Y DESTELLOS */
+        #intro-cine { position: fixed; inset: 0; background: #0b0b0b; z-index: 999999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s ease; }
+        
         .escena-1 { position: absolute; display: flex; flex-direction: column; align-items: center; animation: desvanecerEscena1 0.5s ease 2s forwards; }
-        .taxi-neon-box { font-size: 60px; margin-bottom: 15px; filter: drop-shadow(0 0 15px #00e5ff) drop-shadow(0 0 25px #ff007f); animation: flotarTaxi 1.5s infinite alternate ease-in-out; }
-        .titulo-neon { color: var(--gold); font-size: 32px; font-weight: 900; letter-spacing: 2px; text-shadow: 0 0 15px rgba(255, 193, 7, 0.6); }
-        .escena-2 { position: absolute; display: flex; flex-direction: column; align-items: center; opacity: 0; animation: mostrarEscena2 0.5s ease 2s forwards; }
         .cgt-circulo { width: 110px; height: 110px; border: 3px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 900; color: white; box-shadow: 0 0 20px rgba(255, 255, 255, 0.3); margin-bottom: 15px; letter-spacing: 2px; }
-        .titulo-cgt { color: white; font-size: 26px; font-weight: 800; letter-spacing: 1px; margin: 0; }
-        .eslogan-cgt { color: var(--gold); font-size: 13px; letter-spacing: 4px; text-transform: uppercase; margin-top: 8px; font-weight: 600; }
-        @keyframes flotarTaxi { 0% { transform: scale(0.95) translateY(0); } 100% { transform: scale(1.05) translateY(-6px); } }
+        .titulo-cgt { color: white; font-size: 26px; font-weight: 800; letter-spacing: 1px; margin: 0; animation: destelloTexto1 1.2s infinite alternate ease-in-out; }
+        
+        .escena-2 { position: absolute; inset: 0; background: var(--gold); display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; animation: mostrarEscena2 0.5s ease 2s forwards; }
+        
+        /* Estilo Letras Pincel / Manuscritas Apiladas en Diagonal con Destellos */
+        .titulo-linea-1, .titulo-linea-2 { 
+            font-size: 42px; 
+            font-weight: 800; 
+            font-family: 'Brush Script MT', 'Segoe Script', cursive, sans-serif; 
+            text-transform: uppercase; 
+            letter-spacing: 1px; 
+            margin: 2px 0; 
+            line-height: 1.1; 
+            transform: rotate(-15deg);
+            color: #0b0b0b;
+            animation: destelloScript 1.2s infinite alternate ease-in-out; 
+        }
+
+        @keyframes destelloTexto1 {
+            0%, 100% { text-shadow: 0 0 8px rgba(255,255,255,0.8), 0 0 20px rgba(255,193,7,0.6); }
+            50% { text-shadow: 0 0 20px rgba(255,255,255,1), 0 0 35px rgba(255,193,7,1), 0 0 50px #ffc107; transform: scale(1.02); }
+        }
+
+        @keyframes destelloScript {
+            0%, 100% { 
+                color: #0b0b0b; 
+                text-shadow: 0 0 8px rgba(255,255,255,0.8), 0 0 15px rgba(255,255,255,0.5); 
+                transform: rotate(-15deg) scale(1);
+            }
+            50% { 
+                color: #000000; 
+                text-shadow: 0 0 20px rgba(255,255,255,1), 0 0 35px rgba(255,255,255,0.9), 0 0 50px #ffffff; 
+                transform: rotate(-15deg) scale(1.05); 
+            }
+        }
+
         @keyframes desvanecerEscena1 { to { opacity: 0; visibility: hidden; } }
         @keyframes mostrarEscena2 { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
     </style>
@@ -50,13 +81,12 @@
 
 <div id="intro-cine">
     <div class="escena-1">
-        <div class="taxi-neon-box">🚕</div>
-        <div class="titulo-neon">CLICK & GO TAXI</div>
-    </div>
-    <div class="escena-2">
         <div class="cgt-circulo">CGT</div>
         <div class="titulo-cgt">CLICK & GO TAXI</div>
-        <div class="eslogan-cgt">Tu destino a un clic</div>
+    </div>
+    <div class="escena-2">
+        <div class="titulo-linea-1">TU TAXI</div>
+        <div class="titulo-linea-2">A UN CLICK</div>
     </div>
 </div>
 
@@ -123,7 +153,7 @@
     setTimeout(() => {
         const intro = document.getElementById('intro-cine');
         if(intro) {
-            intro.style.transition = 'opacity 0.5s ease';
+            intro.style.pointerEvents = 'none';
             intro.style.opacity = '0';
             setTimeout(() => intro.remove(), 500);
         }
@@ -135,7 +165,6 @@
             navigator.serviceWorker.register('sw.js').then((registration) => {
                 console.log('Service Worker registrado con éxito:', registration.scope);
 
-                // Inicializar Cloud Messaging y solicitar permisos automáticamente
                 try {
                     const messaging = firebase.messaging();
                     

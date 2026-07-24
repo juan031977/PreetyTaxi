@@ -8,31 +8,18 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBl3OsPn_Q-yeXk0-0_igfCoZgQYduB40g&libraries=places"></script>
     <style>
-        :root { --gold: #ffc107; --dark: #000; --card: transparent; }
-        
-        /* BLOQUEO TOTAL DE PANTALLA ESTILO APP NATIVA */
-        body { margin: 0; padding: 0; height: 100vh; overflow: hidden; background: var(--dark); color: white; font-family: 'Segoe UI', sans-serif; overscroll-behavior-y: none; }
-        
-        /* CABECERA FIJA ARRIBA */
-        .map-header { position: fixed; top: 0; left: 0; width: 100%; height: 45vh; background-image: url('https://firebasestorage.googleapis.com/v0/b/preetytaxiapp.firebasestorage.app/o/taxi%20banner.jpg?alt=media&token=7433caf7-edf1-4fa3-b413-083f5066f90d'); background-size: cover; background-position: center; z-index: 1; }
-        
-        /* BOTÓN VOLVER FLOTANTE */
-        .btn-volver { position: fixed; top: 15px; left: 15px; background: rgba(0,0,0,0.6); color: #fff; border: none; padding: 10px 15px; font-size: 14px; font-weight: bold; border-radius: 10px; cursor: pointer; z-index: 20; transition: 0.2s; }
-        .btn-volver:hover { background: #fff; color: #000; }
-
-        /* EL PANEL INFERIOR ESTILO INDRIVE (BOTTOM SHEET) */
-        .bottom-sheet { position: fixed; bottom: 0; left: 0; width: 100%; height: 60vh; background: #111; border-top-left-radius: 30px; border-top-right-radius: 30px; z-index: 10; box-shadow: 0 -10px 30px rgba(0,0,0,0.9); display: flex; flex-direction: column; border-top: 1px solid #333; }
-        .sheet-handle { width: 45px; height: 5px; background: #555; border-radius: 10px; margin: 12px auto; flex-shrink: 0; }
-        .sheet-content { flex: 1; overflow-y: auto; padding: 0 20px 40px 20px; overscroll-behavior-y: contain; }
-
-        .card { background: transparent; padding: 0; border: none; box-shadow: none; position: relative; }
+        :root { --gold: #ffc107; --dark: #000; --card: #1a1a; }
+        body { margin: 0; background: var(--dark); color: white; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; }
+        .map-header { width: 100%; height: 180px; background-image: url('https://firebasestorage.googleapis.com/v0/b/preetytaxiapp.firebasestorage.app/o/taxi%20banner.jpg?alt=media&token=7433caf7-edf1-4fa3-b413-083f5066f90d'); background-size: cover; background-position: center; }
+        .container { width: 92%; max-width: 400px; margin-top: -30px; position: relative; z-index: 10; padding-bottom: 40px; }
+        .card { background: var(--card); padding: 20px; border-radius: 20px; border: 1px solid #333; box-shadow: 0 10px 25px rgba(0,0,0,0.8); position: relative; }
         .logo-text { color: var(--gold); font-size: 24px; font-weight: bold; text-align: center; margin: 0 0 20px 0; }
         label { display: block; margin-top: 15px; color: #aaa; font-size: 12px; font-weight: bold; text-transform: uppercase; }
         input, select { width: 100%; padding: 14px; margin-top: 5px; border-radius: 12px; border: 1px solid #444; background: #222; color: white; font-size: 16px; box-sizing: border-box; }
-        #mapa-destino { width: 100%; height: 250px; border-radius: 15px; margin: 15px 0; border: 3px solid var(--gold); }
-        .price-display { background: #1a1a1a; padding: 15px; border-radius: 12px; margin-top: 20px; text-align: center; border: 1px dashed var(--gold); }
+        #mapa-destino { width: 100%; height: 300px; border-radius: 15px; margin: 15px 0; border: 3px solid var(--gold); }
+        .price-display { background: #111; padding: 15px; border-radius: 12px; margin-top: 20px; text-align: center; border: 1px dashed var(--gold); }
         .price-display span { font-size: 32px; font-weight: bold; color: var(--gold); }
-        .tarifa-nota { background: #1a1a1a; border-left: 4px solid var(--gold); padding: 12px 15px; border-radius: 8px; margin-top: 15px; text-align: left; font-size: 13px; color: #ccc; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+        .tarifa-nota { background: #111; border-left: 4px solid var(--gold); padding: 12px 15px; border-radius: 8px; margin-top: 15px; text-align: left; font-size: 13px; color: #ccc; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
         .tarifa-nota span { color: var(--gold); font-weight: bold; display: block; margin-bottom: 5px; font-size: 14px; }
         .tarifa-nota p { margin: 5px 0; line-height: 1.5; }
         .tarifa-nota small { font-size: 11px; color: #888; font-style: italic; display: block; margin-top: 5px; }
@@ -47,10 +34,12 @@
         .toggle-modos { display: flex; gap: 10px; margin-top: 15px; margin-bottom: 15px; }
         .btn-modo { flex: 1; background: #333; color: white; border: 1px solid #555; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; }
         .btn-modo.active { background: var(--gold); color: black; border-color: var(--gold); }
+        .btn-volver { position: absolute; top: 20px; left: 15px; background: transparent; color: #aaa; border: none; font-size: 14px; font-weight: bold; cursor: pointer; z-index: 20; }
+        .btn-volver:hover { color: white; }
         .cat-interna-btn { background: #222; color: #fff; border: 1px solid #444; padding: 10px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; text-align: center; margin: 5px; flex: 1; }
         .cat-interna-btn.active { background: var(--gold); color: #000; border-color: var(--gold); }
-        .subcat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 10px; max-height: 200px; overflow-y: auto; }
-        .btn-subcat { background: #222; color: #aaa; border: 1px solid #333; padding: 10px 8px; border-radius: 6px; font-size: 11px; cursor: pointer; text-align: left; }
+        .subcat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 10px; max-height: 300px; overflow-y: auto; }
+        .btn-subcat { background: #1a1a; color: #aaa; border: 1px solid #333; padding: 8px; border-radius: 6px; font-size: 11px; cursor: pointer; text-align: left; }
         .btn-subcat.active { background: var(--gold); color: #000; border-color: var(--gold); font-weight: bold; }
         .seccion-interna { background: #151515; padding: 15px; border-radius: 12px; margin-top: 15px; border: 1px solid #333; }
         #origen-seccion { background: #1f1a00; border-color: #ffc107; }
@@ -59,8 +48,6 @@
         #destino-seccion label { color: #25D366; }
         @keyframes slideIn { from { transform: translateX(400px); } to { transform: translateX(0); } }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
-        
-        /* MODALES (Mantiene overlay global) */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 99999; justify-content: center; align-items: center; }
         .modal-content { background: #222; padding: 25px; border-radius: 15px; border: 2px solid var(--gold); width: 85%; max-width: 350px; text-align: center; color: white; }
         .estrellas { display: flex; justify-content: center; gap: 10px; margin: 15px 0; font-size: 35px; cursor: pointer; direction: rtl; }
@@ -71,7 +58,6 @@
         .btn-soporte { background: #dc3545; color: white; padding: 10px; border-radius: 8px; border: none; width: 100%; margin-top: 10px; font-weight: bold; cursor: pointer; }
         textarea.reporte-input { width: 100%; height: 80px; background: #111; color: white; border: 1px solid #444; border-radius: 8px; padding: 10px; margin-top: 10px; resize: none; box-sizing: border-box;}
     
-        /* PUBLICIDAD */
         .banner-preview-pro { margin-top: 18px; background: linear-gradient(135deg, #1a1a1a, #0f0f0f); border: 1px solid #2a2a2a; border-radius: 16px; padding: 10px 14px; display: flex; align-items: center; gap: 12px; cursor: pointer; position: relative; overflow: hidden; }
         .banner-preview-pro img { width: 48px; height: 48px; border-radius: 12px; object-fit: cover; border: 1px solid #333; }
         .banner-preview-info { flex: 1; text-align: left; }
@@ -81,7 +67,7 @@
         .banner-container-pro { margin-top: 18px; display: none; }
         .banner-container-pro.activo { display: block; animation: slideUp 0.5s; }
         @keyframes slideUp { from { opacity:0; transform: translateY(30px); } to { opacity:1; transform: translateY(0); } }
-        .banner-card-pro { background: #1a1a1a; border: 1px solid #333; border-radius: 20px; overflow: hidden; }
+        .banner-card-pro { background: #111; border: 1px solid #333; border-radius: 20px; overflow: hidden; }
         .banner-top { padding: 8px 14px; display: flex; justify-content: space-between; background: rgba(0,0,0,0.4); font-size:10px; color:#666; }
         .banner-body-pro { display: flex; padding: 14px; gap: 14px; cursor: pointer; }
         .banner-img-pro { width: 92px; height: 92px; border-radius: 16px; object-fit: cover; }
@@ -98,6 +84,8 @@
         .btn-wa { background: #25D366; color: white; }
         .btn-ig { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); color: white; }
         .btn-img { background: #222; color: white; border: 1px solid #333; }
+        #modal-promo { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 999999; justify-content: center; align-items: center; padding: 20px; }
+        #modal-promo.activo { display: flex; }
         .modal-promo-card { background: #111; border-radius: 24px; overflow: hidden; max-width: 380px; width: 100%; border: 1px solid #2a2a2a; max-height: 90vh; overflow-y: auto; }
         .modal-promo-img { width: 100%; height: 320px; object-fit: cover; }
         .modal-promo-body { padding: 18px; text-align: left; }
@@ -105,43 +93,69 @@
         .modal-promo-desc { font-size: 13px; color: #aaa; margin-top: 8px; }
         .modal-promo-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
         .modal-promo-actions .full { grid-column: span 2; }
+
     </style>
 </head>
 <body>
-
 <div class="map-header"></div>
-<button class="btn-volver" onclick="window.history.back()">⬅ Volver</button>
-
-<div class="bottom-sheet">
-    <div class="sheet-handle"></div>
-    <div class="sheet-content">
-        <div id="panel-cliente" class="card">
-            
-            <p class="logo-text">🚕 Click & Go Taxi</p>
-            <label>Nombre del Pasajero</label>
-            <input type="text" id="nombreUsuario" placeholder="Tu Nombre">
-            <label>Tu número de WhatsApp</label>
-            <input type="tel" id="telefono" placeholder="Ej: 50760000000">
-            
-            <div class="toggle-modos">
-                <button id="btn-externa" class="btn-modo active" onclick="cambiarModo('externa')">Rutas Externas</button>
-                <button id="btn-interna" class="btn-modo" onclick="cambiarModo('interna')">Rutas Internas</button>
+<div class="container">
+    <div id="panel-cliente" class="card">
+        <button class="btn-volver" onclick="window.history.back()">⬅ Volver</button>
+        <p class="logo-text">🚕 ClickGoTaxi</p>
+        <label>Nombre del Pasajero</label>
+        <input type="text" id="nombreUsuario" placeholder="Tu Nombre">
+        <label>Tu número de WhatsApp</label>
+        <input type="tel" id="telefono" placeholder="Ej: 50760000000">
+        <div class="toggle-modos">
+            <button id="btn-externa" class="btn-modo active" onclick="cambiarModo('externa')">Rutas Externas</button>
+            <button id="btn-interna" class="btn-modo" onclick="cambiarModo('interna')">Rutas Internas</button>
+        </div>
+        <div class="seccion-interna" id="origen-seccion">
+            <label style="margin-top:0;">Donde Te Buscamos</label>
+            <div style="display:flex; gap:5px; flex-wrap:wrap; margin-top:8px;">
+                <button class="cat-interna-btn" id="origen-cat-calle" onclick="seleccionarOrigenTipo('calle')">Calles Brisas</button>
+                <button class="cat-interna-btn" id="origen-cat-mall" onclick="seleccionarOrigenTipo('mall')">SuperMercados/Mall</button>
+                <button class="cat-interna-btn" id="origen-cat-ph" onclick="seleccionarOrigenTipo('ph')">PH</button>
+                <button class="cat-interna-btn" id="origen-cat-villas" onclick="seleccionarOrigenTipo('villas')">Villas Del Golf</button>
+                <button class="cat-interna-btn" id="origen-cat-escuelas" onclick="seleccionarOrigenTipo('escuelas')">Escuelas</button>
+                <button class="cat-interna-btn" id="origen-cat-otros" onclick="seleccionarOrigenTipo('otros')">Otras Zonas</button>
+                <button class="cat-interna-btn" id="origen-cat-estacion" onclick="seleccionarOrigenTipo('estacion')">Estación Línea 2</button>
             </div>
-            
-            <div class="seccion-interna" id="origen-seccion">
-                <label style="margin-top:0;">Donde Te Buscamos</label>
+            <div id="origen-calle-input" style="display:none; margin-top:10px;">
+                <input type="number" id="calle-origen" placeholder="N° Calle (Ej: 34)" oninput="actualizarRuta()">
+                <select id="zona-origen" onchange="actualizarRuta()" style="margin-top:8px;">
+                    <option value="Asur">Asur</option>
+                    <option value="Occidente">Occidente</option>
+                    <option value="Norte">Norte</option>
+                    <option value="Sur">Sur</option>
+                    <option value="Oeste">Oeste</option>
+                    <option value="Este">Este</option>
+                </select>
+            </div>
+            <div id="origen-subcat-container"></div>
+        </div>
+        <div id="panel-externo" style="display: block;">
+            <div class="seccion-interna" style="border-color:#25D366; background: #0a1f14;">
+                <label style="margin-top:0; color:#25D366;">A DONDE VAS</label>
+                <input type="text" id="destino-input" placeholder="Ej: Río Abajo">
+                <div id="mapa-destino"></div>
+            </div>
+        </div>
+        <div id="panel-interno" style="display: none;">
+            <div class="seccion-interna" id="destino-seccion">
+                <label style="margin-top:0;">A DONDE VAS</label>
                 <div style="display:flex; gap:5px; flex-wrap:wrap; margin-top:8px;">
-                    <button class="cat-interna-btn" id="origen-cat-calle" onclick="seleccionarOrigenTipo('calle')">Calles Brisas</button>
-                    <button class="cat-interna-btn" id="origen-cat-mall" onclick="seleccionarOrigenTipo('mall')">SuperMercados/Mall</button>
-                    <button class="cat-interna-btn" id="origen-cat-ph" onclick="seleccionarOrigenTipo('ph')">PH</button>
-                    <button class="cat-interna-btn" id="origen-cat-villas" onclick="seleccionarOrigenTipo('villas')">Villas Del Golf</button>
-                    <button class="cat-interna-btn" id="origen-cat-escuelas" onclick="seleccionarOrigenTipo('escuelas')">Escuelas</button>
-                    <button class="cat-interna-btn" id="origen-cat-otros" onclick="seleccionarOrigenTipo('otros')">Otras Zonas</button>
-                    <button class="cat-interna-btn" id="origen-cat-estacion" onclick="seleccionarOrigenTipo('estacion')">Estación Línea 2</button>
+                    <button class="cat-interna-btn" id="dest-cat-calle" onclick="seleccionarDestinoTipo('calle')">Calles Brisas</button>
+                    <button class="cat-interna-btn" id="dest-cat-mall" onclick="seleccionarDestinoTipo('mall')">SuperMercados/Mall</button>
+                    <button class="cat-interna-btn" id="dest-cat-ph" onclick="seleccionarDestinoTipo('ph')">PH</button>
+                    <button class="cat-interna-btn" id="dest-cat-villas" onclick="seleccionarDestinoTipo('villas')">Villas Del Golf</button>
+                    <button class="cat-interna-btn" id="dest-cat-escuelas" onclick="seleccionarDestinoTipo('escuelas')">Escuelas</button>
+                    <button class="cat-interna-btn" id="dest-cat-otros" onclick="seleccionarDestinoTipo('otros')">Otras Zonas</button>
+                    <button class="cat-interna-btn" id="dest-cat-estacion" onclick="seleccionarDestinoTipo('estacion')">Estación Línea 2</button>
                 </div>
-                <div id="origen-calle-input" style="display:none; margin-top:10px;">
-                    <input type="number" id="calle-origen" placeholder="N° Calle (Ej: 34)" oninput="actualizarRuta()">
-                    <select id="zona-origen" onchange="actualizarRuta()" style="margin-top:8px;">
+                <div id="destino-calle-input" style="display:none; margin-top:10px;">
+                    <input type="number" id="calle-destino" placeholder="N° Calle (Ej: 36)" oninput="actualizarRuta()">
+                    <select id="zona-destino" onchange="actualizarRuta()" style="margin-top:8px;">
                         <option value="Asur">Asur</option>
                         <option value="Occidente">Occidente</option>
                         <option value="Norte">Norte</option>
@@ -150,97 +164,62 @@
                         <option value="Este">Este</option>
                     </select>
                 </div>
-                <div id="origen-subcat-container"></div>
+                <div id="destino-subcat-container"></div>
             </div>
-            
-            <div id="panel-externo" style="display: block;">
-                <div class="seccion-interna" style="border-color:#25D366; background: #0a1f14;">
-                    <label style="margin-top:0; color:#25D366;">A DONDE VAS</label>
-                    <input type="text" id="destino-input" placeholder="Ej: Río Abajo">
-                    <div id="mapa-destino"></div>
-                </div>
-            </div>
-            
-            <div id="panel-interno" style="display: none;">
-                <div class="seccion-interna" id="destino-seccion">
-                    <label style="margin-top:0;">A DONDE VAS</label>
-                    <div style="display:flex; gap:5px; flex-wrap:wrap; margin-top:8px;">
-                        <button class="cat-interna-btn" id="dest-cat-calle" onclick="seleccionarDestinoTipo('calle')">Calles Brisas</button>
-                        <button class="cat-interna-btn" id="dest-cat-mall" onclick="seleccionarDestinoTipo('mall')">SuperMercados/Mall</button>
-                        <button class="cat-interna-btn" id="dest-cat-ph" onclick="seleccionarDestinoTipo('ph')">PH</button>
-                        <button class="cat-interna-btn" id="dest-cat-villas" onclick="seleccionarDestinoTipo('villas')">Villas Del Golf</button>
-                        <button class="cat-interna-btn" id="dest-cat-escuelas" onclick="seleccionarDestinoTipo('escuelas')">Escuelas</button>
-                        <button class="cat-interna-btn" id="dest-cat-otros" onclick="seleccionarDestinoTipo('otros')">Otras Zonas</button>
-                        <button class="cat-interna-btn" id="dest-cat-estacion" onclick="seleccionarDestinoTipo('estacion')">Estación Línea 2</button>
-                    </div>
-                    <div id="destino-calle-input" style="display:none; margin-top:10px;">
-                        <input type="number" id="calle-destino" placeholder="N° Calle (Ej: 36)" oninput="actualizarRuta()">
-                        <select id="zona-destino" onchange="actualizarRuta()" style="margin-top:8px;">
-                            <option value="Asur">Asur</option>
-                            <option value="Occidente">Occidente</option>
-                            <option value="Norte">Norte</option>
-                            <option value="Sur">Sur</option>
-                            <option value="Oeste">Oeste</option>
-                            <option value="Este">Este</option>
-                        </select>
-                    </div>
-                    <div id="destino-subcat-container"></div>
-                </div>
-            </div>
-            
-            <div class="price-display">
-                <small style="color:#888">TARIFA ESTIMADA</small><br>
-                <span id="display-precio">B/. 0.00</span>
-            </div>
-            
-            <div class="tarifa-nota">
-                <span>ℹ Información de Tarifas</span>
-                <p>• <strong>Feriados y Domingos:</strong> + B/. 0.25 al total.<br>
-                   • <strong>Pasajero adicional:</strong> + B/. 0.50 c/u.</p>
-                <small>*Estos recargos aplican al momento de abordar.</small>
-            </div>
-            
-            <div style="margin: 20px 0 15px 0;">
-                <label style="color:#ffc107; font-weight:bold;">Forma de Pago</label>
-                <select id="metodoPago">
-                    <option value="efectivo">💵 Efectivo</option>
-                    <option value="yappy">📱 Yappy</option>
-                </select>
-            </div>
-            
-            <button class="btn-pedir" id="btn-solicitar" onclick="pedirTaxi()">SOLICITAR TAXI</button>
-            <div id="estado-viaje-container"></div>
+        </div>
+        <div class="price-display">
+            <small style="color:#888">TARIFA ESTIMADA</small><br>
+            <span id="display-precio">B/. 0.00</span>
+        </div>
+        <div class="tarifa-nota">
+            <span>ℹ Información de Tarifas</span>
+            <p>• <strong>Feriados y Domingos:</strong> + B/. 0.25 al total.<br>
+               • <strong>Pasajero adicional:</strong> + B/. 0.50 c/u.</p>
+            <small>*Estos recargos aplican al momento de abordar.</small>
+        </div>
+        <div style="margin: 20px 0 15px 0;">
+            <label style="color:#ffc107; font-weight:bold;">Forma de Pago</label>
+            <select id="metodoPago" style="width:100%; padding:14px; border-radius:12px; background:#222; color:white; border:1px solid #444; font-size:16px;">
+                <option value="efectivo">💵 Efectivo</option>
+                <option value="yappy">📱 Yappy</option>
+            </select>
+        </div>
+        <button class="btn-pedir" id="btn-solicitar" onclick="pedirTaxi()">SOLICITAR TAXI</button>
+        <div id="estado-viaje-container"></div>
 
-            <div id="banner-preview" class="banner-preview-pro" onclick="abrirModalPromo()">
-                <img id="banner-preview-img" src="https://images.unsplash.com/photo-1560066984-138dadb4c035?w=200" alt="promo">
-                <div class="banner-preview-info">
-                    <b id="banner-preview-title">Salon Glam - 20% OFF</b>
-                    <span>Patrocinado - Toca para ver</span>
-                </div>
-                <span class="banner-preview-badge" id="banner-preview-badge">PROMO</span>
-                <span style="color:#444;">›</span>
+        <div id="banner-preview" class="banner-preview-pro" onclick="abrirModalPromo()">
+            <img id="banner-preview-img" src="https://images.unsplash.com/photo-1560066984-138dadb4c035?w=200" alt="promo">
+            <div class="banner-preview-info">
+                <b id="banner-preview-title">Salon Glam - 20% OFF</b>
+                <span>Patrocinado - Toca para ver</span>
             </div>
-            <div id="banner-container" class="banner-container-pro">
-                <div class="banner-card-pro">
-                    <div class="banner-top"><div>PATROCINADO • BRISAS</div><button onclick="cerrarBanners()" style="background:transparent;border:none;color:#555;cursor:pointer;">X</button></div>
-                    <div class="banner-body-pro" onclick="abrirModalPromo()">
-                        <img id="banner-img" class="banner-img-pro" src="" alt="promo">
-                        <div class="banner-text-pro">
-                            <p id="banner-title" class="banner-title-pro"></p>
-                            <p id="banner-promo" class="banner-promo-pro"></p>
-                            <span id="banner-badge" class="tag tag-gold"></span>
-                        </div>
+            <span class="banner-preview-badge" id="banner-preview-badge">PROMO</span>
+            <span style="color:#444;">›</span>
+        </div>
+        <div id="banner-container" class="banner-container-pro">
+            <div class="banner-card-pro">
+                <div class="banner-top"><div>PATROCINADO • BRISAS</div><button onclick="cerrarBanners()" style="background:transparent;border:none;color:#555;cursor:pointer;">X</button></div>
+                <div class="banner-body-pro" onclick="abrirModalPromo()">
+                    <img id="banner-img" class="banner-img-pro" src="" alt="promo">
+                    <div class="banner-text-pro">
+                        <p id="banner-title" class="banner-title-pro"></p>
+                        <p id="banner-promo" class="banner-promo-pro"></p>
+                        <span id="banner-badge" class="tag tag-gold"></span>
                     </div>
-                    <div class="banner-actions-pro">
-                        <button class="btn-banner-action btn-wa" onclick="abrirWhatsApp()">WhatsApp</button>
-                        <button class="btn-banner-action btn-ig" onclick="abrirInstagram()">Instagram</button>
-                        <button class="btn-banner-action btn-img" onclick="abrirModalPromo()">Ver Imagen</button>
-                    </div>
-                    <div class="banner-dots-pro" id="banner-dots"></div>
                 </div>
+                <div class="banner-actions-pro">
+                    <button class="btn-banner-action btn-wa" onclick="abrirWhatsApp()">WhatsApp</button>
+                    <button class="btn-banner-action btn-ig" onclick="abrirInstagram()">Instagram</button>
+                    <button class="btn-banner-action btn-img" onclick="abrirModalPromo()">Ver Imagen</button>
+                </div>
+                <div class="banner-dots-pro" id="banner-dots"></div>
             </div>
+        </div>
 
-        </div> </div> </div> <div id="modal-promo" class="modal-overlay" onclick="if(event.target===this) cerrarModalPromo()">
+    </div>
+</div>
+
+<div id="modal-promo" onclick="if(event.target===this) cerrarModalPromo()">
     <div class="modal-promo-card">
         <div style="position:relative;">
             <img id="modal-promo-img" class="modal-promo-img" src="" alt="promo">
@@ -275,7 +254,6 @@
         <button class="btn-enviar-cal" onclick="enviarCalificacionConductor()">Enviar Calificación</button>
     </div>
 </div>
-
 <div id="modal-soporte" class="modal-overlay">
     <div class="modal-content">
         <h3 style="color:#dc3545; margin-top:0;">Servicio al Cliente</h3>
@@ -285,7 +263,6 @@
         <button style="background:transparent; color:#aaa; border:none; margin-top:15px; cursor:pointer;" onclick="cerrarSoporte()">Cancelar</button>
     </div>
 </div>
-
 <script>
     const firebaseConfig = { apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
@@ -300,13 +277,11 @@
     let relojPasajeroInterval = null; 
     let calificacionSeleccionada = 0;
     let viajeCompletadoData = null; 
-
     const PRECIOS_PH = { 'PH La Riviera Colonial': 1.75, 'Brisas del Pacífico': 1.75, 'PH Brisas Point': 1.75, 'PH Brisas Heights': 1.75, 'PH Golf Gardens': 2.50, 'Club De Golf': 2.50, 'PH Alpes': 2.50, 'PH Everest': 2.50, 'PH Bejin': 2.50, 'PH Olimpus': 2.50, 'PH Mont Blanc': 2.50, 'PH Sierra Nevada': 2.50, 'PH Aventura': 3.00, 'PH Vallarta': 3.00, 'PH Noura': 3.00, 'PH Cavana': 3.00, 'Parque Rash': 3.00, 'PH Lagun': 1.50, 'PH Royal Village': 2.00, 'Oxford School': 3.00, 'Green City': 6.00, 'Golf Garden': 2.50, 'PH Ventura': 3.00 };
     const PRECIOS_VILLAS = { 'Lomas del Golf (Garita)': 1.50, 'Lomas del Golf (Adentro)': 1.75, 'Villas del Golf (Garita)': 1.50, 'Villas del Golf (Adentro)': 1.75, 'Monticello 1 (Garita)': 1.50, 'Monticello 1 (Adentro)': 1.75, 'Monticello 2 (Garita)': 1.50, 'Monticello 2 (Adentro)': 1.75, 'Villa Lido (Garita)': 1.50, 'Villa Lido (Adentro)': 1.75, 'Villa Alta (Garita)': 1.50, 'Villa Alta (Adentro)': 1.75, 'Villa Tivoli (Garita)': 1.50, 'Villa Tivoli (Adentro)': 1.75, 'Villa Navona (Garita)': 1.50, 'Villa Navona (Adentro)': 1.75, 'Villa Tiber (Garita)': 1.50, 'Villa Tiber (Adentro)': 1.75 };
     const PRECIOS_ESCUELAS = { 'El IJA': 2.50, 'La Internacional': 2.50, 'Panamerican School': 2.50, 'Saint George': 1.75, 'SAP': 1.50, 'Smart Academy': 1.50, 'Preparatory High School': 1.50, 'AIP': 1.50, 'Oxford School': 3.00, 'Metropolitan School of Panama': 6.00 };
     const PRECIOS_OTROS = { 'Cerro Viento Rural': 1.75, 'Las Trancas': 1.50 };
     const PRECIOS_MALL = { 'Super 99 Brisas del Golf': 1.50, 'Machetazo': 1.50, 'Riba Smith': 1.50, 'Super Xtra': 1.50, 'El Rey Brisas del Golf': 1.50, 'Brisas Capital': 1.50, 'Kennedy Golf Plaza': 1.50, 'Signature': 1.50, 'Premier Plaza': 1.50, 'Plaza Point': 1.50, 'Plaza Caja de Ahorro': 1.50, 'Brisas Mall': 1.50, 'Plaza Mcdonalds': 1.50, 'Paseo Drive': 2.50, 'Northside Galleries': 2.00, 'Yappy Park': 3.50 };
-    
     window.onload = function() {
         initMap(); 
         initAutocomplete();
@@ -327,7 +302,6 @@
             escucharEstadoViaje(viajeID);
         }
     };
-    
     function cambiarModo(modo) {
         modoActual = modo;
         document.getElementById('btn-externa').classList.toggle('active', modo === 'externa');
@@ -343,7 +317,6 @@
             calcularInterna();
         }
     }
-    
     function seleccionarOrigenTipo(tipo) {
         origenTipo = tipo;
         document.querySelectorAll('#origen-seccion .cat-interna-btn').forEach(b => b.classList.remove('active'));
@@ -371,7 +344,6 @@
         document.getElementById('origen-subcat-container').innerHTML = html; 
         actualizarRuta();
     }
-    
     function seleccionarOrigenSubcat(btn, nombre, precio) { 
         origenSeleccionado = nombre; 
         origenPrecio = precio; 
@@ -379,7 +351,6 @@
         if(btn) btn.classList.add('active'); 
         actualizarRuta(); 
     }
-    
     function seleccionarDestinoTipo(tipo) {
         destinoTipo = tipo;
         document.querySelectorAll('#destino-seccion .cat-interna-btn').forEach(b => b.classList.remove('active'));
@@ -396,7 +367,6 @@
         document.getElementById('destino-subcat-container').innerHTML = html; 
         actualizarRuta();
     }
-    
     function seleccionarDestinoSubcat(btn, nombre, precio) { 
         destinoSeleccionado = nombre; 
         destinoPrecio = precio; 
@@ -404,7 +374,6 @@
         if(btn) btn.classList.add('active'); 
         actualizarRuta(); 
     }
-    
     function actualizarRuta() {
         if (modoActual === 'interna') {
             calcularInterna();
@@ -412,7 +381,6 @@
             calcularRuta();
         }
     }
-    
     function calcularInterna() {
         if (modoActual!== 'interna') return;
         let precio = 0; let origenCalle = null; let destinoCalle = null;
@@ -455,7 +423,6 @@
     let bannerIndex = 0;
     let bannerInterval = null;
     let bannersActivos = false;
-    
     function mostrarBanner(idx) {
         if (!BANNERS_PUBLICIDAD[idx]) return;
         const b = BANNERS_PUBLICIDAD[idx];
@@ -479,7 +446,6 @@
             dots.appendChild(dot);
         });
     }
-    
     function iniciarBanners() {
         if (bannersActivos) return;
         bannersActivos = true;
@@ -492,33 +458,28 @@
             mostrarBanner(bannerIndex);
         }, 5000);
     }
-    
     function cerrarBanners() {
         document.getElementById('banner-container').classList.remove('activo');
         document.getElementById('banner-preview').style.display = 'flex';
         bannersActivos = false;
         if (bannerInterval) clearInterval(bannerInterval);
     }
-    
     function abrirModalPromo() {
         document.getElementById('modal-promo').classList.add('activo');
-        // No ocultamos overflow del body global para no romper bottom sheet
+        document.body.style.overflow = 'hidden';
     }
-    
     function cerrarModalPromo() {
         document.getElementById('modal-promo').classList.remove('activo');
+        document.body.style.overflow = '';
     }
-    
     function abrirWhatsApp() {
         const b = BANNERS_PUBLICIDAD[bannerIndex];
         if (b && b.whatsapp) window.open(b.whatsapp, '_blank');
     }
-    
     function abrirInstagram() {
         const b = BANNERS_PUBLICIDAD[bannerIndex];
         if (b && b.instagram) window.open(b.instagram, '_blank');
     }
-    
     function compartirPromo() {
         const b = BANNERS_PUBLICIDAD[bannerIndex];
         if (navigator.share) {
@@ -527,7 +488,6 @@
             alert('Copia: ' + (b.instagram || b.whatsapp));
         }
     }
-    
     function iniciarPreviewRotativo() {
         mostrarBanner(0);
         setInterval(() => {
@@ -539,7 +499,6 @@
     }
 
     function initMap() { mapa = new google.maps.Map(document.getElementById('mapa-destino'), { zoom: 13, center: { lat: 9.0729, lng: -79.4451 } }); directionsService = new google.maps.DirectionsService(); directionsRenderer = new google.maps.DirectionsRenderer({ map: mapa }); }
-    
     function initAutocomplete() {
         if (autoDestino) return;
         autoDestino = new google.maps.places.Autocomplete(document.getElementById('destino-input'), { componentRestrictions: { country: 'pa' } });
@@ -551,7 +510,6 @@
             } 
         });
     }
-    
     function calcularRuta() {
         if (modoActual !== 'externa' || !destinoCoords) return;
         let origenTxtParaMapa = "";
@@ -581,7 +539,6 @@
             }
         });
     }
-    
     function pedirTaxi() {
         let destinoFinal = "";
         let origenFinal = ""; 
@@ -639,7 +596,6 @@
             tipo_ruta: modoActual 
         }).then(() => { escucharEstadoViaje(viajeID); }); 
     } 
-    
     window.revertirViaje = function(id) {
         if (confirm("¿El conductor demoró mucho? Vamos a quitarle el viaje y a buscarte otro taxi cercano.")) {
             if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
@@ -659,7 +615,6 @@
             `;
         }
     };
-    
     window.rechazarConductorLocal = function(id) {
         if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
         db.ref('viajes/' + id).update({
@@ -678,7 +633,6 @@
             <button class="btn-cancelar-viaje" onclick="cancelarViajeCliente('${id}')" style="margin-top: 15px; width: 100%;">❌ Cancelar Búsqueda</button>
         `;
     };
-    
     function escucharEstadoViaje(id) { 
         db.ref('viajes/' + id).on('value', (snapshot) => { 
             const viaje = snapshot.val(); 
@@ -795,19 +749,16 @@
             } 
         }); 
     } 
-    
     function mostrarNotificacionLlegada(viaje) { 
         if (document.getElementById('notif-llegada')) return; 
         const html = `<div id="notif-llegada" class="notificacion-llegada"><h4 style="margin:0 0 10px;">🎉 ¡Tu conductor llegó!</h4><p style="margin:5px 0;">${viaje.conductorNombre} está en el punto de recogida</p><p style="margin:5px 0; font-size:14px;">${viaje.conductorVehiculo} ${viaje.conductorColor} - ${viaje.conductorPlaca}</p><button onclick="window.open('https://wa.me/${viaje.conductorCel}?text=Hola ${viaje.conductorNombre}, soy ${viaje.pasajero_nombre}, ya estoy saliendo', '_blank')" style="background:white; color:#28a745; padding:8px 16px; border-radius:6px; text-decoration:none; display:inline-block; margin-top:10px; font-weight:bold; cursor:pointer;">💬 WhatsApp</button></div>`; 
         document.body.insertAdjacentHTML('beforeend', html); 
         setTimeout(() => document.getElementById('notif-llegada')?.remove(), 15000); 
     } 
-    
     function mostrarViajeFinalizado(viaje) { 
         const html = `<div style="position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:30px; border-radius:12px; z-index:10000; box-shadow:0 10px 40px rgba(0,0,0,0.3); text-align:center; max-width:400px;"><h3 style="color:#28a745; margin:0 0 15px;">Viaje Finalizado</h3><p style="color:#666;">Gracias por viajar con ClickGoTaxi</p><p style="font-size:24px; font-weight:bold; color:#333; margin:15px 0;">Total: B/. ${viaje.precio_numerico.toFixed(2)}</p><button onclick="location.reload()" style="background:#FFC107; color:#000; border:none; padding:12px 30px; border-radius:6px; cursor:pointer; font-weight:bold; margin-top:10px;">Nuevo Viaje</button></div>`; 
         document.body.insertAdjacentHTML('beforeend', html); 
     } 
-    
     function cancelarViajeCliente(id) { 
         if (confirm("¿Estás seguro de que deseas cancelar este viaje?")) { 
             if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
@@ -817,7 +768,6 @@
             db.ref('viajes/' + id).update({ estado: 'cancelado' }).then(() => { resetFormularioUI(); }); 
         } 
     } 
-    
     function resetFormularioUI() { 
         cerrarBanners();
         localStorage.removeItem('viajeActivoID');
@@ -827,7 +777,6 @@
         btnSolicitar.innerText = "SOLICITAR TAXI"; 
         document.getElementById('estado-viaje-container').innerHTML = ""; 
     } 
-    
     function marcarEstrellas(valor, tipo) {
         calificacionSeleccionada = valor;
         const estrellas = document.querySelectorAll(`#estrellas-${tipo} span`);
@@ -836,13 +785,11 @@
         const textos = {1: "Muy Malo 😠", 2: "Malo 😕", 3: "Regular 😐", 4: "Bueno 🙂", 5: "Excelente 🤩"};
         document.getElementById(`texto-estrellas-${tipo}`).innerText = textos[valor];
     }
-    
     function mostrarModalCalificacionConductor(viaje) {
         viajeCompletadoData = viaje;
         document.getElementById('nombre-conductor-cal').innerText = viaje.conductorNombre || 'el conductor';
         document.getElementById('modal-calificar').style.display = 'flex';
     }
-    
     function enviarCalificacionConductor() {
         if (calificacionSeleccionada === 0) return alert("Por favor selecciona una estrella.");
         const comentario = document.getElementById('comentario-cliente').value || "Sin comentario";
@@ -860,10 +807,8 @@
         document.getElementById('modal-calificar').style.display = 'none';
         mostrarViajeFinalizado(viajeCompletadoData);
     }
-    
     function abrirSoporte() { document.getElementById('modal-soporte').style.display = 'flex'; }
     function cerrarSoporte() { document.getElementById('modal-soporte').style.display = 'none'; }
-    
     function enviarQueja() {
         const texto = document.getElementById('texto-queja').value;
         if (!texto) return alert("Escribe un comentario.");

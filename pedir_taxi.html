@@ -97,6 +97,11 @@
     </style>
 </head>
 <body>
+
+<audio id="audioLlegoPasajero" preload="auto">
+    <source src="https://raw.githubusercontent.com/juan031977/PreetyTaxi/main/taxi%20llego.mp3" type="audio/mpeg">
+</audio>
+
 <div class="map-header"></div>
 <div class="container">
     <div id="panel-cliente" class="card">
@@ -282,6 +287,7 @@
     const PRECIOS_ESCUELAS = { 'El IJA': 2.50, 'La Internacional': 2.50, 'Panamerican School': 2.50, 'Saint George': 1.75, 'SAP': 1.50, 'Smart Academy': 1.50, 'Preparatory High School': 1.50, 'AIP': 1.50, 'Oxford School': 3.00, 'Metropolitan School of Panama': 6.00 };
     const PRECIOS_OTROS = { 'Cerro Viento Rural': 1.75, 'Las Trancas': 1.50 };
     const PRECIOS_MALL = { 'Super 99 Brisas del Golf': 1.50, 'Machetazo': 1.50, 'Riba Smith': 1.50, 'Super Xtra': 1.50, 'El Rey Brisas del Golf': 1.50, 'Brisas Capital': 1.50, 'Kennedy Golf Plaza': 1.50, 'Signature': 1.50, 'Premier Plaza': 1.50, 'Plaza Point': 1.50, 'Plaza Caja de Ahorro': 1.50, 'Brisas Mall': 1.50, 'Plaza Mcdonalds': 1.50, 'Paseo Drive': 2.50, 'Northside Galleries': 2.00, 'Yappy Park': 3.50 };
+    
     window.onload = function() {
         initMap(); 
         initAutocomplete();
@@ -539,7 +545,17 @@
             }
         });
     }
+
     function pedirTaxi() {
+        // --- DESBLOQUEAR AUDIO AL HACER CLIC PARA QUE NO ALLE AL REPRODUCIRSE DESPUÉS ---
+        const audioLlego = document.getElementById('audioLlegoPasajero');
+        if (audioLlego) {
+            audioLlego.play().then(() => {
+                audioLlego.pause();
+                audioLlego.currentTime = 0;
+            }).catch(e => console.log("Audio unlock falló", e));
+        }
+
         let destinoFinal = "";
         let origenFinal = ""; 
         const precio = document.getElementById('display-precio').innerText;
@@ -720,6 +736,14 @@
                 if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
                 let elContenedorReloj = document.getElementById('contenedor-reloj-pasajero');
                 if (elContenedorReloj) elContenedorReloj.innerHTML = `<p style="color: #28a745; font-weight: bold; margin: 0; text-align:center;">✅ El conductor ha llegado</p>`;
+                
+                // --- NUEVO: REPRODUCIR SONIDO DE LLEGADA ---
+                const audioLlego = document.getElementById('audioLlegoPasajero');
+                if (audioLlego) {
+                    audioLlego.currentTime = 0;
+                    audioLlego.play().catch(e => console.log("Error de audio:", e));
+                }
+                
                 mostrarNotificacionLlegada(viaje); 
             } 
             if (viaje.estado === 'viaje_iniciado') { 

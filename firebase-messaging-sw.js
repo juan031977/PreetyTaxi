@@ -1,7 +1,7 @@
+// Firebase Messaging Service Worker - ClickGoTaxi
 importScripts('https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js');
 importScripts('https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js');
 
-// Configuración exacta de ClickGoTaxi
 firebase.initializeApp({
   apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg",
   databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com",
@@ -12,35 +12,43 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
+// Notificaciones en SEGUNDO PLANO (app minimizada)
 messaging.onBackgroundMessage(function(payload) {
-  console.log('[FCM SW] Mensaje recibido en segundo plano:', payload);
-  
+  console.log('[FCM SW] Mensaje en segundo plano:', payload);
+
   const title = payload.notification?.title || payload.data?.title || "🚕 ¡Nuevo viaje disponible!";
-  const body = payload.notification?.body || payload.data?.body || "Un pasajero está esperando";
-  
+  const body = payload.notification?.body || payload.data?.body || "Un pasajero está esperando. Toca para abrir.";
+
   const options = {
     body: body,
-    icon: '/icon-192.png', // Ruta absoluta para evitar que falle en segundo plano
-    badge: '/badge.png',   // Ruta absoluta para evitar que falle en segundo plano
+    icon: './icon-192.png',
+    badge: './badge.png',
     vibrate: [300, 100, 300, 100, 300],
-    requireInteraction: true, 
-    tag: 'viaje-nuevo', 
+    sound: 'default',
+    requireInteraction: true,  // No se cierra sola
     renotify: true,
+    tag: 'viaje-nuevo',
+    silent: false,
     data: {
-      url: payload.data?.url || payload.fcmOptions?.link || "./panel_trabajo.html",
+      url: payload.data?.url || "./panel_trabajo.html",
       viajeId: payload.data?.viajeId || ""
-    }
+    },
+    actions: [
+      { action: 'abrir', title: 'Abrir panel' },
+      { action: 'cerrar', title: 'Cerrar' }
+    ]
   };
-  
+
   return self.registration.showNotification(title, options);
 });
 
+// Al tocar la notificación
 self.addEventListener('notificationclick', function(event) {
-  console.log('[FCM SW] Click en notificacion:', event);
   event.notification.close();
-  
+  if (event.action === 'cerrar') return;
+
   const urlToOpen = event.notification.data?.url || "./panel_trabajo.html";
-  
+
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
       for (let client of windowClients) {

@@ -282,7 +282,10 @@
     let relojPasajeroInterval = null; 
     let calificacionSeleccionada = 0;
     let ultimoEstadoViajeUI = null; // Evitar re-dibujar la card del conductor
-    let viajeCompletadoData = null; 
+    let viajeCompletadoData = null;
+    let mapaVivo = null;
+    let markerConductor = null;
+    let listenerUbicacion = null;
     const PRECIOS_PH = { 'PH La Riviera Colonial': 1.75, 'Brisas del Pacífico': 1.75, 'PH Brisas Point': 1.75, 'PH Brisas Heights': 1.75, 'PH Golf Gardens': 2.50, 'Club De Golf': 2.50, 'PH Alpes': 2.50, 'PH Everest': 2.50, 'PH Bejin': 2.50, 'PH Olimpus': 2.50, 'PH Mont Blanc': 2.50, 'PH Sierra Nevada': 2.50, 'PH Aventura': 3.00, 'PH Vallarta': 3.00, 'PH Noura': 3.00, 'PH Cavana': 3.00, 'Parque Rash': 3.00, 'PH Lagun': 1.50, 'PH Royal Village': 2.00, 'Oxford School': 3.00, 'Green City': 6.00, 'Golf Garden': 2.50, 'PH Ventura': 3.00 };
     const PRECIOS_VILLAS = { 'Lomas del Golf (Garita)': 1.50, 'Lomas del Golf (Adentro)': 1.75, 'Villas del Golf (Garita)': 1.50, 'Villas del Golf (Adentro)': 1.75, 'Monticello 1 (Garita)': 1.50, 'Monticello 1 (Adentro)': 1.75, 'Monticello 2 (Garita)': 1.50, 'Monticello 2 (Adentro)': 1.75, 'Villa Lido (Garita)': 1.50, 'Villa Lido (Adentro)': 1.75, 'Villa Alta (Garita)': 1.50, 'Villa Alta (Adentro)': 1.75, 'Villa Tivoli (Garita)': 1.50, 'Villa Tivoli (Adentro)': 1.75, 'Villa Navona (Garita)': 1.50, 'Villa Navona (Adentro)': 1.75, 'Villa Tiber (Garita)': 1.50, 'Villa Tiber (Adentro)': 1.75 };
     const PRECIOS_ESCUELAS = { 'El IJA': 2.50, 'La Internacional': 2.50, 'Panamerican School': 2.50, 'Saint George': 1.75, 'SAP': 1.50, 'Smart Academy': 1.50, 'Preparatory High School': 1.50, 'AIP': 1.50, 'Oxford School': 3.00, 'Metropolitan School of Panama': 6.00 };
@@ -703,6 +706,14 @@
                             <p><strong>Tel:</strong> +${numeroConductor}</p>
                             <p><strong>Vehículo:</strong> ${viaje.conductorVehiculo} ${viaje.conductorColor}</p>
                             <p><strong>Placa:</strong> ${viaje.conductorPlaca}</p>
+                            
+                            <!-- MAPA GPS EN VIVO -->
+                            <div style="margin: 15px 0;">
+                                <p style="color:#ffc107; font-weight:bold; font-size:13px; margin-bottom:8px;">📍 Ubicación del conductor en vivo</p>
+                                <div id="mapa-vivo" style="width:100%; height:250px; border-radius:12px; border:2px solid #ffc107; background:#111;"></div>
+                                <p id="texto-ubicacion-vivo" style="font-size:11px; color:#888; margin-top:5px; text-align:center;">Esperando señal GPS del conductor...</p>
+                            </div>
+                            
                             <div style="text-align: center; margin-top: 15px; margin-bottom: 10px;">
                                 <img src="${fotoCarro}" style="width: 100%; border-radius: 8px; object-fit: cover; border: 1px solid #444;">
                             </div>
@@ -798,10 +809,66 @@
         const camino = document.getElementById('ui-taxi-camino');
         if (card) card.style.display = 'none';
         if (camino) camino.style.display = 'block';
-        // Iniciar mapa en vivo si existe la función
-        if (typeof iniciarMapaVivo === 'function' && viajeID) {
-            setTimeout(() => iniciarMapaVivo(viajeID), 300);
+        if (viajeID) {
+            setTimeout(() => iniciarMapaVivo(viajeID), 400);
         }
+    }
+
+    // ========== MAPA GPS EN VIVO DEL CONDUCTOR ==========
+    function iniciarMapaVivo(viajeId) {
+        const divMapa = document.getElementById('mapa-vivo');
+        if (!divMapa) return;
+        if (!window.google || !google.maps) {
+            document.getElementById('texto-ubicacion-vivo').innerText = "Mapa no disponible";
+            return;
+        }
+
+        mapaVivo = new google.maps.Map(divMapa, {
+            zoom: 15,
+            center: { lat: 9.0729, lng: -79.4451 },
+            mapTypeControl: false,
+            streetViewControl: false,
+            fullscreenControl: false
+        });
+
+        const iconoTaxi = {
+            url: "https://maps.google.com/mapfiles/kml/shapes/cabs.png",
+            scaledSize: new google.maps.Size(40, 40)
+        };
+
+        markerConductor = new google.maps.Marker({
+            map: mapaVivo,
+            icon: iconoTaxi,
+            title: "Tu conductor"
+        });
+
+        if (listenerUbicacion) {
+            try { db.ref('viajes/' + viajeId + '/conductorUbicacion').off('value'); } catch(e) {}
+        }
+
+        listenerUbicacion = db.ref('viajes/' + viajeId + '/conductorUbicacion').on('value', snap => {
+            const ubi = snap.val();
+            if (ubi && ubi.lat && ubi.lng) {
+                const pos = { lat: parseFloat(ubi.lat), lng: parseFloat(ubi.lng) };
+                markerConductor.setPosition(pos);
+                mapaVivo.panTo(pos);
+                const texto = document.getElementById('texto-ubicacion-vivo');
+                if (texto) {
+                    const hace = Math.round((Date.now() - (ubi.timestamp || Date.now())) / 1000);
+                    texto.innerHTML = `🟢 Conductor en movimiento · hace ${hace < 3 ? 'segundos' : hace + 's'}`;
+                    texto.style.color = '#28a745';
+                }
+            }
+        });
+    }
+
+    function detenerMapaVivo() {
+        if (viajeID) {
+            try { db.ref('viajes/' + viajeID + '/conductorUbicacion').off('value'); } catch(e) {}
+        }
+        listenerUbicacion = null;
+        mapaVivo = null;
+        markerConductor = null;
     }
 
     function cancelarViajeCliente(id) { 
@@ -817,6 +884,7 @@
     function resetFormularioUI() { 
         cerrarBanners();
         localStorage.removeItem('viajeActivoID');
+        detenerMapaVivo();
         viajeID = null;
         ultimoEstadoViajeUI = null;
         const btnSolicitar = document.getElementById('btn-solicitar'); 

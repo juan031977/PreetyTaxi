@@ -19,6 +19,7 @@
         .btn-active { background: #28a745; color: white; }
         .btn-reset { background: #007bff; color: white; }
         .btn-corte { background: #800080; color: white; padding: 15px; font-size: 16px; width: 100%; margin-bottom: 10px; }
+        .btn-reporte { background: #17a2b8; color: white; padding: 15px; font-size: 16px; width: 100%; margin-bottom: 10px; }
         .btn-info { background: #17a2b8; color: white; font-size: 11px; padding: 5px 8px; }
         .btn-danger { background: #bd2130; color: white; margin-top: 5px; width: 100%; }
         
@@ -40,8 +41,11 @@
     <div class="container">
         <div class="card">
             <h2>Panel de Control Administrativo 🚕</h2>
-            <button class="btn btn-corte" onclick="corteDiario()">🌙 CORTE DIARIO</button>
-            <button class="btn btn-block" onclick="cierreSemanal()">RESETEO SEMANAL</button>
+            <div id="estadoSistema" style="margin-bottom: 10px; font-size: 14px; color: #555; font-weight: bold;">Verificando estado del ciclo diario...</div>
+            <button class="btn btn-corte" onclick="corteDiario()">🌙 CORTE DIARIO MANUAL</button>
+            <!-- Enlace corregido con el nombre exacto del archivo -->
+            <button class="btn btn-reporte" onclick="window.open('admin_reporte_diario.html', '_blank')">📊 ABRIR REPORTE DIARIO</button>
+            <button class="btn btn-block" onclick="cierreSemanal()" style="width: 100%; padding: 12px; font-size: 15px; margin-bottom: 10px;">RESETEO SEMANAL</button>
             <input type="text" id="buscador" onkeyup="filtrarConductores()" placeholder="🔍 Buscar conductor..." class="input-buscador">
         </div>
 
@@ -80,6 +84,8 @@
         const storage = firebase.storage();
 
         function cargarDatos() {
+            verificarCorteAutomatico();
+
             db.ref('conductores').on('value', snap => {
                 const tbody = document.getElementById('lista-conductores');
                 tbody.innerHTML = "";
@@ -130,7 +136,35 @@
             });
         }
 
-        // --- Funciones del Modal ---
+        function verificarCorteAutomatico() {
+            const hoy = new Date().toISOString().split('T')[0];
+            
+            db.ref('sistema/ultimoCorte').once('value', snap => {
+                const ultimoCorte = snap.val();
+                
+                if (ultimoCorte !== hoy) {
+                    console.log("Detectado nuevo día. Aplicando bloqueo y corte automático...");
+                    document.getElementById('estadoSistema').innerHTML = `<span style="color: #dc3545;">⚠️ Aplicando corte automático de medianoche para el nuevo día...</span>`;
+                    
+                    db.ref('conductores').once('value', conductoresSnap => {
+                        let updates = {};
+                        conductoresSnap.forEach(c => {
+                            let deudaActual = parseFloat(c.val().deuda || 0);
+                            updates[c.key + '/estado'] = 'bloqueado';
+                            updates[c.key + '/deuda'] = deudaActual + 1.00;
+                        });
+                        
+                        db.ref('conductores').update(updates).then(() => {
+                            db.ref('sistema').update({ ultimoCorte: hoy });
+                            document.getElementById('estadoSistema').innerHTML = `<span style="color: #28a745;">✅ Corte diario aplicado correctamente. Unidades bloqueadas hasta pago.</span>`;
+                        });
+                    });
+                } else {
+                    document.getElementById('estadoSistema').innerHTML = `<span style="color: #28a745;">✅ Sistema al día. Ciclo activo.</span>`;
+                }
+            });
+        }
+
         function abrirModal(cel) {
             document.getElementById('modalComentarios').style.display = 'block';
             const contenedor = document.getElementById('lista-detallada');
@@ -144,7 +178,6 @@
                     let listaComentarios = [];
                     snap.forEach(c => { listaComentarios.push(c.val()); });
                     
-                    // Ordenar: fecha más nueva primero
                     listaComentarios.sort((a, b) => (b.fecha || 0) - (a.fecha || 0));
 
                     listaComentarios.forEach(data => {
@@ -153,7 +186,7 @@
                         html += `<div style="border-bottom:1px solid #eee; padding:10px;">
                                     <strong>${data.estrellas} ★</strong> <span style="font-size:11px; color:#888;">${fechaLegible}</span><br>
                                     <span style="font-size:14px;">${texto}</span>
-                                 </div>`;
+                               </div>`;
                     });
                     html += `<hr><button class="btn btn-danger" style="width:100%" onclick="limpiarTextosComentarios('${cel}')">🗑️ Borrar SOLO textos (mantener estrellas)</button>`;
                 }
@@ -175,7 +208,6 @@
             }
         }
 
-        // --- Funciones existentes ---
         function subirImagen(cel, tipo) {
             const fileInput = document.getElementById(`file-${cel}-${tipo}`);
             const file = fileInput.files[0];
@@ -192,20 +224,45 @@
         }
 
         function cambiarEstado(cel, nuevoEstado) { db.ref('conductores/' + cel).update({ estado: nuevoEstado }); }
-        function pagarDeuda(cel) { db.ref('conductores/' + cel).update({ deuda: 0, estado: 'activo' }); }
+        
+        function pagarDeuda(cel) { 
+            db.ref('conductores/' + cel).update({ deuda: 0, estado: 'activo' }); 
+        }
+        
         function eliminarConductor(cel) { if(confirm("¿Eliminar?")) db.ref('conductores/' + cel).remove(); }
         
         function corteDiario() {
-            db.ref('conductores').once('value', snap => {
-                snap.forEach(c => db.ref('conductores/' + c.key).update({ estado: 'bloqueado', deuda: 1.00 }));
-            });
+            if(confirm("¿Estás seguro de ejecutar el corte diario manual y bloquear todas las unidades?")) {
+                const hoy = new Date().toISOString().split('T')[0];
+                db.ref('conductores').once('value', snap => {
+                    let updates = {};
+                    snap.forEach(c => {
+                        let deudaActual = parseFloat(c.val().deuda || 0);
+                        updates[c.key + '/estado'] = 'bloqueado';
+                        updates[c.key + '/deuda'] = deudaActual + 1.00;
+                    });
+                    db.ref('conductores').update(updates).then(() => {
+                        db.ref('sistema').update({ ultimoCorte: hoy });
+                        alert("Corte diario ejecutado. Todas las unidades bloqueadas.");
+                    });
+                });
+            }
         }
 
         function cierreSemanal() {
-            db.ref('viajes').remove();
-            db.ref('conductores').once('value', snap => {
-                snap.forEach(c => db.ref('conductores/' + c.key).update({ deuda: 0, estado: 'activo' }));
-            });
+            if(confirm("¿Deseas realizar el reseteo semanal de viajes y limpiar deudas?")) {
+                db.ref('viajes').remove();
+                db.ref('conductores').once('value', snap => {
+                    let updates = {};
+                    snap.forEach(c => {
+                        updates[c.key + '/deuda'] = 0;
+                        updates[c.key + '/estado'] = 'activo';
+                    });
+                    db.ref('conductores').update(updates).then(() => {
+                        alert("Reseteo semanal completado.");
+                    });
+                });
+            }
         }
 
         function filtrarConductores() {

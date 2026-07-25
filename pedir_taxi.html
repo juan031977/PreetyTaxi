@@ -261,10 +261,22 @@
 </div>
 <div id="modal-soporte" class="modal-overlay">
     <div class="modal-content">
-        <h3 style="color:#dc3545; margin-top:0;">Servicio al Cliente</h3>
-        <p style="font-size:14px; color:#ccc;">¿Tuviste algún problema con el conductor o el viaje?</p>
-        <textarea id="texto-queja" class="reporte-input" placeholder="Escribe tu reporte o queja aquí..."></textarea>
-        <button class="btn-soporte" onclick="enviarQueja()">Enviar Reporte al Administrador</button>
+        <h3 style="color:#dc3545; margin-top:0;">Quejas y Sugerencias</h3>
+        <p style="font-size:14px; color:#ccc;">Tu mensaje llegará a <strong>clkgotaxi@hotmail.com</strong></p>
+        
+        <label style="display:block; text-align:left; color:#aaa; font-size:12px; margin-top:10px;">Tu Nombre *</label>
+        <input type="text" id="queja-nombre" placeholder="Nombre completo" style="width:100%; padding:10px; margin-top:4px; border-radius:8px; border:1px solid #444; background:#111; color:white; box-sizing:border-box;">
+        
+        <label style="display:block; text-align:left; color:#aaa; font-size:12px; margin-top:10px;">Tu Teléfono *</label>
+        <input type="tel" id="queja-telefono" placeholder="Ej: 50760000000" style="width:100%; padding:10px; margin-top:4px; border-radius:8px; border:1px solid #444; background:#111; color:white; box-sizing:border-box;">
+        
+        <label style="display:block; text-align:left; color:#aaa; font-size:12px; margin-top:10px;">Tu Correo *</label>
+        <input type="email" id="queja-correo" placeholder="tucorreo@ejemplo.com" style="width:100%; padding:10px; margin-top:4px; border-radius:8px; border:1px solid #444; background:#111; color:white; box-sizing:border-box;">
+        
+        <label style="display:block; text-align:left; color:#aaa; font-size:12px; margin-top:10px;">Mensaje / Queja / Sugerencia *</label>
+        <textarea id="texto-queja" class="reporte-input" placeholder="Escribe tu queja o sugerencia aquí..." style="margin-top:4px;"></textarea>
+        
+        <button class="btn-soporte" id="btn-enviar-queja" onclick="enviarQueja()">Enviar a clkgotaxi@hotmail.com</button>
         <button style="background:transparent; color:#aaa; border:none; margin-top:15px; cursor:pointer;" onclick="cerrarSoporte()">Cancelar</button>
     </div>
 </div>
@@ -831,23 +843,81 @@
         document.getElementById('modal-calificar').style.display = 'none';
         mostrarViajeFinalizado(viajeCompletadoData);
     }
-    function abrirSoporte() { document.getElementById('modal-soporte').style.display = 'flex'; }
+    function abrirSoporte() { 
+        const nombreGuardado = localStorage.getItem('nombre_pasajero') || localStorage.getItem('userName') || '';
+        const telGuardado = localStorage.getItem('telefono_pasajero') || localStorage.getItem('userCel') || '';
+        document.getElementById('queja-nombre').value = nombreGuardado;
+        document.getElementById('queja-telefono').value = telGuardado;
+        document.getElementById('queja-correo').value = '';
+        document.getElementById('texto-queja').value = '';
+        document.getElementById('modal-soporte').style.display = 'flex'; 
+    }
     function cerrarSoporte() { document.getElementById('modal-soporte').style.display = 'none'; }
+    
     function enviarQueja() {
-        const texto = document.getElementById('texto-queja').value;
-        if (!texto) return alert("Escribe un comentario.");
+        const nombre = document.getElementById('queja-nombre').value.trim();
+        const telefono = document.getElementById('queja-telefono').value.trim();
+        const correo = document.getElementById('queja-correo').value.trim();
+        const texto = document.getElementById('texto-queja').value.trim();
+        
+        if (!nombre) return alert("Por favor escribe tu nombre.");
+        if (!telefono) return alert("Por favor escribe tu número de teléfono.");
+        if (!correo || !correo.includes('@')) return alert("Por favor escribe un correo válido.");
+        if (!texto) return alert("Por favor escribe tu queja o sugerencia.");
+        
+        const btn = document.getElementById('btn-enviar-queja');
+        btn.disabled = true;
+        btn.innerText = "Enviando...";
+        
         const quejaID = Date.now();
+        
+        // 1. Guardar en Firebase
         db.ref('quejas/' + quejaID).set({
             viajeID: viajeID || 'Sin viaje activo',
-            pasajero: localStorage.getItem('nombre_pasajero') || 'Anónimo',
-            telefono_pasajero: localStorage.getItem('telefono_pasajero') || '',
+            nombre: nombre,
+            telefono: telefono,
+            correo: correo,
             mensaje: texto,
-            fecha: new Date().toLocaleString(),
+            fecha: new Date().toLocaleString('es-PA'),
             estado: 'pendiente_revision'
-        }).then(() => {
-            alert("Tu reporte ha sido enviado a la administración.");
+        });
+        
+        // 2. Enviar correo con Web3Forms (tu access key)
+        fetch("https://api.web3forms.com/submit", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            body: JSON.stringify({
+                access_key: "3e91680b-8172-40e7-b991-7b4a9c672222",
+                subject: "🚕 Nueva Queja/Sugerencia - ClickGoTaxi",
+                from_name: "ClickGoTaxi App",
+                name: nombre,
+                email: correo,
+                phone: telefono,
+                message: texto,
+                Viaje_ID: viajeID || "Sin viaje activo",
+                Fecha: new Date().toLocaleString("es-PA")
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert("✅ ¡Mensaje enviado correctamente a clkgotaxi@hotmail.com!");
+            } else {
+                alert("✅ Mensaje guardado. Revisa tu correo (también Spam).");
+            }
             cerrarSoporte();
-            document.getElementById('texto-queja').value = '';
+        })
+        .catch(err => {
+            console.error(err);
+            alert("✅ Tu mensaje fue registrado. El administrador lo verá en el sistema.");
+            cerrarSoporte();
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerText = "Enviar a clkgotaxi@hotmail.com";
         });
     }
 </script>

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de Trabajo - Click$GoTaxi</title>
-    <link rel="manifest" href="./manifest.json"> 
+    <link rel="manifest" href="./manifest.json">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; background: #000; color: #fff; padding: 20px; transition: background 0.3s; }
@@ -41,13 +41,10 @@
         <button class="btn-iniciar" onclick="iniciarApp()" style="width: auto; padding: 20px 40px;">ACTIVAR APLICACIÓN</button>
     </div>
 
+    <!-- AUDIO DESDE GITHUB (jsDelivr CDN) -->
     <audio id="sonidoNotificacion" preload="auto">
         <source src="https://cdn.jsdelivr.net/gh/juan031977/PreetyTaxi@main/silbido.mp3" type="audio/mpeg">
         <source src="https://assets.mixkit.co/sfx/preview/2320/2320-preview.mp3" type="audio/mpeg">
-    </audio>
-
-    <audio id="audioLlego" preload="auto">
-        <source src="https://raw.githubusercontent.com/juan031977/PreetyTaxi/main/su%20taxi%20llego.mp3" type="audio/mpeg">
     </audio>
 
     <button class="btn-volver" onclick="window.history.back()">⬅ Volver</button>
@@ -58,19 +55,13 @@
             <div style="margin-top: 5px;">Conductor: <strong id="nombreConductor">Cargando...</strong></div>
             <button class="btn-editar" onclick="mostrarFormulario()">✏️ Editar mis datos</button>
         </div>
-        <div style="text-align: right;">
+        <div>
             <div style="font-size: 12px; color: #aaa;">GANANCIA HOY</div>
-            <span id="ganancia" style="font-size: 20px; font-weight: bold; color: #FFC107;">B/. 0.00</span>
-            <div style="font-size: 10px; color: #777; margin-top: 2px;">Se reinicia a media noche</div>
+            <span id="ganancia" style="font-size: 18px; font-weight: bold; color: #FFC107;">B/. 0.00</span>
         </div>
     </div>
 
     <button id="btnConexion" class="btn-conexion" onclick="toggleConexion()">🔄 Sincronizando...</button>
-
-    <div class="card" id="tarjetaHistorial" style="display: none; padding: 15px; border-left: 4px solid #28a745;">
-        <h4 style="margin-bottom: 10px; color: #28a745;">📅 Historial de Ganancias</h4>
-        <div id="contenedorHistorial6Dias"></div>
-    </div>
 
     <div id="formularioDatos" class="card" style="display: none; border-left: 4px solid #007bff;">
         <h3 style="margin-bottom: 15px; color: #007bff;">Configura tus datos</h3>
@@ -85,7 +76,6 @@
     <div id="area-viajes"><div id="contenedor"></div></div>
 
     <script>
-        // CONFIGURACIÓN DE FIREBASE
         const firebaseConfig = { 
             apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", 
             databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/",
@@ -96,15 +86,6 @@
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         const audio = document.getElementById('sonidoNotificacion');
-        const audioLlego = document.getElementById('audioLlego');
-
-        let datos = JSON.parse(localStorage.getItem('datos_conductor'));
-        let adminEstado = 'pendiente'; 
-        let conductorConectado = localStorage.getItem('conductor_conectado') === 'true'; 
-        let estoyEnViajeActivo = false;
-        let intervaloReloj = null;
-        let watchIdUbicacion = null;
-        let viajeActivoId = null;
 
         function iniciarApp() {
             audio.play().then(() => {
@@ -115,9 +96,8 @@
         }
 
         function reproducirSonido() {
-            // Flash corto (1.5s) para que no se vuelva loco
             document.body.classList.add('modo-alerta');
-            setTimeout(() => document.body.classList.remove('modo-alerta'), 1500);
+            setTimeout(() => document.body.classList.remove('modo-alerta'), 3000);
             audio.currentTime = 0;
             audio.play().catch(e => console.log("Error al reproducir:", e));
         }
@@ -128,95 +108,18 @@
             }
         });
 
-        // ----------------------------------------------------
-        // LÓGICA DE REPORTES DIARIOS Y RESETEO A MEDIANOCHE
-        // ----------------------------------------------------
-        function obtenerFechaHoy() {
-            const tzoffset = (new Date()).getTimezoneOffset() * 60000;
-            const localISOTime = (new Date(Date.now() - tzoffset)).toISOString().slice(0, -1);
-            return localISOTime.split('T')[0]; // Devuelve formato YYYY-MM-DD
-        }
+        let datos = JSON.parse(localStorage.getItem('datos_conductor'));
+        let adminEstado = 'pendiente'; 
+        let conductorConectado = localStorage.getItem('conductor_conectado') === 'true'; 
+        let estoyEnViajeActivo = false;
+        let intervaloReloj = null;
 
-        function obtenerNombreDia(fechaStr) {
-            const partes = fechaStr.split('-');
-            const fecha = new Date(partes[0], partes[1] - 1, partes[2]);
-            const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-            return dias[fecha.getDay()] + ' (' + fechaStr.substring(5) + ')';
-        }
-
-        function verificarReseteoDiario(telefono) {
-            const fechaHoy = obtenerFechaHoy();
-            const refConductor = db.ref('conductores/' + telefono);
-
-            refConductor.once('value', snapshot => {
-                const conductorInfo = snapshot.val() || {};
-                const ultimaFecha = conductorInfo.ultimoDiaRegistrado || fechaHoy;
-                const generadoHoy = conductorInfo.totalGeneradoHoy || 0;
-
-                // Si detecta que cambió el día
-                if (ultimaFecha !== fechaHoy) {
-                    // 1. Guardar el reporte del día anterior si generó algo
-                    if (generadoHoy > 0) {
-                        db.ref('reportes_diarios/' + telefono + '/' + ultimaFecha).set({
-                            total: generadoHoy,
-                            fecha: ultimaFecha,
-                            diaNombre: obtenerNombreDia(ultimaFecha)
-                        });
-                    }
-                    // 2. Reiniciar los valores para el día de hoy
-                    refConductor.update({
-                        totalGeneradoHoy: 0,
-                        ultimoDiaRegistrado: fechaHoy
-                    });
-                } else if (!conductorInfo.ultimoDiaRegistrado) {
-                    refConductor.update({ ultimoDiaRegistrado: fechaHoy });
-                }
-            });
-        }
-
-        function cargarHistorial6Dias(telefono) {
-            const refReportes = db.ref('reportes_diarios/' + telefono);
-            const divHistorial = document.getElementById('contenedorHistorial6Dias');
-            const tarjetaHistorial = document.getElementById('tarjetaHistorial');
-
-            refReportes.limitToLast(6).on('value', snapshot => {
-                let html = '';
-                let totalSemana = 0;
-
-                if (!snapshot.exists()) {
-                    html += '<p style="color:#aaa; font-size:13px; text-align:center;">Aún no hay reportes de días anteriores.</p>';
-                } else {
-                    html += '<div style="display:flex; flex-direction:column; gap:8px;">';
-                    snapshot.forEach(childSnapshot => {
-                        const reporte = childSnapshot.val();
-                        totalSemana += (reporte.total || 0);
-                        html += `
-                            <div style="background:#222; padding:10px; border-radius:8px; display:flex; justify-content: space-between; align-items:center;">
-                                <span style="color:#ddd; font-size:14px;">${reporte.diaNombre || reporte.fecha}</span>
-                                <span style="color:#28a745; font-weight:bold;">B/. ${(reporte.total || 0).toFixed(2)}</span>
-                            </div>
-                        `;
-                    });
-                    html += '</div>';
-                    html += `<p style="margin-top:10px; color:#fff; font-size:15px; text-align:right;"><b>Total Acumulado:</b> B/. ${totalSemana.toFixed(2)}</p>`;
-                }
-
-                if (divHistorial) {
-                    divHistorial.innerHTML = html;
-                    tarjetaHistorial.style.display = 'block';
-                }
-            });
-        }
-
-        // INICIALIZACIÓN
         if (!datos || !datos.telefono) { 
             mostrarFormulario(); 
         } else { 
             document.getElementById('nombreConductor').textContent = datos.nombre; 
-            verificarReseteoDiario(datos.telefono); 
-            cargarHistorial6Dias(datos.telefono);   
             escucharEstadoAdmin(datos.telefono); 
-            pedirPermisoNotificaciones(datos.telefono); 
+            pedirPermisoNotificaciones(datos.telefono);
         }
 
         function pedirPermisoNotificaciones(telefono) {
@@ -227,6 +130,7 @@
                         messaging.getToken({ vapidKey: 'BBUHPimNFxcFynE28L8yDonGLzDqi8P7x2L5sKlFPpqoId-_Lkl6WURXgPHH4lTTQVtlpa_WRNO9-Sq4SSxHFn0' }).then(token => {
                             if (token) {
                                 db.ref('conductores/' + telefono + '/fcmToken').set(token);
+                                console.log("Token FCM guardado.");
                             }
                         }).catch(err => console.log('Error FCM:', err));
                     }
@@ -239,27 +143,14 @@
             document.getElementById('formularioDatos').style.display = 'block'; 
         }
 
-        let ultimoEstadoAdmin = null;
-        let escuchasActivas = false;
-        let pedidosYaMostrados = {}; // Evitar flash repetido del mismo viaje
-
         function escucharEstadoAdmin(telefono) {
             db.ref('conductores/' + telefono).on('value', snap => {
                 const conductorData = snap.val();
-                const nuevoEstado = conductorData ? (conductorData.estado || 'pendiente') : 'pendiente';
-                
-                if(conductorData) {
-                    document.getElementById('ganancia').innerText = "B/. " + parseFloat(conductorData.totalGeneradoHoy || 0).toFixed(2);
+                adminEstado = conductorData ? (conductorData.estado || 'pendiente') : 'pendiente';
+                if(conductorData && conductorData.totalGeneradoHoy) {
+                    document.getElementById('ganancia').innerText = "B/. " + parseFloat(conductorData.totalGeneradoHoy).toFixed(2);
                 }
-                
-                // Solo actualizar interfaz de conexión si cambió el estado de la cuenta
-                if (nuevoEstado !== ultimoEstadoAdmin) {
-                    adminEstado = nuevoEstado;
-                    ultimoEstadoAdmin = nuevoEstado;
-                    actualizarInterfaz();
-                } else {
-                    adminEstado = nuevoEstado;
-                }
+                actualizarInterfaz();
             });
         }
 
@@ -267,81 +158,39 @@
             const btnConexion = document.getElementById('btnConexion');
             if (adminEstado === 'bloqueado' || adminEstado === 'pendiente') {
                 conductorConectado = false;
-                document.getElementById('txtEstado').innerHTML = `<span style="color: #dc3545; font-weight: bold;">⛔ CUENTA RESTRINGIDA</span>`;
-                btnConexion.innerHTML = `❌ CUENTA INACTIVA / PENDIENTE`;
-                if (!escuchasActivas) {
-                    activarEscuchasDeViajes();
-                }
+                document.getElementById('txtEstado').innerHTML = `<span style="color: #dc3545; font-weight: bold;">⛔ CUENTA BLOQUEADA</span>`;
+                btnConexion.innerHTML = `❌ BLOQUEADO (Paga tu deuda)`;
+                activarEscuchasDeViajes();
             } else {
                 document.getElementById('txtEstado').innerHTML = `<span style="color: #28a745; font-weight: bold;">✅ CUENTA ACTIVA</span>`;
                 if (conductorConectado) {
                     btnConexion.innerHTML = `🟢 CONECTADO (Toca para Desconectar)`;
-                    if (!escuchasActivas) {
-                        activarEscuchasDeViajes();
-                    }
+                    activarEscuchasDeViajes();
                 } else {
                     btnConexion.innerHTML = `⚪ DESCONECTADO (Modo Descanso)`;
                     document.getElementById('contenedor').innerHTML = '<div style="text-align:center; padding:35px; color:#666;">💤 Estás desconectado.</div>';
                     db.ref('viajes').off();
-                    escuchasActivas = false;
-                    pedidosYaMostrados = {};
                 }
             }
         }
 
         function toggleConexion() {
             if (adminEstado === 'bloqueado' || adminEstado === 'pendiente') {
-                return alert("⛔ Tu cuenta se encuentra en revisión o pendiente de activación por el administrador.");
+                return alert("⛔ Tu cuenta está bloqueada por deuda.\nDebes pagar B/. 1.00 para poder aceptar viajes.");
             }
             conductorConectado = !conductorConectado;
             localStorage.setItem('conductor_conectado', conductorConectado);
-            escuchasActivas = false;
-            pedidosYaMostrados = {};
             actualizarInterfaz();
         }
-
-        function iniciarCompartirUbicacion(viajeId) {
-            if (watchIdUbicacion) return;
-            if (!navigator.geolocation) return;
-            watchIdUbicacion = navigator.geolocation.watchPosition(
-                (pos) => {
-                    const ubicacion = {
-                        lat: pos.coords.latitude,
-                        lng: pos.coords.longitude,
-                        accuracy: pos.coords.accuracy,
-                        timestamp: Date.now()
-                    };
-                    if (viajeId) db.ref('viajes/' + viajeId + '/conductorUbicacion').set(ubicacion);
-                    if (datos && datos.telefono) db.ref('conductores/' + datos.telefono + '/ubicacion').set(ubicacion);
-                },
-                (err) => console.log("Error GPS:", err.message),
-                { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
-            );
-        }
-
-        function detenerCompartirUbicacion() {
-            if (watchIdUbicacion !== null) {
-                navigator.geolocation.clearWatch(watchIdUbicacion);
-                watchIdUbicacion = null;
-            }
-        }
-
-        let viajeActivoRenderizadoId = null;
-        let viajeActivoUltimoEstado = null;
 
         function activarEscuchasDeViajes() {
             db.ref('viajes').off();
             document.getElementById('contenedor').innerHTML = '';
-            escuchasActivas = true;
-            pedidosYaMostrados = {};
-            viajeActivoRenderizadoId = null;
-            viajeActivoUltimoEstado = null;
             
             if(datos && datos.telefono) {
                 db.ref('viajes').orderByChild('conductorCel').equalTo(datos.telefono).on('value', (snap) => {
                     let hayViajeValido = false;
                     let viajeData = null;
-                    let viajeKey = null;
 
                     snap.forEach((child) => {
                         const v = child.val();
@@ -349,28 +198,15 @@
                             hayViajeValido = true;
                             estoyEnViajeActivo = true;
                             viajeData = v;
-                            viajeKey = child.key;
-                            viajeActivoId = child.key;
+                            renderizarActivo(child.key, v);
                         }
                     });
                     
                     if (!hayViajeValido) {
                         estoyEnViajeActivo = false;
-                        viajeActivoId = null;
-                        viajeActivoRenderizadoId = null;
-                        viajeActivoUltimoEstado = null;
-                        detenerCompartirUbicacion();
                         document.getElementById('contenedor').innerHTML = '';
                         if(intervaloReloj) clearInterval(intervaloReloj);
                     } else {
-                        // Solo re-renderizar si cambió el viaje o el estado (NO en cada update de GPS)
-                        if (viajeKey !== viajeActivoRenderizadoId || viajeData.estado !== viajeActivoUltimoEstado) {
-                            viajeActivoRenderizadoId = viajeKey;
-                            viajeActivoUltimoEstado = viajeData.estado;
-                            renderizarActivo(viajeKey, viajeData);
-                            iniciarCompartirUbicacion(viajeKey);
-                        }
-                        
                         if(intervaloReloj) clearInterval(intervaloReloj);
                         if (viajeData && viajeData.estado === 'conductor_asignado' && viajeData.tiempoAsignacion) {
                             intervaloReloj = setInterval(() => {
@@ -394,8 +230,7 @@
             }
 
             db.ref('viajes').orderByChild('estado').equalTo('pendiente').on('child_added', (snap) => {
-                if (!estoyEnViajeActivo && !pedidosYaMostrados[snap.key]) {
-                    pedidosYaMostrados[snap.key] = true;
+                if (!estoyEnViajeActivo) {
                     const viaje = snap.val();
                     reproducirSonido();
                     mostrarPedido(snap.key, viaje);
@@ -405,7 +240,7 @@
                             reg.showNotification("🚕 ¡Nuevo viaje disponible!", {
                                 body: `De ${viaje.origen} a ${viaje.destino} - B/. ${viaje.precio}`,
                                 icon: './icon-192.png',
-                                badge: './badge.png', 
+                                badge: './badge.png',
                                 vibrate: [200,100,200],
                                 requireInteraction: true,
                                 tag: 'viaje-nuevo'
@@ -418,7 +253,6 @@
             db.ref('viajes').orderByChild('estado').equalTo('pendiente').on('child_removed', (snap) => {
                 const tarj = document.getElementById('pedido_' + snap.key);
                 if (tarj) tarj.remove();
-                delete pedidosYaMostrados[snap.key];
             });
         }
 
@@ -431,27 +265,13 @@
                 <div class="info-row">🏁 <strong>Destino:</strong> ${p.destino}</div>
                 <div class="precio">Total: B/. ${p.precio || "0.00"}</div>
                 ${p.metodo_pago ? `<div class="info-row" style="color:#ffc107;">💰 <strong>Pago:</strong> ${p.metodo_pago.toUpperCase()}</div>` : ''}
-                ${estaBloqueado ? `<button style="background:#dc3545; color:white;" disabled>⛔ CUENTA INACTIVA</button>` : `<button id="btn-aceptar-${id}" style="background: #28a745; color: white;" onclick="aceptar('${id}')">✅ ACEPTAR VIAJE</button>`}
+                ${estaBloqueado ? `<button style="background:#dc3545; color:white;" disabled>⛔ BLOQUEADO - PAGA TU DEUDA</button>` : `<button style="background: #28a745; color: white;" onclick="aceptar('${id}')">✅ ACEPTAR VIAJE</button>`}
             </div>`;
             document.getElementById('contenedor').insertAdjacentHTML('beforeend', html);
         }
 
         window.aceptar = (id) => {
-            if (adminEstado === 'bloqueado' || adminEstado === 'pendiente') return alert("❌ No puedes aceptar viajes hasta que tu cuenta sea activada.");
-            if (estoyEnViajeActivo) return alert("Ya tienes un viaje en curso.");
-            
-            // Feedback inmediato para que no parpadee
-            const btn = document.getElementById('btn-aceptar-' + id);
-            if (btn) {
-                btn.disabled = true;
-                btn.innerText = "ACEPTANDO...";
-                btn.style.background = "#666";
-            }
-            estoyEnViajeActivo = true; // Evitar que entren más pedidos
-            
-            // Quitar todos los pedidos pendientes de la pantalla
-            document.querySelectorAll('[id^="pedido_"]').forEach(el => el.remove());
-            
+            if (adminEstado === 'bloqueado' || adminEstado === 'pendiente') return alert("❌ No puedes aceptar viajes porque tu cuenta está bloqueada.");
             db.ref('viajes/' + id).update({
                 estado: 'conductor_asignado',
                 conductorNombre: datos.nombre,
@@ -478,79 +298,26 @@
                     <div style="background:${esLlegada ? '#28a745' : '#1a1a1a'}; border: 1px solid #28a745; padding:10px; border-radius:5px; text-align:center; margin-bottom:15px; font-weight:bold; color:${esLlegada ? '#fff' : '#28a745'};">
                         ${esLlegada ? '🟢 PASAJERO NOTIFICADO (ESTADO VERDE)' : '✅ VIAJE EN CURSO'}
                     </div>
-                    <div class="info-row">👤 <strong>Cliente:</strong> ${v.pasajero_nombre || 'Cliente'}</div>
+                    <div class="info-row">👤 <strong>Cliente:</strong> ${v.pasajero_nombre}</div>
                     <div class="info-row">📍 <strong>Origen:</strong> ${v.origen}</div>
                     <div class="info-row">🏁 <strong>Destino:</strong> ${v.destino}</div>
                     <div class="precio">Total: B/. ${v.precio || "0.00"}</div>
                     ${relojHtml}
-                    <button style="background:${esLlegada ? '#6c757d' : '#007bff'}; color:white;" onclick="actualizar('${id}', 'conductor_llego')">${esLlegada ? '✓ PASAJERO YA NOTIFICADO' : '📍 LLEGUÉ AL PUNTO (NOTIFICAR VERDE)'}</button>
+                    <button style="background:${esLlegada ? '#6c757d' : '#28a745'}; color:white;" onclick="actualizar('${id}', 'conductor_llego')">${esLlegada ? '✓ PASAJERO YA NOTIFICADO' : '📍 LLEGUÉ AL PUNTO (NOTIFICAR VERDE)'}</button>
                     <button class="btn-whatsapp" onclick="window.open('https://wa.me/${celPasajero}', '_blank')">💬 WHATSAPP</button>
                     <button class="btn-iniciar" onclick="actualizar('${id}', 'viaje_iniciado')">▶️ INICIAR VIAJE</button>
-                    <button class="btn-finalizar" onclick="finalizarViajeSeguro('${id}')">🏁 FINALIZAR VIAJE</button>
+                    <button class="btn-finalizar" onclick="actualizar('${id}', 'completado')">🏁 FINALIZAR VIAJE</button>
                 </div>
             `;
         }
 
         window.actualizar = (id, estado) => {
-            if (estado === 'conductor_llego') {
-                if (audioLlego) {
-                    audioLlego.currentTime = 0;
-                    audioLlego.play().catch(e => console.log("Error al reproducir audio llegó:", e));
-                }
-            }
-            db.ref('viajes/' + id).update({ estado: estado });
-        };
-
-        // Función que suma el 100% de la ganancia del viaje (Sin porcentajes ni comisiones)
-        window.finalizarViajeSeguro = (id) => {
-            if(!confirm("¿Estás seguro que deseas finalizar este viaje y registrar la ganancia completa?")) return;
-            
-            const viajeRef = db.ref('viajes/' + id);
-            
-            viajeRef.once('value', snap => {
-                const viaje = snap.val();
-                if (!viaje) {
-                    alert("El viaje ya no existe o fue cancelado.");
-                    return;
-                }
-                
-                // Extrae el número limpio del precio (ej. "B/. 2.50" se vuelve 2.50)
-                const precioLimpioStr = String(viaje.precio || "0").replace(/[^0-9.]/g, '');
-                const precioViaje = parseFloat(precioLimpioStr) || 0;
-                
-                const hoy = obtenerFechaHoy();
-
-                viajeRef.update({ estado: 'completado' }).then(() => {
+            db.ref('viajes/' + id).update({ estado: estado }).then(() => {
+                if(estado === 'completado') {
                     document.getElementById('contenedor').innerHTML = '';
                     estoyEnViajeActivo = false;
                     if(intervaloReloj) clearInterval(intervaloReloj);
-
-                    // 1. Suma el 100% del precio al acumulado de HOY del conductor
-                    const refConductor = db.ref('conductores/' + datos.telefono);
-                    refConductor.once('value', snapCond => {
-                        const actual = snapCond.val() || {};
-                        const gananciaActual = parseFloat(actual.totalGeneradoHoy || 0);
-                        const nuevoTotal = gananciaActual + precioViaje; // Suma completa exacta
-                        
-                        refConductor.update({ 
-                            totalGeneradoHoy: nuevoTotal,
-                            ultimoDiaRegistrado: hoy 
-                        });
-                    });
-
-                    // 2. Guarda el reporte con el monto completo para el historial
-                    db.ref(`reportes_diarios/${datos.telefono}/${hoy}/${id}`).set({
-                        origen: viaje.origen || 'No especificado',
-                        destino: viaje.destino || 'No especificado',
-                        precio: precioViaje,
-                        cliente: viaje.pasajero_nombre || 'Cliente',
-                        timestamp: firebase.database.ServerValue.TIMESTAMP
-                    });
-
-                }).catch(err => {
-                    console.error("Error al finalizar:", err);
-                    alert("No se pudo finalizar el viaje. Inténtalo de nuevo.");
-                });
+                }
             });
         };
         

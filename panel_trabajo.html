@@ -2,925 +2,525 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Click&GoTaxi - Pedir Viaje</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Trabajo - Click$GoTaxi</title>
+    <link rel="manifest" href="./manifest.json"> 
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #000; color: #fff; padding: 20px; transition: background 0.3s; }
+        
+        /* ALERTA VISUAL: Parpadeo rojo cuando llega pedido */
+        @keyframes alertaFlash { 0% { background: #000; } 50% { background: #900; } 100% { background: #000; } }
+        .modo-alerta { animation: alertaFlash 1s infinite; }
+
+        #pantallaInicio { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 20px; }
+        
+        .header { background: #1a1a1a; padding: 15px; border-radius: 12px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #333; }
+        .card { background: #1a1a1a; border-radius: 12px; padding: 20px; margin-bottom: 15px; border-left: 4px solid #FFC107; border: 1px solid #333; transition: 0.3s; }
+        .info-row { margin: 10px 0; font-size: 16px; }
+        .precio { color: #FFC107; font-size: 32px; font-weight: bold; margin: 15px 0; }
+        button { width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin: 8px 0; transition: 0.2s; }
+        input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 6px; border: 1px solid #444; background: #222; color: white; font-size: 16px; }
+        label { font-size: 12px; color: #aaa; text-transform: uppercase; font-weight: bold; }
+        .btn-conexion { font-size: 18px; letter-spacing: 0.5px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .btn-whatsapp { background: #25D366; color: white; }
+        .btn-iniciar { background: #28a745; color: white; }
+        .btn-finalizar { background: #dc3545; color: white; }
+        .btn-editar { background: #444; color: white; padding: 8px; font-size: 14px; width: auto; border-radius: 5px; margin-top: 10px; }
+        .btn-volver { position: absolute; top: 5px; left: 15px; background: transparent; color: #aaa; border: none; font-size: 14px; font-weight: bold; cursor: pointer; z-index: 20; width: auto; padding: 0; margin: 0; }
+    </style>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBl3OsPn_Q-yeXk0-0_igfCoZgQYduB40g&libraries=places"></script>
-    <style>
-        :root { --gold: #ffc107; --dark: #000; --card: #1a1a; }
-        body { margin: 0; background: var(--dark); color: white; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; }
-        .map-header { width: 100%; height: 180px; background-image: url('https://firebasestorage.googleapis.com/v0/b/preetytaxiapp.firebasestorage.app/o/taxi%20banner.jpg?alt=media&token=7433caf7-edf1-4fa3-b413-083f5066f90d'); background-size: cover; background-position: center; }
-        .container { width: 92%; max-width: 400px; margin-top: -30px; position: relative; z-index: 10; padding-bottom: 40px; }
-        .card { background: var(--card); padding: 20px; border-radius: 20px; border: 1px solid #333; box-shadow: 0 10px 25px rgba(0,0,0,0.8); position: relative; }
-        .logo-text { color: var(--gold); font-size: 24px; font-weight: bold; text-align: center; margin: 0 0 20px 0; }
-        label { display: block; margin-top: 15px; color: #aaa; font-size: 12px; font-weight: bold; text-transform: uppercase; }
-        input, select { width: 100%; padding: 14px; margin-top: 5px; border-radius: 12px; border: 1px solid #444; background: #222; color: white; font-size: 16px; box-sizing: border-box; }
-        #mapa-destino { width: 100%; height: 300px; border-radius: 15px; margin: 15px 0; border: 3px solid var(--gold); }
-        .price-display { background: #111; padding: 15px; border-radius: 12px; margin-top: 20px; text-align: center; border: 1px dashed var(--gold); }
-        .price-display span { font-size: 32px; font-weight: bold; color: var(--gold); }
-        .tarifa-nota { background: #111; border-left: 4px solid var(--gold); padding: 12px 15px; border-radius: 8px; margin-top: 15px; text-align: left; font-size: 13px; color: #ccc; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
-        .tarifa-nota span { color: var(--gold); font-weight: bold; display: block; margin-bottom: 5px; font-size: 14px; }
-        .tarifa-nota p { margin: 5px 0; line-height: 1.5; }
-        .tarifa-nota small { font-size: 11px; color: #888; font-style: italic; display: block; margin-top: 5px; }
-        .btn-pedir { background: var(--gold); color: black; width: 100%; padding: 18px; border: none; border-radius: 15px; font-weight: bold; font-size: 18px; margin-top: 20px; cursor: pointer; }
-        .btn-pedir:disabled { background: #444; color: #888; cursor: not-allowed; }
-        .card-conductor { background: #222; padding: 15px; border-radius: 12px; border: 1px solid var(--gold); margin-top: 15px; text-align: center; }
-        .card-conductor h3 { margin: 0 0 10px 0; color: var(--gold); }
-        .card-conductor p { margin: 5px 0; font-size: 15px; }
-        .btn-whatsapp { display: block; background: #25D366; color: white; padding: 12px; border-radius: 10px; font-weight: bold; margin: 10px auto 0 auto; width: 85%; box-sizing: border-box; border: none; cursor: pointer; }
-        .btn-cancelar-viaje { background: #dc3545; color: white; width: 85%; padding: 12px; border: none; border-radius: 10px; font-weight: bold; margin-top: 10px; cursor: pointer; display: block; margin-left: auto; margin-right: auto;}
-        .notificacion-llegada { position: fixed; top: 20px; right: 20px; background: #28a745; color: white; padding: 20px; border-radius: 12px; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.3); animation: slideIn 0.3s; max-width: 300px; }
-        .toggle-modos { display: flex; gap: 10px; margin-top: 15px; margin-bottom: 15px; }
-        .btn-modo { flex: 1; background: #333; color: white; border: 1px solid #555; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; }
-        .btn-modo.active { background: var(--gold); color: black; border-color: var(--gold); }
-        .btn-volver { position: absolute; top: 20px; left: 15px; background: transparent; color: #aaa; border: none; font-size: 14px; font-weight: bold; cursor: pointer; z-index: 20; }
-        .btn-volver:hover { color: white; }
-        .cat-interna-btn { background: #222; color: #fff; border: 1px solid #444; padding: 10px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; text-align: center; margin: 5px; flex: 1; }
-        .cat-interna-btn.active { background: var(--gold); color: #000; border-color: var(--gold); }
-        .subcat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 10px; max-height: 300px; overflow-y: auto; }
-        .btn-subcat { background: #1a1a; color: #aaa; border: 1px solid #333; padding: 8px; border-radius: 6px; font-size: 11px; cursor: pointer; text-align: left; }
-        .btn-subcat.active { background: var(--gold); color: #000; border-color: var(--gold); font-weight: bold; }
-        .seccion-interna { background: #151515; padding: 15px; border-radius: 12px; margin-top: 15px; border: 1px solid #333; }
-        #origen-seccion { background: #1f1a00; border-color: #ffc107; }
-        #origen-seccion label { color: #ffc107; }
-        #destino-seccion { background: #0a1f14; border-color: #25D366; }
-        #destino-seccion label { color: #25D366; }
-        @keyframes slideIn { from { transform: translateX(400px); } to { transform: translateX(0); } }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 99999; justify-content: center; align-items: center; }
-        .modal-content { background: #222; padding: 25px; border-radius: 15px; border: 2px solid var(--gold); width: 85%; max-width: 350px; text-align: center; color: white; }
-        .estrellas { display: flex; justify-content: center; gap: 10px; margin: 15px 0; font-size: 35px; cursor: pointer; direction: rtl; }
-        .estrellas span { color: #555; transition: color 0.2s; }
-        .estrellas span:hover, .estrellas span:hover ~ span { color: var(--gold); }
-        .estrellas span.seleccionada, .estrellas span.seleccionada ~ span { color: var(--gold); }
-        .btn-enviar-cal { background: var(--gold); color: black; border: none; padding: 12px 20px; font-weight: bold; border-radius: 8px; cursor: pointer; width: 100%; margin-top: 10px; }
-        .btn-soporte { background: #dc3545; color: white; padding: 10px; border-radius: 8px; border: none; width: 100%; margin-top: 10px; font-weight: bold; cursor: pointer; }
-        textarea.reporte-input { width: 100%; height: 80px; background: #111; color: white; border: 1px solid #444; border-radius: 8px; padding: 10px; margin-top: 10px; resize: none; box-sizing: border-box;}
-    
-        .banner-preview-pro { margin-top: 18px; background: linear-gradient(135deg, #1a1a1a, #0f0f0f); border: 1px solid #2a2a2a; border-radius: 16px; padding: 10px 14px; display: flex; align-items: center; gap: 12px; cursor: pointer; position: relative; overflow: hidden; }
-        .banner-preview-pro img { width: 48px; height: 48px; border-radius: 12px; object-fit: cover; border: 1px solid #333; }
-        .banner-preview-info { flex: 1; text-align: left; }
-        .banner-preview-info b { font-size: 13px; color: white; display: block; }
-        .banner-preview-info span { font-size: 11px; color: #888; }
-        .banner-preview-badge { background: #ffc107; color: black; font-size: 8px; font-weight: bold; padding: 2px 6px; border-radius: 10px; position: absolute; top: 8px; right: 35px; }
-        .banner-container-pro { margin-top: 18px; display: none; }
-        .banner-container-pro.activo { display: block; animation: slideUp 0.5s; }
-        @keyframes slideUp { from { opacity:0; transform: translateY(30px); } to { opacity:1; transform: translateY(0); } }
-        .banner-card-pro { background: #111; border: 1px solid #333; border-radius: 20px; overflow: hidden; }
-        .banner-top { padding: 8px 14px; display: flex; justify-content: space-between; background: rgba(0,0,0,0.4); font-size:10px; color:#666; }
-        .banner-body-pro { display: flex; padding: 14px; gap: 14px; cursor: pointer; }
-        .banner-img-pro { width: 92px; height: 92px; border-radius: 16px; object-fit: cover; }
-        .banner-text-pro { flex: 1; text-align: left; }
-        .banner-title-pro { font-size: 15px; font-weight: 800; color: white; margin: 0; }
-        .banner-promo-pro { font-size: 12px; color: #aaa; margin-top: 6px; }
-        .tag { font-size: 9px; font-weight: bold; padding: 3px 8px; border-radius: 20px; }
-        .tag-gold { background: #ffc107; color: black; }
-        .banner-dots-pro { display: flex; gap: 6px; justify-content: center; padding: 10px; background: #0a0a0a; }
-        .banner-dot-pro { width: 5px; height: 5px; border-radius: 50%; background: #333; }
-        .banner-dot-pro.active { background: #ffc107; width: 22px; border-radius: 10px; }
-        .banner-actions-pro { display: flex; gap: 8px; padding: 0 14px 14px 14px; }
-        .btn-banner-action { flex: 1; padding: 10px; border-radius: 12px; font-size: 12px; font-weight: bold; border: none; cursor: pointer; }
-        .btn-wa { background: #25D366; color: white; }
-        .btn-ig { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); color: white; }
-        .btn-img { background: #222; color: white; border: 1px solid #333; }
-        #modal-promo { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 999999; justify-content: center; align-items: center; padding: 20px; }
-        #modal-promo.activo { display: flex; }
-        .modal-promo-card { background: #111; border-radius: 24px; overflow: hidden; max-width: 380px; width: 100%; border: 1px solid #2a2a2a; max-height: 90vh; overflow-y: auto; }
-        .modal-promo-img { width: 100%; height: 320px; object-fit: cover; }
-        .modal-promo-body { padding: 18px; text-align: left; }
-        .modal-promo-title { font-size: 20px; font-weight: 900; margin: 0; color: white; }
-        .modal-promo-desc { font-size: 13px; color: #aaa; margin-top: 8px; }
-        .modal-promo-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
-        .modal-promo-actions .full { grid-column: span 2; }
-
-    </style>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
 </head>
 <body>
 
-<audio id="audioLlegoPasajero" preload="auto">
-    <source src="https://raw.githubusercontent.com/juan031977/PreetyTaxi/main/taxi%20llego.mp3" type="audio/mpeg">
-</audio>
-
-<div class="map-header"></div>
-<div class="container">
-    <div id="panel-cliente" class="card">
-        <button class="btn-volver" onclick="window.history.back()">⬅ Volver</button>
-        <p class="logo-text">🚕 ClickGoTaxi</p>
-        <label>Nombre del Pasajero</label>
-        <input type="text" id="nombreUsuario" placeholder="Tu Nombre">
-        <label>Tu número de WhatsApp</label>
-        <input type="tel" id="telefono" placeholder="Ej: 50760000000">
-        <div class="toggle-modos">
-            <button id="btn-externa" class="btn-modo active" onclick="cambiarModo('externa')">Rutas Externas</button>
-            <button id="btn-interna" class="btn-modo" onclick="cambiarModo('interna')">Rutas Internas</button>
-        </div>
-        <div class="seccion-interna" id="origen-seccion">
-            <label style="margin-top:0;">Donde Te Buscamos</label>
-            <div style="display:flex; gap:5px; flex-wrap:wrap; margin-top:8px;">
-                <button class="cat-interna-btn" id="origen-cat-calle" onclick="seleccionarOrigenTipo('calle')">Calles Brisas</button>
-                <button class="cat-interna-btn" id="origen-cat-mall" onclick="seleccionarOrigenTipo('mall')">SuperMercados/Mall</button>
-                <button class="cat-interna-btn" id="origen-cat-ph" onclick="seleccionarOrigenTipo('ph')">PH</button>
-                <button class="cat-interna-btn" id="origen-cat-villas" onclick="seleccionarOrigenTipo('villas')">Villas Del Golf</button>
-                <button class="cat-interna-btn" id="origen-cat-escuelas" onclick="seleccionarOrigenTipo('escuelas')">Escuelas</button>
-                <button class="cat-interna-btn" id="origen-cat-otros" onclick="seleccionarOrigenTipo('otros')">Otras Zonas</button>
-                <button class="cat-interna-btn" id="origen-cat-estacion" onclick="seleccionarOrigenTipo('estacion')">Estación Línea 2</button>
-            </div>
-            <div id="origen-calle-input" style="display:none; margin-top:10px;">
-                <input type="number" id="calle-origen" placeholder="N° Calle (Ej: 34)" oninput="actualizarRuta()">
-                <select id="zona-origen" onchange="actualizarRuta()" style="margin-top:8px;">
-                    <option value="Asur">Asur</option>
-                    <option value="Occidente">Occidente</option>
-                    <option value="Norte">Norte</option>
-                    <option value="Sur">Sur</option>
-                    <option value="Oeste">Oeste</option>
-                    <option value="Este">Este</option>
-                </select>
-            </div>
-            <div id="origen-subcat-container"></div>
-        </div>
-        <div id="panel-externo" style="display: block;">
-            <div class="seccion-interna" style="border-color:#25D366; background: #0a1f14;">
-                <label style="margin-top:0; color:#25D366;">A DONDE VAS</label>
-                <input type="text" id="destino-input" placeholder="Ej: Río Abajo">
-                <div id="mapa-destino"></div>
-            </div>
-        </div>
-        <div id="panel-interno" style="display: none;">
-            <div class="seccion-interna" id="destino-seccion">
-                <label style="margin-top:0;">A DONDE VAS</label>
-                <div style="display:flex; gap:5px; flex-wrap:wrap; margin-top:8px;">
-                    <button class="cat-interna-btn" id="dest-cat-calle" onclick="seleccionarDestinoTipo('calle')">Calles Brisas</button>
-                    <button class="cat-interna-btn" id="dest-cat-mall" onclick="seleccionarDestinoTipo('mall')">SuperMercados/Mall</button>
-                    <button class="cat-interna-btn" id="dest-cat-ph" onclick="seleccionarDestinoTipo('ph')">PH</button>
-                    <button class="cat-interna-btn" id="dest-cat-villas" onclick="seleccionarDestinoTipo('villas')">Villas Del Golf</button>
-                    <button class="cat-interna-btn" id="dest-cat-escuelas" onclick="seleccionarDestinoTipo('escuelas')">Escuelas</button>
-                    <button class="cat-interna-btn" id="dest-cat-otros" onclick="seleccionarDestinoTipo('otros')">Otras Zonas</button>
-                    <button class="cat-interna-btn" id="dest-cat-estacion" onclick="seleccionarDestinoTipo('estacion')">Estación Línea 2</button>
-                </div>
-                <div id="destino-calle-input" style="display:none; margin-top:10px;">
-                    <input type="number" id="calle-destino" placeholder="N° Calle (Ej: 36)" oninput="actualizarRuta()">
-                    <select id="zona-destino" onchange="actualizarRuta()" style="margin-top:8px;">
-                        <option value="Asur">Asur</option>
-                        <option value="Occidente">Occidente</option>
-                        <option value="Norte">Norte</option>
-                        <option value="Sur">Sur</option>
-                        <option value="Oeste">Oeste</option>
-                        <option value="Este">Este</option>
-                    </select>
-                </div>
-                <div id="destino-subcat-container"></div>
-            </div>
-        </div>
-        <div class="price-display">
-            <small style="color:#888">TARIFA ESTIMADA</small><br>
-            <span id="display-precio">B/. 0.00</span>
-        </div>
-        <div class="tarifa-nota">
-            <span>ℹ Información de Tarifas</span>
-            <p>• <strong>Feriados y Domingos:</strong> + B/. 0.25 al total.<br>
-               • <strong>Pasajero adicional:</strong> + B/. 0.50 c/u.</p>
-            <small>*Estos recargos aplican al momento de abordar.</small>
-        </div>
-        <div style="margin: 20px 0 15px 0;">
-            <label style="color:#ffc107; font-weight:bold;">Forma de Pago</label>
-            <select id="metodoPago" style="width:100%; padding:14px; border-radius:12px; background:#222; color:white; border:1px solid #444; font-size:16px;">
-                <option value="efectivo">💵 Efectivo</option>
-                <option value="yappy">📱 Yappy</option>
-            </select>
-        </div>
-        <button class="btn-pedir" id="btn-solicitar" onclick="pedirTaxi()">SOLICITAR TAXI</button>
-        <div id="estado-viaje-container"></div>
-
-        <div id="banner-preview" class="banner-preview-pro" onclick="abrirModalPromo()">
-            <img id="banner-preview-img" src="https://images.unsplash.com/photo-1560066984-138dadb4c035?w=200" alt="promo">
-            <div class="banner-preview-info">
-                <b id="banner-preview-title">Salon Glam - 20% OFF</b>
-                <span>Patrocinado - Toca para ver</span>
-            </div>
-            <span class="banner-preview-badge" id="banner-preview-badge">PROMO</span>
-            <span style="color:#444;">›</span>
-        </div>
-        <div id="banner-container" class="banner-container-pro">
-            <div class="banner-card-pro">
-                <div class="banner-top"><div>PATROCINADO • BRISAS</div><button onclick="cerrarBanners()" style="background:transparent;border:none;color:#555;cursor:pointer;">X</button></div>
-                <div class="banner-body-pro" onclick="abrirModalPromo()">
-                    <img id="banner-img" class="banner-img-pro" src="" alt="promo">
-                    <div class="banner-text-pro">
-                        <p id="banner-title" class="banner-title-pro"></p>
-                        <p id="banner-promo" class="banner-promo-pro"></p>
-                        <span id="banner-badge" class="tag tag-gold"></span>
-                    </div>
-                </div>
-                <div class="banner-actions-pro">
-                    <button class="btn-banner-action btn-wa" onclick="abrirWhatsApp()">WhatsApp</button>
-                    <button class="btn-banner-action btn-ig" onclick="abrirInstagram()">Instagram</button>
-                    <button class="btn-banner-action btn-img" onclick="abrirModalPromo()">Ver Imagen</button>
-                </div>
-                <div class="banner-dots-pro" id="banner-dots"></div>
-            </div>
-        </div>
-
+    <div id="pantallaInicio">
+        <h2 style="margin-bottom: 20px;">Click$GoTaxi</h2>
+        <p style="margin-bottom: 20px;">Toca el botón para activar las notificaciones sonoras</p>
+        <button class="btn-iniciar" onclick="iniciarApp()" style="width: auto; padding: 20px 40px;">ACTIVAR APLICACIÓN</button>
     </div>
-</div>
 
-<div id="modal-promo" onclick="if(event.target===this) cerrarModalPromo()">
-    <div class="modal-promo-card">
-        <div style="position:relative;">
-            <img id="modal-promo-img" class="modal-promo-img" src="" alt="promo">
-            <button onclick="cerrarModalPromo()" style="position:absolute;top:12px;right:12px;background:rgba(0,0,0,0.6);color:white;width:36px;height:36px;border-radius:50%;border:none;cursor:pointer;">X</button>
-            <div style="position:absolute;bottom:12px;left:12px;"><span id="modal-promo-badge" class="tag tag-gold"></span></div>
+    <audio id="sonidoNotificacion" preload="auto">
+        <source src="https://cdn.jsdelivr.net/gh/juan031977/PreetyTaxi@main/silbido.mp3" type="audio/mpeg">
+        <source src="https://assets.mixkit.co/sfx/preview/2320/2320-preview.mp3" type="audio/mpeg">
+    </audio>
+
+    <audio id="audioLlego" preload="auto">
+        <source src="https://raw.githubusercontent.com/juan031977/PreetyTaxi/main/su%20taxi%20llego.mp3" type="audio/mpeg">
+    </audio>
+
+    <button class="btn-volver" onclick="window.history.back()">⬅ Volver</button>
+
+    <div class="header">
+        <div>
+            <div id="txtEstado" style="font-size: 16px;">Verificando estado...</div>
+            <div style="margin-top: 5px;">Conductor: <strong id="nombreConductor">Cargando...</strong></div>
+            <button class="btn-editar" onclick="mostrarFormulario()">✏️ Editar mis datos</button>
         </div>
-        <div class="modal-promo-body">
-            <h3 id="modal-promo-title" class="modal-promo-title"></h3>
-            <p id="modal-promo-desc" class="modal-promo-desc"></p>
-            <div class="modal-promo-actions">
-                <button class="btn-banner-action btn-wa full" onclick="abrirWhatsApp()" style="padding:14px;">Pedir por WhatsApp</button>
-                <button class="btn-banner-action btn-ig" onclick="abrirInstagram()">Ver Instagram</button>
-                <button class="btn-banner-action btn-img" onclick="compartirPromo()">Compartir</button>
-            </div>
+        <div style="text-align: right;">
+            <div style="font-size: 12px; color: #aaa;">GANANCIA HOY</div>
+            <span id="ganancia" style="font-size: 20px; font-weight: bold; color: #FFC107;">B/. 0.00</span>
+            <div style="font-size: 10px; color: #777; margin-top: 2px;">Se reinicia a media noche</div>
         </div>
     </div>
-</div>
 
-<div id="modal-calificar" class="modal-overlay">
-    <div class="modal-content">
-        <h2 style="color:var(--gold); margin-top:0;">¡Llegaste a tu destino!</h2>
-        <p>¿Qué tal fue tu viaje con <strong id="nombre-conductor-cal">el conductor</strong>?</p>
-        <div class="estrellas" id="estrellas-cliente">
-            <span onclick="marcarEstrellas(5, 'cliente')">★</span>
-            <span onclick="marcarEstrellas(4, 'cliente')">★</span>
-            <span onclick="marcarEstrellas(3, 'cliente')">★</span>
-            <span onclick="marcarEstrellas(2, 'cliente')">★</span>
-            <span onclick="marcarEstrellas(1, 'cliente')">★</span>
-        </div>
-        <p id="texto-estrellas-cliente" style="font-size: 14px; color: #aaa; margin-bottom: 5px;">Selecciona una calificación</p>
-        <textarea id="comentario-cliente" class="reporte-input" placeholder="Escribe un comentario opcional sobre el conductor..."></textarea>
-        <button class="btn-enviar-cal" onclick="enviarCalificacionConductor()">Enviar Calificación</button>
+    <button id="btnConexion" class="btn-conexion" onclick="toggleConexion()">🔄 Sincronizando...</button>
+
+    <div class="card" id="tarjetaHistorial" style="display: none; padding: 15px; border-left: 4px solid #28a745;">
+        <h4 style="margin-bottom: 10px; color: #28a745;">📅 Historial de Ganancias</h4>
+        <div id="contenedorHistorial6Dias"></div>
     </div>
-</div>
-<div id="modal-soporte" class="modal-overlay">
-    <div class="modal-content">
-        <h3 style="color:#dc3545; margin-top:0;">Servicio al Cliente</h3>
-        <p style="font-size:14px; color:#ccc;">¿Tuviste algún problema con el conductor o el viaje?</p>
-        <textarea id="texto-queja" class="reporte-input" placeholder="Escribe tu reporte o queja aquí..."></textarea>
-        <button class="btn-soporte" onclick="enviarQueja()">Enviar Reporte al Administrador</button>
-        <button style="background:transparent; color:#aaa; border:none; margin-top:15px; cursor:pointer;" onclick="cerrarSoporte()">Cancelar</button>
+
+    <div id="formularioDatos" class="card" style="display: none; border-left: 4px solid #007bff;">
+        <h3 style="margin-bottom: 15px; color: #007bff;">Configura tus datos</h3>
+        <label>Tu Nombre</label> <input type="text" id="inNombre" placeholder="Ej: Juan Pérez">
+        <label>WhatsApp</label> <input type="tel" id="inTel" placeholder="Ej: 60000000">
+        <label>Vehículo</label> <input type="text" id="inVehiculo" placeholder="Ej: Kia Picanto">
+        <label>Color</label> <input type="text" id="inColor" placeholder="Ej: Blanco">
+        <label>Placa</label> <input type="text" id="inPlaca" placeholder="Ej: AB1234">
+        <button class="btn-iniciar" onclick="guardarDatos()">GUARDAR DATOS</button>
     </div>
-</div>
-<script>
-    const firebaseConfig = { apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" };
-    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    let mapa, directionsService, directionsRenderer;
-    let destinoCoords = null;
-    let autoDestino; 
-    let viajeID = null;
-    let modoActual = 'externa';
-    let origenTipo = null, origenSeleccionado = null, origenPrecio = 0;
-    let destinoTipo = null, destinoSeleccionado = null, destinoPrecio = 0;
-    let relojPasajeroInterval = null; 
-    let calificacionSeleccionada = 0;
-    let viajeCompletadoData = null; 
-    // Variables para mapa en vivo del conductor
-    let mapaVivo = null;
-    let markerConductor = null;
-    let listenerUbicacion = null;
-    const PRECIOS_PH = { 'PH La Riviera Colonial': 1.75, 'Brisas del Pacífico': 1.75, 'PH Brisas Point': 1.75, 'PH Brisas Heights': 1.75, 'PH Golf Gardens': 2.50, 'Club De Golf': 2.50, 'PH Alpes': 2.50, 'PH Everest': 2.50, 'PH Bejin': 2.50, 'PH Olimpus': 2.50, 'PH Mont Blanc': 2.50, 'PH Sierra Nevada': 2.50, 'PH Aventura': 3.00, 'PH Vallarta': 3.00, 'PH Noura': 3.00, 'PH Cavana': 3.00, 'Parque Rash': 3.00, 'PH Lagun': 1.50, 'PH Royal Village': 2.00, 'Oxford School': 3.00, 'Green City': 6.00, 'Golf Garden': 2.50, 'PH Ventura': 3.00 };
-    const PRECIOS_VILLAS = { 'Lomas del Golf (Garita)': 1.50, 'Lomas del Golf (Adentro)': 1.75, 'Villas del Golf (Garita)': 1.50, 'Villas del Golf (Adentro)': 1.75, 'Monticello 1 (Garita)': 1.50, 'Monticello 1 (Adentro)': 1.75, 'Monticello 2 (Garita)': 1.50, 'Monticello 2 (Adentro)': 1.75, 'Villa Lido (Garita)': 1.50, 'Villa Lido (Adentro)': 1.75, 'Villa Alta (Garita)': 1.50, 'Villa Alta (Adentro)': 1.75, 'Villa Tivoli (Garita)': 1.50, 'Villa Tivoli (Adentro)': 1.75, 'Villa Navona (Garita)': 1.50, 'Villa Navona (Adentro)': 1.75, 'Villa Tiber (Garita)': 1.50, 'Villa Tiber (Adentro)': 1.75 };
-    const PRECIOS_ESCUELAS = { 'El IJA': 2.50, 'La Internacional': 2.50, 'Panamerican School': 2.50, 'Saint George': 1.75, 'SAP': 1.50, 'Smart Academy': 1.50, 'Preparatory High School': 1.50, 'AIP': 1.50, 'Oxford School': 3.00, 'Metropolitan School of Panama': 6.00 };
-    const PRECIOS_OTROS = { 'Cerro Viento Rural': 1.75, 'Las Trancas': 1.50 };
-    const PRECIOS_MALL = { 'Super 99 Brisas del Golf': 1.50, 'Machetazo': 1.50, 'Riba Smith': 1.50, 'Super Xtra': 1.50, 'El Rey Brisas del Golf': 1.50, 'Brisas Capital': 1.50, 'Kennedy Golf Plaza': 1.50, 'Signature': 1.50, 'Premier Plaza': 1.50, 'Plaza Point': 1.50, 'Plaza Caja de Ahorro': 1.50, 'Brisas Mall': 1.50, 'Plaza Mcdonalds': 1.50, 'Paseo Drive': 2.50, 'Northside Galleries': 2.00, 'Yappy Park': 3.50 };
-    
-    window.onload = function() {
-        initMap(); 
-        initAutocomplete();
-        iniciarPreviewRotativo();
-        const savedCel = localStorage.getItem('userCel');
-        const savedName = localStorage.getItem('userName');
-        if (savedCel && savedName) {
-            const telInput = document.getElementById('telefono');
-            const nomInput = document.getElementById('nombreUsuario');
-            if(telInput) { telInput.value = savedCel; telInput.readOnly = true; }
-            if(nomInput) { nomInput.value = savedName; nomInput.readOnly = true; }
-        }
-        const viajeRecuperado = localStorage.getItem('viajeActivoID');
-        if (viajeRecuperado) {
-            viajeID = viajeRecuperado;
-            document.getElementById('btn-solicitar').disabled = true;
-            document.getElementById('btn-solicitar').innerText = "RECUPERANDO VIAJE...";
-            escucharEstadoViaje(viajeID);
-        }
-    };
-    function cambiarModo(modo) {
-        modoActual = modo;
-        document.getElementById('btn-externa').classList.toggle('active', modo === 'externa');
-        document.getElementById('btn-interna').classList.toggle('active', modo === 'interna');
-        document.getElementById('panel-externo').style.display = modo === 'externa'? 'block' : 'none';
-        document.getElementById('panel-interno').style.display = modo === 'interna'? 'block' : 'none';
-        document.getElementById('display-precio').innerText = "B/. 0.00";
-        if(origenTipo) seleccionarOrigenTipo(origenTipo);
-        if (modo === 'externa') {
-            if (!autoDestino) initAutocomplete();
-            calcularRuta();
-        } else {
-            calcularInterna();
-        }
-    }
-    function seleccionarOrigenTipo(tipo) {
-        origenTipo = tipo;
-        document.querySelectorAll('#origen-seccion .cat-interna-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById('origen-cat-' + tipo).classList.add('active');
-        origenSeleccionado = null; origenPrecio = 0;
-        document.getElementById('origen-calle-input').style.display = tipo === 'calle'? 'block' : 'none';
-        const generarBotones = (obj) => {
-            let htmlTemp = '<div class="subcat-grid">';
-            Object.keys(obj).forEach(nombre => {
-                const textoPrecio = modoActual === 'interna' ? `<br>B/. ${obj[nombre].toFixed(2)}` : '';
-                htmlTemp += `<button class="btn-subcat" onclick="seleccionarOrigenSubcat(this, '${nombre}', ${obj[nombre]})">${nombre}${textoPrecio}</button>`;
-            });
-            return htmlTemp + '</div>';
+
+    <div id="area-viajes"><div id="contenedor"></div></div>
+
+    <script>
+        // CONFIGURACIÓN DE FIREBASE
+        const firebaseConfig = { 
+            apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", 
+            databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/",
+            projectId: "preetytaxiapp",
+            messagingSenderId: "1083536462057",
+            appId: "1:1083536462057:web:1a2b3c4d5e6f"
         };
-        let html = '';
-        if (tipo === 'mall') html = generarBotones(PRECIOS_MALL);
-        else if (tipo === 'ph') html = generarBotones(PRECIOS_PH);
-        else if (tipo === 'villas') html = generarBotones(PRECIOS_VILLAS);
-        else if (tipo === 'escuelas') html = generarBotones(PRECIOS_ESCUELAS);
-        else if (tipo === 'otros') html = generarBotones(PRECIOS_OTROS);
-        else if (tipo === 'estacion') { 
-            seleccionarOrigenSubcat(null, 'Estación Brisas del Golf Línea 2', 0); 
-            html = '<p style="color:#aaa; font-size:12px; margin-top:10px;">Origen seleccionado.</p>'; 
-        }
-        document.getElementById('origen-subcat-container').innerHTML = html; 
-        actualizarRuta();
-    }
-    function seleccionarOrigenSubcat(btn, nombre, precio) { 
-        origenSeleccionado = nombre; 
-        origenPrecio = precio; 
-        document.querySelectorAll('#origen-subcat-container .btn-subcat').forEach(b => b.classList.remove('active')); 
-        if(btn) btn.classList.add('active'); 
-        actualizarRuta(); 
-    }
-    function seleccionarDestinoTipo(tipo) {
-        destinoTipo = tipo;
-        document.querySelectorAll('#destino-seccion .cat-interna-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById('dest-cat-' + tipo).classList.add('active');
-        destinoSeleccionado = null; destinoPrecio = 0;
-        document.getElementById('destino-calle-input').style.display = tipo === 'calle'? 'block' : 'none';
-        let html = '';
-        if (tipo === 'mall') { html = '<div class="subcat-grid">'; Object.keys(PRECIOS_MALL).forEach(nombre => { html += `<button class="btn-subcat" onclick="seleccionarDestinoSubcat(this, '${nombre}', ${PRECIOS_MALL[nombre]})">${nombre}<br>B/. ${PRECIOS_MALL[nombre].toFixed(2)}</button>`; }); html += '</div>'; } 
-        else if (tipo === 'ph') { html = '<div class="subcat-grid">'; Object.keys(PRECIOS_PH).forEach(nombre => { html += `<button class="btn-subcat" onclick="seleccionarDestinoSubcat(this, '${nombre}', ${PRECIOS_PH[nombre]})">${nombre}<br>B/. ${PRECIOS_PH[nombre].toFixed(2)}</button>`; }); html += '</div>'; } 
-        else if (tipo === 'villas') { html = '<div class="subcat-grid">'; Object.keys(PRECIOS_VILLAS).forEach(nombre => { html += `<button class="btn-subcat" onclick="seleccionarDestinoSubcat(this, '${nombre}', ${PRECIOS_VILLAS[nombre]})">${nombre}<br>B/. ${PRECIOS_VILLAS[nombre].toFixed(2)}</button>`; }); html += '</div>'; } 
-        else if (tipo === 'escuelas') { html = '<div class="subcat-grid">'; Object.keys(PRECIOS_ESCUELAS).forEach(nombre => { html += `<button class="btn-subcat" onclick="seleccionarDestinoSubcat(this, '${nombre}', ${PRECIOS_ESCUELAS[nombre]})">${nombre}<br>B/. ${PRECIOS_ESCUELAS[nombre].toFixed(2)}</button>`; }); html += '</div>'; } 
-        else if (tipo === 'otros') { html = '<div class="subcat-grid">'; Object.keys(PRECIOS_OTROS).forEach(nombre => { html += `<button class="btn-subcat" onclick="seleccionarDestinoSubcat(this, '${nombre}', ${PRECIOS_OTROS[nombre]})">${nombre}<br>B/. ${PRECIOS_OTROS[nombre].toFixed(2)}</button>`; }); html += '</div>'; } 
-        else if (tipo === 'estacion') { seleccionarDestinoSubcat(null, 'Estación Brisas del Golf Línea 2', 0); html = '<p style="color:#aaa; font-size:12px; margin-top:10px;">Destino seleccionado.</p>'; }
-        document.getElementById('destino-subcat-container').innerHTML = html; 
-        actualizarRuta();
-    }
-    function seleccionarDestinoSubcat(btn, nombre, precio) { 
-        destinoSeleccionado = nombre; 
-        destinoPrecio = precio; 
-        document.querySelectorAll('#destino-subcat-container .btn-subcat').forEach(b => b.classList.remove('active')); 
-        if(btn) btn.classList.add('active'); 
-        actualizarRuta(); 
-    }
-    function actualizarRuta() {
-        if (modoActual === 'interna') {
-            calcularInterna();
-        } else {
-            calcularRuta();
-        }
-    }
-    function calcularInterna() {
-        if (modoActual!== 'interna') return;
-        let precio = 0; let origenCalle = null; let destinoCalle = null;
-        if (origenTipo === 'calle') origenCalle = parseInt(document.getElementById('calle-origen').value);
-        if (destinoTipo === 'calle') destinoCalle = parseInt(document.getElementById('calle-destino').value);
-        const esOrigenEstacion = origenSeleccionado === 'Estación Brisas del Golf Línea 2';
-        const esDestinoEstacion = destinoSeleccionado === 'Estación Brisas del Golf Línea 2';
-        if (esOrigenEstacion || esDestinoEstacion) {
-            const otroPunto = esOrigenEstacion? destinoSeleccionado : origenSeleccionado;
-            if (otroPunto === 'PH Ventura') precio = 3.00;
-            else if ((esOrigenEstacion && destinoTipo === 'calle') || (esDestinoEstacion && origenTipo === 'calle')) { const calle = esOrigenEstacion? destinoCalle : origenCalle; if (!isNaN(calle)) precio = calle <= 36? 1.50 : 1.75; } 
-            else if (otroPunto) precio = esOrigenEstacion? destinoPrecio : origenPrecio;
-        } else if (origenTipo === 'calle' && destinoTipo === 'calle') { if (!isNaN(origenCalle) &&!isNaN(destinoCalle)) { const calleMayor = Math.max(origenCalle, destinoCalle); precio = calleMayor <= 36? 1.50 : 1.75; } }
-        else if (origenTipo === 'calle' && destinoSeleccionado) precio = destinoPrecio;
-        else if (destinoTipo === 'calle' && origenSeleccionado) precio = origenPrecio;
-        else if (origenSeleccionado && destinoSeleccionado) precio = Math.max(origenPrecio, destinoPrecio);
-        document.getElementById('display-precio').innerText = "B/. " + precio.toFixed(2);
-    }
-    
-    const BANNERS_PUBLICIDAD = [
-        {
-            id: 'salon',
-            titulo: 'Salon Glam Brisas',
-            promo: '20% OFF en Keratina + Lavado Gratis! Solo esta semana.',
-            img: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=600&h=600&fit=crop',
-            badge: 'BELLEZA',
-            whatsapp: 'https://wa.me/50760000000?text=Hola%20Salon%20Glam%20vi%20promo%20ClickGoTaxi',
-            instagram: 'https://instagram.com/'
-        },
-        {
-            id: 'leonardo',
-            titulo: 'Leonardo Pizzas',
-            promo: 'Pizza Familiar 3 ingredientes a B/. 5.99',
-            img: 'https://firebasestorage.googleapis.com/v0/b/preetytaxiapp.firebasestorage.app/o/publicidad%2Fpromocion%20leonardo.jpg?alt=media&token=379a1b00-7f3c-40a7-ae61-3ed06136849e',
-            badge: 'COMIDA',
-            whatsapp: 'https://wa.me/50760000000?text=Hola%20Leonardo',
-            instagram: 'https://instagram.com/leonardo_pizzapty_'
-        }
-    ];
-    let bannerIndex = 0;
-    let bannerInterval = null;
-    let bannersActivos = false;
-    function mostrarBanner(idx) {
-        if (!BANNERS_PUBLICIDAD[idx]) return;
-        const b = BANNERS_PUBLICIDAD[idx];
-        document.getElementById('banner-img').src = b.img;
-        document.getElementById('banner-title').innerText = b.titulo;
-        document.getElementById('banner-promo').innerText = b.promo;
-        document.getElementById('banner-badge').innerText = b.badge;
-        document.getElementById('banner-preview-img').src = b.img;
-        document.getElementById('banner-preview-title').innerText = b.titulo;
-        document.getElementById('banner-preview-badge').innerText = b.badge;
-        document.getElementById('modal-promo-img').src = b.img;
-        document.getElementById('modal-promo-title').innerText = b.titulo;
-        document.getElementById('modal-promo-desc').innerText = b.promo;
-        document.getElementById('modal-promo-badge').innerText = b.badge;
-        const dots = document.getElementById('banner-dots');
-        dots.innerHTML = '';
-        BANNERS_PUBLICIDAD.forEach((_, i) => {
-            const dot = document.createElement('div');
-            dot.className = 'banner-dot-pro' + (i === idx ? ' active' : '');
-            dot.onclick = (e) => { e.stopPropagation(); bannerIndex = i; mostrarBanner(i); };
-            dots.appendChild(dot);
-        });
-    }
-    function iniciarBanners() {
-        if (bannersActivos) return;
-        bannersActivos = true;
-        document.getElementById('banner-container').classList.add('activo');
-        document.getElementById('banner-preview').style.display = 'none';
-        mostrarBanner(bannerIndex);
-        if (bannerInterval) clearInterval(bannerInterval);
-        bannerInterval = setInterval(() => {
-            bannerIndex = (bannerIndex + 1) % BANNERS_PUBLICIDAD.length;
-            mostrarBanner(bannerIndex);
-        }, 5000);
-    }
-    function cerrarBanners() {
-        document.getElementById('banner-container').classList.remove('activo');
-        document.getElementById('banner-preview').style.display = 'flex';
-        bannersActivos = false;
-        if (bannerInterval) clearInterval(bannerInterval);
-    }
-    function abrirModalPromo() {
-        document.getElementById('modal-promo').classList.add('activo');
-        document.body.style.overflow = 'hidden';
-    }
-    function cerrarModalPromo() {
-        document.getElementById('modal-promo').classList.remove('activo');
-        document.body.style.overflow = '';
-    }
-    function abrirWhatsApp() {
-        const b = BANNERS_PUBLICIDAD[bannerIndex];
-        if (b && b.whatsapp) window.open(b.whatsapp, '_blank');
-    }
-    function abrirInstagram() {
-        const b = BANNERS_PUBLICIDAD[bannerIndex];
-        if (b && b.instagram) window.open(b.instagram, '_blank');
-    }
-    function compartirPromo() {
-        const b = BANNERS_PUBLICIDAD[bannerIndex];
-        if (navigator.share) {
-            navigator.share({ title: b.titulo, text: b.promo, url: b.instagram || b.whatsapp });
-        } else {
-            alert('Copia: ' + (b.instagram || b.whatsapp));
-        }
-    }
-    function iniciarPreviewRotativo() {
-        mostrarBanner(0);
-        setInterval(() => {
-            if (!bannersActivos) {
-                bannerIndex = (bannerIndex + 1) % BANNERS_PUBLICIDAD.length;
-                mostrarBanner(bannerIndex);
-            }
-        }, 4000);
-    }
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const audio = document.getElementById('sonidoNotificacion');
+        const audioLlego = document.getElementById('audioLlego');
 
-    function initMap() { mapa = new google.maps.Map(document.getElementById('mapa-destino'), { zoom: 13, center: { lat: 9.0729, lng: -79.4451 } }); directionsService = new google.maps.DirectionsService(); directionsRenderer = new google.maps.DirectionsRenderer({ map: mapa }); }
-    function initAutocomplete() {
-        if (autoDestino) return;
-        autoDestino = new google.maps.places.Autocomplete(document.getElementById('destino-input'), { componentRestrictions: { country: 'pa' } });
-        autoDestino.addListener('place_changed', () => { 
-            const place = autoDestino.getPlace(); 
-            if (place.geometry) { 
-                destinoCoords = place.geometry.location; 
-                actualizarRuta(); 
-            } 
-        });
-    }
-    function calcularRuta() {
-        if (modoActual !== 'externa' || !destinoCoords) return;
-        let origenTxtParaMapa = "";
-        if (origenTipo === 'calle') {
-            const calle = document.getElementById('calle-origen').value;
-            const zona = document.getElementById('zona-origen').value;
-            if (!calle) return; 
-            origenTxtParaMapa = `Calle ${calle} ${zona}, Brisas del Golf, San Miguelito, Panamá`;
-        } else if (origenSeleccionado) {
-            origenTxtParaMapa = `${origenSeleccionado}, Brisas del Golf, San Miguelito, Panamá`;
-        } else {
-            return; 
+        let datos = JSON.parse(localStorage.getItem('datos_conductor'));
+        let adminEstado = 'pendiente'; 
+        let conductorConectado = localStorage.getItem('conductor_conectado') === 'true'; 
+        let estoyEnViajeActivo = false;
+        let intervaloReloj = null;
+        let watchIdUbicacion = null; // GPS en vivo
+        let viajeActivoId = null;
+
+        function iniciarApp() {
+            audio.play().then(() => {
+                audio.pause();
+                audio.currentTime = 0;
+                document.getElementById('pantallaInicio').style.display = 'none';
+            }).catch(e => alert("Por favor, permite el sonido en tu navegador"));
         }
-        directionsService.route({ 
-            origin: origenTxtParaMapa, 
-            destination: destinoCoords, 
-            travelMode: 'DRIVING' 
-        }, (response, status) => {
-            if (status === 'OK') {
-                directionsRenderer.setDirections(response);
-                const distanceKm = response.routes[0].legs[0].distance.value / 1000;
-                let precioBruto = 1.00 + (distanceKm * 0.50);
-                let opciones = [1.00, 1.25, 1.50, 2.00];
-                let precioFinal = opciones.reduce((prev, curr) => (Math.abs(curr - precioBruto) < Math.abs(prev - precioBruto)? curr : prev));
-                if (precioBruto > 2.00) precioFinal = Math.ceil(precioBruto * 4) / 4;
-                document.getElementById('display-precio').innerText = "B/. " + precioFinal.toFixed(2);
+
+        function reproducirSonido() {
+            document.body.classList.add('modo-alerta');
+            setTimeout(() => document.body.classList.remove('modo-alerta'), 3000);
+            audio.currentTime = 0;
+            audio.play().catch(e => console.log("Error al reproducir:", e));
+        }
+
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible") {
+                document.body.classList.remove('modo-alerta');
             }
         });
-    }
 
-    function pedirTaxi() {
-        // --- DESBLOQUEAR AUDIO AL HACER CLIC PARA QUE NO ALLE AL REPRODUCIRSE DESPUÉS ---
-        const audioLlego = document.getElementById('audioLlegoPasajero');
-        if (audioLlego) {
-            audioLlego.play().then(() => {
-                audioLlego.pause();
-                audioLlego.currentTime = 0;
-            }).catch(e => console.log("Audio unlock falló", e));
+        // ----------------------------------------------------
+        // LÓGICA DE REPORTES DIARIOS Y RESETEO A MEDIANOCHE
+        // ----------------------------------------------------
+        function obtenerFechaHoy() {
+            const tzoffset = (new Date()).getTimezoneOffset() * 60000;
+            const localISOTime = (new Date(Date.now() - tzoffset)).toISOString().slice(0, -1);
+            return localISOTime.split('T')[0]; // Devuelve formato YYYY-MM-DD
         }
 
-        let destinoFinal = "";
-        let origenFinal = ""; 
-        const precio = document.getElementById('display-precio').innerText;
-        const nombrePasajeroActual = document.getElementById('nombreUsuario').value || "Pasajero"; 
-        const telefono = document.getElementById('telefono').value.replace(/[^0-9]/g, '');
-        if (origenTipo === 'calle') { 
-            const calle = document.getElementById('calle-origen').value; 
-            const zona = document.getElementById('zona-origen').value; 
-            if (!calle) return alert("Por favor ingresa el número de calle de donde te buscamos"); 
-            origenFinal = `Calle ${calle} ${zona}`; 
-        } else if (origenSeleccionado) { 
-            origenFinal = origenSeleccionado; 
-        } else { 
-            return alert("Por favor selecciona dónde te buscamos"); 
-        } 
-        if (modoActual === 'externa') {
-            destinoFinal = document.getElementById('destino-input').value;
-            if (!destinoFinal) return alert("Por favor completa el destino en el mapa");
-        } else {
-            if (destinoTipo === 'calle') { 
-                const calle = document.getElementById('calle-destino').value; 
-                const zona = document.getElementById('zona-destino').value; 
-                if (!calle) return alert("Por favor ingresa el número de calle de destino"); 
-                destinoFinal = `Calle ${calle} ${zona}`; 
-            } else if (destinoSeleccionado) { 
-                destinoFinal = destinoSeleccionado; 
-            } else {
-                return alert("Selecciona un destino interno"); 
-            } 
-        } 
-        if (!telefono || telefono.length < 8) return alert("Por favor ingresa tu número de WhatsApp"); 
-        if (precio === "B/. 0.00") return alert("Por favor espera a que se calcule la tarifa completa de origen a destino."); 
-        localStorage.setItem('telefono_pasajero', telefono); 
-        localStorage.setItem('nombre_pasajero', nombrePasajeroActual); 
-        const btnSolicitar = document.getElementById('btn-solicitar'); 
-        btnSolicitar.disabled = true; 
-        btnSolicitar.innerText = "BUSCANDO TAXI..."; 
-        iniciarBanners();
-        document.getElementById('estado-viaje-container').innerHTML = `
-            <div style="text-align:center; color:#ffc107; font-weight:bold; margin-top:20px; font-size:16px; animation: pulse 2s infinite;">⏳ Buscando conductor disponible...</div>
-            <button class="btn-cancelar-viaje" onclick="cancelarViajeCliente('${Date.now()}')" style="margin-top: 15px; width: 100%;">❌ Cancelar Búsqueda</button>
-        `; 
-        viajeID = Date.now();
-        localStorage.setItem('viajeActivoID', viajeID);
-        db.ref('viajes/' + viajeID).set({ 
-            origen: origenFinal,
-            destino: destinoFinal, 
-            precio: precio, 
-            precio_numerico: parseFloat(precio.replace('B/. ', '')), 
-            estado: 'pendiente', 
-            timestamp: viajeID, 
-            pasajero_nombre: nombrePasajeroActual,
-            telefono: telefono, 
-            tipo_ruta: modoActual 
-        }).then(() => { escucharEstadoViaje(viajeID); }); 
-    } 
-    window.revertirViaje = function(id) {
-        if (confirm("¿El conductor demoró mucho? Vamos a quitarle el viaje y a buscarte otro taxi cercano.")) {
-            if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
-            db.ref('viajes/' + id).update({
-                estado: 'pendiente',
-                conductorCel: null,
-                conductorNombre: null,
-                conductorVehiculo: null,
-                conductorColor: null,
-                conductorPlaca: null,
-                tiempoAsignacion: null,
-                conductorLlego: null
+        function obtenerNombreDia(fechaStr) {
+            const partes = fechaStr.split('-');
+            const fecha = new Date(partes[0], partes[1] - 1, partes[2]);
+            const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+            return dias[fecha.getDay()] + ' (' + fechaStr.substring(5) + ')';
+        }
+
+        function verificarReseteoDiario(telefono) {
+            const fechaHoy = obtenerFechaHoy();
+            const refConductor = db.ref('conductores/' + telefono);
+
+            refConductor.once('value', snapshot => {
+                const conductorInfo = snapshot.val() || {};
+                const ultimaFecha = conductorInfo.ultimoDiaRegistrado || fechaHoy;
+                const generadoHoy = conductorInfo.totalGeneradoHoy || 0;
+
+                // Si detecta que cambió el día
+                if (ultimaFecha !== fechaHoy) {
+                    // 1. Guardar el reporte del día anterior si generó algo
+                    if (generadoHoy > 0) {
+                        db.ref('reportes_diarios/' + telefono + '/' + ultimaFecha).set({
+                            total: generadoHoy,
+                            fecha: ultimaFecha,
+                            diaNombre: obtenerNombreDia(ultimaFecha)
+                        });
+                    }
+                    // 2. Reiniciar los valores para el día de hoy
+                    refConductor.update({
+                        totalGeneradoHoy: 0,
+                        ultimoDiaRegistrado: fechaHoy
+                    });
+                } else if (!conductorInfo.ultimoDiaRegistrado) {
+                    refConductor.update({ ultimoDiaRegistrado: fechaHoy });
+                }
             });
-            document.getElementById('estado-viaje-container').innerHTML = `
-                <div style="text-align:center; color:#ffc107; font-weight:bold; margin-top:20px; font-size:16px; animation: pulse 2s infinite;">⏳ Relanzando búsqueda...</div>
-                <button class="btn-cancelar-viaje" onclick="cancelarViajeCliente('${id}')" style="margin-top: 15px; width: 100%;">❌ Cancelar Búsqueda</button>
+        }
+
+        function cargarHistorial6Dias(telefono) {
+            const refReportes = db.ref('reportes_diarios/' + telefono);
+            const divHistorial = document.getElementById('contenedorHistorial6Dias');
+            const tarjetaHistorial = document.getElementById('tarjetaHistorial');
+
+            refReportes.limitToLast(6).on('value', snapshot => {
+                let html = '';
+                let totalSemana = 0;
+
+                if (!snapshot.exists()) {
+                    html += '<p style="color:#aaa; font-size:13px; text-align:center;">Aún no hay reportes de días anteriores.</p>';
+                } else {
+                    html += '<div style="display:flex; flex-direction:column; gap:8px;">';
+                    snapshot.forEach(childSnapshot => {
+                        const reporte = childSnapshot.val();
+                        totalSemana += (reporte.total || 0);
+                        html += `
+                            <div style="background:#222; padding:10px; border-radius:8px; display:flex; justify-content: space-between; align-items:center;">
+                                <span style="color:#ddd; font-size:14px;">${reporte.diaNombre || reporte.fecha}</span>
+                                <span style="color:#28a745; font-weight:bold;">B/. ${(reporte.total || 0).toFixed(2)}</span>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                    html += `<p style="margin-top:10px; color:#fff; font-size:15px; text-align:right;"><b>Total Acumulado:</b> B/. ${totalSemana.toFixed(2)}</p>`;
+                }
+
+                if (divHistorial) {
+                    divHistorial.innerHTML = html;
+                    tarjetaHistorial.style.display = 'block';
+                }
+            });
+        }
+
+        // INICIALIZACIÓN
+        if (!datos || !datos.telefono) { 
+            mostrarFormulario(); 
+        } else { 
+            document.getElementById('nombreConductor').textContent = datos.nombre; 
+            verificarReseteoDiario(datos.telefono); 
+            cargarHistorial6Dias(datos.telefono);   
+            escucharEstadoAdmin(datos.telefono); 
+            pedirPermisoNotificaciones(datos.telefono); 
+        }
+
+        function pedirPermisoNotificaciones(telefono) {
+            if ('Notification' in window) {
+                Notification.requestPermission().then(perm => {
+                    if(perm === 'granted') {
+                        const messaging = firebase.messaging();
+                        messaging.getToken({ vapidKey: 'BBUHPimNFxcFynE28L8yDonGLzDqi8P7x2L5sKlFPpqoId-_Lkl6WURXgPHH4lTTQVtlpa_WRNO9-Sq4SSxHFn0' }).then(token => {
+                            if (token) {
+                                db.ref('conductores/' + telefono + '/fcmToken').set(token);
+                            }
+                        }).catch(err => console.log('Error FCM:', err));
+                    }
+                });
+            }
+        }
+
+        function mostrarFormulario() { 
+            document.getElementById('area-viajes').style.display = 'none'; 
+            document.getElementById('formularioDatos').style.display = 'block'; 
+        }
+
+        function escucharEstadoAdmin(telefono) {
+            db.ref('conductores/' + telefono).on('value', snap => {
+                const conductorData = snap.val();
+                adminEstado = conductorData ? (conductorData.estado || 'pendiente') : 'pendiente';
+                
+                if(conductorData) {
+                    document.getElementById('ganancia').innerText = "B/. " + parseFloat(conductorData.totalGeneradoHoy || 0).toFixed(2);
+                }
+                actualizarInterfaz();
+            });
+        }
+
+        function actualizarInterfaz() {
+            const btnConexion = document.getElementById('btnConexion');
+            if (adminEstado === 'bloqueado' || adminEstado === 'pendiente') {
+                conductorConectado = false;
+                document.getElementById('txtEstado').innerHTML = `<span style="color: #dc3545; font-weight: bold;">⛔ CUENTA RESTRINGIDA</span>`;
+                btnConexion.innerHTML = `❌ CUENTA INACTIVA / PENDIENTE`;
+                activarEscuchasDeViajes();
+            } else {
+                document.getElementById('txtEstado').innerHTML = `<span style="color: #28a745; font-weight: bold;">✅ CUENTA ACTIVA</span>`;
+                if (conductorConectado) {
+                    btnConexion.innerHTML = `🟢 CONECTADO (Toca para Desconectar)`;
+                    activarEscuchasDeViajes();
+                } else {
+                    btnConexion.innerHTML = `⚪ DESCONECTADO (Modo Descanso)`;
+                    document.getElementById('contenedor').innerHTML = '<div style="text-align:center; padding:35px; color:#666;">💤 Estás desconectado.</div>';
+                    db.ref('viajes').off();
+                }
+            }
+        }
+
+        function toggleConexion() {
+            if (adminEstado === 'bloqueado' || adminEstado === 'pendiente') {
+                return alert("⛔ Tu cuenta se encuentra en revisión o pendiente de activación por el administrador.");
+            }
+            conductorConectado = !conductorConectado;
+            localStorage.setItem('conductor_conectado', conductorConectado);
+            actualizarInterfaz();
+        }
+
+        // ========== GPS EN VIVO (compartir ubicación con el pasajero) ==========
+        function iniciarCompartirUbicacion(viajeId) {
+            if (watchIdUbicacion) return; // Ya está compartiendo
+            if (!navigator.geolocation) {
+                console.log("Geolocalización no disponible");
+                return;
+            }
+            watchIdUbicacion = navigator.geolocation.watchPosition(
+                (pos) => {
+                    const ubicacion = {
+                        lat: pos.coords.latitude,
+                        lng: pos.coords.longitude,
+                        accuracy: pos.coords.accuracy,
+                        timestamp: Date.now()
+                    };
+                    // Guardar en el viaje para que el pasajero lo vea
+                    if (viajeId) {
+                        db.ref('viajes/' + viajeId + '/conductorUbicacion').set(ubicacion);
+                    }
+                    // También en el nodo del conductor
+                    if (datos && datos.telefono) {
+                        db.ref('conductores/' + datos.telefono + '/ubicacion').set(ubicacion);
+                    }
+                },
+                (err) => {
+                    console.log("Error GPS:", err.message);
+                },
+                { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
+            );
+        }
+
+        function detenerCompartirUbicacion() {
+            if (watchIdUbicacion !== null) {
+                navigator.geolocation.clearWatch(watchIdUbicacion);
+                watchIdUbicacion = null;
+            }
+        }
+
+        function activarEscuchasDeViajes() {
+            db.ref('viajes').off();
+            document.getElementById('contenedor').innerHTML = '';
+            
+            if(datos && datos.telefono) {
+                db.ref('viajes').orderByChild('conductorCel').equalTo(datos.telefono).on('value', (snap) => {
+                    let hayViajeValido = false;
+                    let viajeData = null;
+
+                    snap.forEach((child) => {
+                        const v = child.val();
+                        if(['conductor_asignado', 'conductor_llego', 'viaje_iniciado'].includes(v.estado)) {
+                            hayViajeValido = true;
+                            estoyEnViajeActivo = true;
+                            viajeData = v;
+                            viajeActivoId = child.key;
+                            renderizarActivo(child.key, v);
+                            iniciarCompartirUbicacion(child.key); // GPS en vivo
+                        }
+                    });
+                    
+                    if (!hayViajeValido) {
+                        estoyEnViajeActivo = false;
+                        viajeActivoId = null;
+                        detenerCompartirUbicacion(); // Parar GPS
+                        document.getElementById('contenedor').innerHTML = '';
+                        if(intervaloReloj) clearInterval(intervaloReloj);
+                    } else {
+                        if(intervaloReloj) clearInterval(intervaloReloj);
+                        if (viajeData && viajeData.estado === 'conductor_asignado' && viajeData.tiempoAsignacion) {
+                            intervaloReloj = setInterval(() => {
+                                const elReloj = document.getElementById('reloj-conductor');
+                                if(elReloj) {
+                                    const tiempoPasado = Date.now() - viajeData.tiempoAsignacion;
+                                    const tiempoRestante = (7 * 60 * 1000) - tiempoPasado;
+                                    if(tiempoRestante > 0) {
+                                        const mins = Math.floor(tiempoRestante / 60000);
+                                        const secs = Math.floor((tiempoRestante % 60000) / 1000);
+                                        elReloj.innerText = `⏱️ Tienes ${mins}:${secs < 10 ? '0'+secs : secs} para llegar`;
+                                    } else {
+                                        elReloj.innerText = `🚨 TIEMPO AGOTADO. El pasajero puede cancelar.`;
+                                        elReloj.style.color = '#dc3545';
+                                    }
+                                }
+                            }, 1000);
+                        }
+                    }
+                });
+            }
+
+            db.ref('viajes').orderByChild('estado').equalTo('pendiente').on('child_added', (snap) => {
+                if (!estoyEnViajeActivo) {
+                    const viaje = snap.val();
+                    reproducirSonido();
+                    mostrarPedido(snap.key, viaje);
+
+                    if (Notification.permission === 'granted') {
+                        navigator.serviceWorker.ready.then(reg => {
+                            reg.showNotification("🚕 ¡Nuevo viaje disponible!", {
+                                body: `De ${viaje.origen} a ${viaje.destino} - B/. ${viaje.precio}`,
+                                icon: './icon-192.png',
+                                badge: './badge.png', 
+                                vibrate: [200,100,200],
+                                requireInteraction: true,
+                                tag: 'viaje-nuevo'
+                            });
+                        });
+                    }
+                }
+            });
+
+            db.ref('viajes').orderByChild('estado').equalTo('pendiente').on('child_removed', (snap) => {
+                const tarj = document.getElementById('pedido_' + snap.key);
+                if (tarj) tarj.remove();
+            });
+        }
+
+        function mostrarPedido(id, p) {
+            if(document.getElementById('pedido_' + id)) return;
+            const estaBloqueado = (adminEstado === 'bloqueado' || adminEstado === 'pendiente');
+            const html = `<div class="card" id="pedido_${id}">
+                <div class="info-row">👤 <strong>Cliente:</strong> ${p.pasajero_nombre || 'Cliente'}</div>
+                <div class="info-row">📍 <strong>Origen:</strong> ${p.origen}</div>
+                <div class="info-row">🏁 <strong>Destino:</strong> ${p.destino}</div>
+                <div class="precio">Total: B/. ${p.precio || "0.00"}</div>
+                ${p.metodo_pago ? `<div class="info-row" style="color:#ffc107;">💰 <strong>Pago:</strong> ${p.metodo_pago.toUpperCase()}</div>` : ''}
+                ${estaBloqueado ? `<button style="background:#dc3545; color:white;" disabled>⛔ CUENTA INACTIVA</button>` : `<button style="background: #28a745; color: white;" onclick="aceptar('${id}')">✅ ACEPTAR VIAJE</button>`}
+            </div>`;
+            document.getElementById('contenedor').insertAdjacentHTML('beforeend', html);
+        }
+
+        window.aceptar = (id) => {
+            if (adminEstado === 'bloqueado' || adminEstado === 'pendiente') return alert("❌ No puedes aceptar viajes hasta que tu cuenta sea activada.");
+            db.ref('viajes/' + id).update({
+                estado: 'conductor_asignado',
+                conductorNombre: datos.nombre,
+                conductorCel: datos.telefono,
+                conductorVehiculo: datos.vehiculo,
+                conductorColor: datos.color,
+                conductorPlaca: datos.placa,
+                tiempoAsignacion: firebase.database.ServerValue.TIMESTAMP
+            });
+        };
+
+        function renderizarActivo(id, v) {
+            const esLlegada = v.estado === 'conductor_llego';
+            let relojHtml = '';
+            if (v.estado === 'conductor_asignado') {
+                relojHtml = `<div id="reloj-conductor" style="text-align:center; color:#ffc107; font-weight:bold; margin-bottom:15px; font-size:16px;">⏱️ Calculando tiempo...</div>`;
+            }
+
+            let celPasajero = String(v.telefono || "").replace(/\D/g, '');
+            if (celPasajero.length === 8) celPasajero = "507" + celPasajero;
+
+            document.getElementById('contenedor').innerHTML = `
+                <div class="card">
+                    <div style="background:${esLlegada ? '#28a745' : '#1a1a1a'}; border: 1px solid #28a745; padding:10px; border-radius:5px; text-align:center; margin-bottom:15px; font-weight:bold; color:${esLlegada ? '#fff' : '#28a745'};">
+                        ${esLlegada ? '🟢 PASAJERO NOTIFICADO (ESTADO VERDE)' : '✅ VIAJE EN CURSO'}
+                    </div>
+                    <div class="info-row">👤 <strong>Cliente:</strong> ${v.pasajero_nombre || 'Cliente'}</div>
+                    <div class="info-row">📍 <strong>Origen:</strong> ${v.origen}</div>
+                    <div class="info-row">🏁 <strong>Destino:</strong> ${v.destino}</div>
+                    <div class="precio">Total: B/. ${v.precio || "0.00"}</div>
+                    ${relojHtml}
+                    <button style="background:${esLlegada ? '#6c757d' : '#007bff'}; color:white;" onclick="actualizar('${id}', 'conductor_llego')">${esLlegada ? '✓ PASAJERO YA NOTIFICADO' : '📍 LLEGUÉ AL PUNTO (NOTIFICAR VERDE)'}</button>
+                    <button class="btn-whatsapp" onclick="window.open('https://wa.me/${celPasajero}', '_blank')">💬 WHATSAPP</button>
+                    <button class="btn-iniciar" onclick="actualizar('${id}', 'viaje_iniciado')">▶️ INICIAR VIAJE</button>
+                    <button class="btn-finalizar" onclick="finalizarViajeSeguro('${id}')">🏁 FINALIZAR VIAJE</button>
+                </div>
             `;
         }
-    };
-    window.rechazarConductorLocal = function(id) {
-        if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
-        db.ref('viajes/' + id).update({
-            estado: 'pendiente',
-            conductorCel: null,
-            conductorNombre: null,
-            conductorVehiculo: null,
-            conductorColor: null,
-            conductorPlaca: null,
-            tiempoAsignacion: null,
-            conductorLlego: null
-        });
-        iniciarBanners();
-        document.getElementById('estado-viaje-container').innerHTML = `
-            <div style="text-align:center; color:#ffc107; font-weight:bold; margin-top:20px; font-size:16px; animation: pulse 2s infinite;">⏳ Relanzando búsqueda...</div>
-            <button class="btn-cancelar-viaje" onclick="cancelarViajeCliente('${id}')" style="margin-top: 15px; width: 100%;">❌ Cancelar Búsqueda</button>
-        `;
-    };
-    function escucharEstadoViaje(id) { 
-        db.ref('viajes/' + id).on('value', (snapshot) => { 
-            const viaje = snapshot.val(); 
-            if (!viaje) return; 
-            if (viaje.estado === 'conductor_asignado') { 
-                const numeroConductor = viaje.conductorCel || 'Sin número'; 
-                db.ref('conductores/' + numeroConductor).once('value').then(snap => {
-                    const datosConductor = snap.val() || {};
-                    const fotoPerfil = datosConductor.foto_conductor || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png';
-                    const fotoCarro = datosConductor.foto_carro || 'https://cdn-icons-png.flaticon.com/512/3204/3204121.png';
-                    let estrellasPromedio = "Nuevo";
-                    if (datosConductor.calificaciones) {
-                        let suma = 0, cantidad = 0;
-                        Object.values(datosConductor.calificaciones).forEach(c => {
-                            suma += parseFloat(c.estrellas);
-                            cantidad++;
-                        });
-                        if (cantidad > 0) estrellasPromedio = (suma / cantidad).toFixed(1) + " ⭐ (" + cantidad + " viajes)";
-                    } else {
-                        estrellasPromedio = "5.0 ⭐ (Nuevo)";
-                    }
-                    document.getElementById('estado-viaje-container').innerHTML = `
-                        <div id="ui-driver-card" class="card-conductor" style="padding: 0; overflow: hidden; background: #fff; color: #000; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
-                            <div style="background: #000; color: #fff; padding: 12px; font-weight: bold; font-size: 18px; text-align: center;">Driver Card</div>
-                            <h3 style="color: #000; margin-top: 15px; margin-bottom: 5px;">${viaje.conductorNombre}</h3>
-                            <div style="display: flex; justify-content: center; gap: 10px; margin: 15px;">
-                                <img src="${fotoPerfil}" style="width: 100px; height: 100px; border-radius: 8px; object-fit: cover; border: 1px solid #ccc;">
-                                <img src="${fotoCarro}" style="width: 140px; height: 100px; border-radius: 8px; object-fit: cover; border: 1px solid #ccc;">
-                            </div>
-                            <p style="font-size: 16px; font-weight: bold; margin: 5px 0;">${estrellasPromedio}</p>
-                            <p style="color: #555; font-size: 13px; margin: 5px 0; padding: 0 10px;">${viaje.conductorVehiculo} ${viaje.conductorColor} - ${viaje.conductorPlaca}</p>
-                            <div style="padding: 15px;">
-                                <button onclick="document.getElementById('ui-driver-card').style.display='none'; document.getElementById('ui-taxi-camino').style.display='block';" style="background: #28a745; color: white; width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer;">ACEPTAR VIAJE</button>
-                                <button onclick="rechazarConductorLocal('${id}')" style="background: #ffc107; color: black; width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin-top: 10px; cursor: pointer;">NO, BUSCAR OTRO</button>
-                                <button class="btn-cancelar-viaje" onclick="cancelarViajeCliente('${id}')" style="margin-top: 10px;">❌ Cancelar Viaje</button>
-                            </div>
-                        </div>
-                        <div id="ui-taxi-camino" class="card-conductor" style="display: none;">
-                            <h3>✅ ¡Taxi en Camino!</h3>
-                            <div style="text-align: center; margin-top: 15px; margin-bottom: 10px;">
-                                <img src="${fotoPerfil}" style="width: 90px; height: 90px; border-radius: 50%; border: 3px solid #ffc107; object-fit: cover;">
-                                <p style="font-size: 18px; margin: 5px 0;"><strong>${viaje.conductorNombre}</strong></p>
-                            </div>
-                            <p><strong>Tel:</strong> +${numeroConductor}</p>
-                            <p><strong>Vehículo:</strong> ${viaje.conductorVehiculo} ${viaje.conductorColor}</p>
-                            <p><strong>Placa:</strong> ${viaje.conductorPlaca}</p>
-                            
-                            <!-- MAPA EN VIVO DEL CONDUCTOR -->
-                            <div style="margin: 15px 0;">
-                                <p style="color:#ffc107; font-weight:bold; font-size:13px; margin-bottom:8px;">📍 Ubicación del conductor en vivo</p>
-                                <div id="mapa-vivo" style="width:100%; height:250px; border-radius:12px; border:2px solid #ffc107; background:#111;"></div>
-                                <p id="texto-ubicacion-vivo" style="font-size:11px; color:#888; margin-top:5px; text-align:center;">Esperando señal GPS del conductor...</p>
-                            </div>
-                            
-                            <div style="text-align: center; margin-top: 15px; margin-bottom: 10px;">
-                                <img src="${fotoCarro}" style="width: 100%; border-radius: 8px; object-fit: cover; border: 1px solid #444;">
-                            </div>
-                            ${viaje.metodo_pago ? `<p><strong>Pago:</strong> ${viaje.metodo_pago.toUpperCase()}</p>` : ''}
-                            <div id="contenedor-reloj-pasajero" style="background: #111; padding: 10px; border-radius: 8px; margin: 15px 0; border: 1px solid #444;">
-                                 <p style="color: #ffc107; font-weight: bold; margin: 0; font-size: 14px;" id="texto-reloj-pasajero">⏱ Calculando tiempo...</p>
-                                 <div id="opciones-demora" style="display:none; margin-top: 10px;">
-                                     <p style="color: #dc3545; font-size: 12px; margin-bottom: 8px;">El conductor ha excedido los 7 minutos.</p>
-                                     <button style="background: #ffc107; color: black; padding: 10px; border: none; border-radius: 5px; width: 100%; font-weight: bold; cursor: pointer;" onclick="revertirViaje('${id}')">🔄 BUSCAR OTRO TAXI</button>
-                                 </div>
-                            </div>
-                            <button class="btn-whatsapp" onclick="event.stopPropagation(); window.open('https://wa.me/${numeroConductor}?text=Hola ${viaje.conductorNombre}, soy ${viaje.pasajero_nombre}', '_blank')">💬 Enviar WhatsApp</button>
-                            <button class="btn-cancelar-viaje" onclick="cancelarViajeCliente('${id}')">❌ Cancelar Viaje</button>
-                        </div>`;
-                        
-                        // Iniciar mapa en vivo cuando el pasajero vea el taxi en camino
-                        setTimeout(() => iniciarMapaVivo(id), 500);
-                    if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
-                    relojPasajeroInterval = setInterval(() => {
-                        if(!viaje.tiempoAsignacion) return; 
-                        let ahora = Date.now();
-                        let limite = 7 * 60 * 1000;
-                        let tiempoTranscurrido = ahora - viaje.tiempoAsignacion;
-                        let tiempoRestante = limite - tiempoTranscurrido;
-                        let elTextoReloj = document.getElementById('texto-reloj-pasajero');
-                        let elDivDemora = document.getElementById('opciones-demora');
-                        if (!elTextoReloj) return;
-                        if (tiempoRestante > 0) {
-                            let mins = Math.floor(tiempoRestante / 60000);
-                            let secs = Math.floor((tiempoRestante % 60000) / 1000);
-                            elTextoReloj.innerText = `⏱ Tiempo de llegada: ${mins}:${secs < 10 ? '0'+secs : secs}`;
-                        } else {
-                            elTextoReloj.innerText = `🚨 Tiempo expirado (7 min)`;
-                            elTextoReloj.style.color = '#dc3545';
-                            if (elDivDemora) elDivDemora.style.display = 'block';
-                            clearInterval(relojPasajeroInterval);
-                        }
-                    }, 1000);
-                });
-            } 
-            if (viaje.estado === 'conductor_llego') {
-                if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
-                let elContenedorReloj = document.getElementById('contenedor-reloj-pasajero');
-                if (elContenedorReloj) elContenedorReloj.innerHTML = `<p style="color: #28a745; font-weight: bold; margin: 0; text-align:center;">✅ El conductor ha llegado</p>`;
-                
-                // --- NUEVO: REPRODUCIR SONIDO DE LLEGADA ---
-                const audioLlego = document.getElementById('audioLlegoPasajero');
+
+        window.actualizar = (id, estado) => {
+            if (estado === 'conductor_llego') {
                 if (audioLlego) {
                     audioLlego.currentTime = 0;
-                    audioLlego.play().catch(e => console.log("Error de audio:", e));
-                }
-                
-                mostrarNotificacionLlegada(viaje); 
-            } 
-            if (viaje.estado === 'viaje_iniciado') { 
-                if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
-                document.getElementById('estado-viaje-container').innerHTML = `
-                    <div class="card-conductor">
-                        <h3>🚗 Viaje en curso</h3>
-                        <p style="color:#28a745; font-size:18px; margin:15px 0;">Buen viaje</p>
-                        <p><strong>Conductor:</strong> ${viaje.conductorNombre}</p>
-                        <p><strong>Tel:</strong> +${viaje.conductorCel}</p>
-                        <button class="btn-soporte" onclick="abrirSoporte()">🎧 Reportar Problema</button>
-                    </div>`; 
-            } 
-            if (viaje.estado === 'completado') { 
-                if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
-                cerrarBanners();
-                localStorage.removeItem('viajeActivoID');
-                mostrarModalCalificacionConductor(viaje); 
-                db.ref('viajes/' + id).off(); 
-            } 
-            if (viaje.estado === 'cancelado') { 
-                if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
-                cerrarBanners();
-                alert("El viaje ha sido cancelado."); 
-                resetFormularioUI(); 
-                db.ref('viajes/' + id).off(); 
-            } 
-        }); 
-    } 
-    function mostrarNotificacionLlegada(viaje) { 
-        if (document.getElementById('notif-llegada')) return; 
-        const html = `<div id="notif-llegada" class="notificacion-llegada"><h4 style="margin:0 0 10px;">🎉 ¡Tu conductor llegó!</h4><p style="margin:5px 0;">${viaje.conductorNombre} está en el punto de recogida</p><p style="margin:5px 0; font-size:14px;">${viaje.conductorVehiculo} ${viaje.conductorColor} - ${viaje.conductorPlaca}</p><button onclick="window.open('https://wa.me/${viaje.conductorCel}?text=Hola ${viaje.conductorNombre}, soy ${viaje.pasajero_nombre}, ya estoy saliendo', '_blank')" style="background:white; color:#28a745; padding:8px 16px; border-radius:6px; text-decoration:none; display:inline-block; margin-top:10px; font-weight:bold; cursor:pointer;">💬 WhatsApp</button></div>`; 
-        document.body.insertAdjacentHTML('beforeend', html); 
-        setTimeout(() => document.getElementById('notif-llegada')?.remove(), 15000); 
-    } 
-    function mostrarViajeFinalizado(viaje) { 
-        const html = `<div style="position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:30px; border-radius:12px; z-index:10000; box-shadow:0 10px 40px rgba(0,0,0,0.3); text-align:center; max-width:400px;"><h3 style="color:#28a745; margin:0 0 15px;">Viaje Finalizado</h3><p style="color:#666;">Gracias por viajar con ClickGoTaxi</p><p style="font-size:24px; font-weight:bold; color:#333; margin:15px 0;">Total: B/. ${viaje.precio_numerico.toFixed(2)}</p><button onclick="location.reload()" style="background:#FFC107; color:#000; border:none; padding:12px 30px; border-radius:6px; cursor:pointer; font-weight:bold; margin-top:10px;">Nuevo Viaje</button></div>`; 
-        document.body.insertAdjacentHTML('beforeend', html); 
-    } 
-    function cancelarViajeCliente(id) { 
-        if (confirm("¿Estás seguro de que deseas cancelar este viaje?")) { 
-            if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
-            cerrarBanners();
-            localStorage.removeItem('viajeActivoID');
-            db.ref('viajes/' + id).off(); 
-            db.ref('viajes/' + id).update({ estado: 'cancelado' }).then(() => { resetFormularioUI(); }); 
-        } 
-    } 
-    function resetFormularioUI() { 
-        cerrarBanners();
-        localStorage.removeItem('viajeActivoID');
-        viajeID = null; 
-        detenerMapaVivo();
-        const btnSolicitar = document.getElementById('btn-solicitar'); 
-        btnSolicitar.disabled = false; 
-        btnSolicitar.innerText = "SOLICITAR TAXI"; 
-        document.getElementById('estado-viaje-container').innerHTML = ""; 
-    } 
-
-    // ========== MAPA EN VIVO DEL CONDUCTOR ==========
-    function iniciarMapaVivo(viajeId) {
-        const divMapa = document.getElementById('mapa-vivo');
-        if (!divMapa || !google || !google.maps) return;
-
-        // Crear mapa centrado en Panamá (se actualizará con la ubicación real)
-        mapaVivo = new google.maps.Map(divMapa, {
-            zoom: 15,
-            center: { lat: 9.0729, lng: -79.4451 },
-            mapTypeControl: false,
-            streetViewControl: false,
-            fullscreenControl: false
-        });
-
-        // Icono de taxi
-        const iconoTaxi = {
-            url: "https://maps.google.com/mapfiles/kml/shapes/cabs.png",
-            scaledSize: new google.maps.Size(40, 40)
-        };
-
-        markerConductor = new google.maps.Marker({
-            map: mapaVivo,
-            icon: iconoTaxi,
-            title: "Tu conductor"
-        });
-
-        // Escuchar ubicación en tiempo real desde Firebase
-        if (listenerUbicacion) db.ref('viajes/' + viajeId + '/conductorUbicacion').off('value', listenerUbicacion);
-        
-        listenerUbicacion = db.ref('viajes/' + viajeId + '/conductorUbicacion').on('value', snap => {
-            const ubi = snap.val();
-            if (ubi && ubi.lat && ubi.lng) {
-                const pos = { lat: ubi.lat, lng: ubi.lng };
-                markerConductor.setPosition(pos);
-                mapaVivo.panTo(pos);
-                
-                const texto = document.getElementById('texto-ubicacion-vivo');
-                if (texto) {
-                    const hace = Math.round((Date.now() - (ubi.timestamp || Date.now())) / 1000);
-                    texto.innerHTML = `🟢 Conductor en movimiento · actualizado hace ${hace < 5 ? 'segundos' : hace + 's'}`;
-                    texto.style.color = '#28a745';
+                    audioLlego.play().catch(e => console.log("Error al reproducir audio llegó:", e));
                 }
             }
-        });
-    }
+            db.ref('viajes/' + id).update({ estado: estado });
+        };
 
-    function detenerMapaVivo() {
-        if (listenerUbicacion && viajeID) {
-            db.ref('viajes/' + viajeID + '/conductorUbicacion').off('value');
-            listenerUbicacion = null;
-        }
-        mapaVivo = null;
-        markerConductor = null;
-    }
-    function marcarEstrellas(valor, tipo) {
-        calificacionSeleccionada = valor;
-        const estrellas = document.querySelectorAll(`#estrellas-${tipo} span`);
-        estrellas.forEach(e => e.classList.remove('seleccionada'));
-        event.target.classList.add('seleccionada');
-        const textos = {1: "Muy Malo 😠", 2: "Malo 😕", 3: "Regular 😐", 4: "Bueno 🙂", 5: "Excelente 🤩"};
-        document.getElementById(`texto-estrellas-${tipo}`).innerText = textos[valor];
-    }
-    function mostrarModalCalificacionConductor(viaje) {
-        viajeCompletadoData = viaje;
-        document.getElementById('nombre-conductor-cal').innerText = viaje.conductorNombre || 'el conductor';
-        document.getElementById('modal-calificar').style.display = 'flex';
-    }
-    function enviarCalificacionConductor() {
-        if (calificacionSeleccionada === 0) return alert("Por favor selecciona una estrella.");
-        const comentario = document.getElementById('comentario-cliente').value || "Sin comentario";
-        db.ref('viajes/' + viajeID).update({
-            calificacion_conductor: calificacionSeleccionada,
-            comentario_pasajero: comentario 
-        });
-        if (viajeCompletadoData && viajeCompletadoData.conductorCel) {
-            db.ref('conductores/' + viajeCompletadoData.conductorCel + '/calificaciones/' + viajeID).set({
-                estrellas: calificacionSeleccionada,
-                comentario: comentario,
-                fecha: new Date().toISOString()
+        // Función que suma el 100% de la ganancia del viaje (Sin porcentajes ni comisiones)
+        window.finalizarViajeSeguro = (id) => {
+            if(!confirm("¿Estás seguro que deseas finalizar este viaje y registrar la ganancia completa?")) return;
+            
+            const viajeRef = db.ref('viajes/' + id);
+            
+            viajeRef.once('value', snap => {
+                const viaje = snap.val();
+                if (!viaje) {
+                    alert("El viaje ya no existe o fue cancelado.");
+                    return;
+                }
+                
+                // Extrae el número limpio del precio (ej. "B/. 2.50" se vuelve 2.50)
+                const precioLimpioStr = String(viaje.precio || "0").replace(/[^0-9.]/g, '');
+                const precioViaje = parseFloat(precioLimpioStr) || 0;
+                
+                const hoy = obtenerFechaHoy();
+
+                viajeRef.update({ estado: 'completado' }).then(() => {
+                    document.getElementById('contenedor').innerHTML = '';
+                    estoyEnViajeActivo = false;
+                    viajeActivoId = null;
+                    detenerCompartirUbicacion();
+                    if(intervaloReloj) clearInterval(intervaloReloj);
+
+                    // 1. Suma el 100% del precio al acumulado de HOY del conductor
+                    const refConductor = db.ref('conductores/' + datos.telefono);
+                    refConductor.once('value', snapCond => {
+                        const actual = snapCond.val() || {};
+                        const gananciaActual = parseFloat(actual.totalGeneradoHoy || 0);
+                        const nuevoTotal = gananciaActual + precioViaje; // Suma completa exacta
+                        
+                        refConductor.update({ 
+                            totalGeneradoHoy: nuevoTotal,
+                            ultimoDiaRegistrado: hoy 
+                        });
+                    });
+
+                    // 2. Guarda el reporte con el monto completo para el historial
+                    db.ref(`reportes_diarios/${datos.telefono}/${hoy}/${id}`).set({
+                        origen: viaje.origen || 'No especificado',
+                        destino: viaje.destino || 'No especificado',
+                        precio: precioViaje,
+                        cliente: viaje.pasajero_nombre || 'Cliente',
+                        timestamp: firebase.database.ServerValue.TIMESTAMP
+                    });
+
+                }).catch(err => {
+                    console.error("Error al finalizar:", err);
+                    alert("No se pudo finalizar el viaje. Inténtalo de nuevo.");
+                });
             });
+        };
+        
+        function guardarDatos() {
+            const tel = document.getElementById('inTel').value.replace(/[^0-9]/g, '');
+            if(tel.length < 8) return alert("Número inválido");
+            datos = { nombre: document.getElementById('inNombre').value, telefono: tel, vehiculo: document.getElementById('inVehiculo').value, color: document.getElementById('inColor').value, placa: document.getElementById('inPlaca').value };
+            localStorage.setItem('datos_conductor', JSON.stringify(datos));
+            db.ref('conductores/' + tel).update(datos).then(() => location.reload());
         }
-        document.getElementById('modal-calificar').style.display = 'none';
-        mostrarViajeFinalizado(viajeCompletadoData);
-    }
-    function abrirSoporte() { document.getElementById('modal-soporte').style.display = 'flex'; }
-    function cerrarSoporte() { document.getElementById('modal-soporte').style.display = 'none'; }
-    function enviarQueja() {
-        const texto = document.getElementById('texto-queja').value;
-        if (!texto) return alert("Escribe un comentario.");
-        const quejaID = Date.now();
-        db.ref('quejas/' + quejaID).set({
-            viajeID: viajeID || 'Sin viaje activo',
-            pasajero: localStorage.getItem('nombre_pasajero') || 'Anónimo',
-            telefono_pasajero: localStorage.getItem('telefono_pasajero') || '',
-            mensaje: texto,
-            fecha: new Date().toLocaleString(),
-            estado: 'pendiente_revision'
-        }).then(() => {
-            alert("Tu reporte ha sido enviado a la administración.");
-            cerrarSoporte();
-            document.getElementById('texto-queja').value = '';
-        });
-    }
-</script>
+    </script>
 </body>
 </html>

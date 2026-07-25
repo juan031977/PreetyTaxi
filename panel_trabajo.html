@@ -4,8 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de Trabajo - Click$GoTaxi</title>
-    <link rel="manifest" href="./manifest.json">
-    <style>
+    <link rel="manifest" href="./manifest.json"> <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; background: #000; color: #fff; padding: 20px; transition: background 0.3s; }
         
@@ -27,13 +26,7 @@
         .btn-iniciar { background: #28a745; color: white; }
         .btn-finalizar { background: #dc3545; color: white; }
         .btn-editar { background: #444; color: white; padding: 8px; font-size: 14px; width: auto; border-radius: 5px; margin-top: 10px; }
-        .btn-historial { background: #17a2b8; color: white; padding: 8px; font-size: 14px; width: auto; border-radius: 5px; margin-top: 10px; }
         .btn-volver { position: absolute; top: 5px; left: 15px; background: transparent; color: #aaa; border: none; font-size: 14px; font-weight: bold; cursor: pointer; z-index: 20; width: auto; padding: 0; margin: 0; }
-
-        /* Estilos del Modal */
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); }
-        .modal-content { background-color: #1a1a1a; margin: 15% auto; padding: 20px; border: 1px solid #444; width: 90%; max-width: 400px; border-radius: 12px; position: relative; color: white; }
-        .close-btn { position: absolute; top: 10px; right: 15px; font-size: 24px; cursor: pointer; font-weight: bold; color: #aaa; }
     </style>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -52,17 +45,19 @@
         <source src="https://assets.mixkit.co/sfx/preview/2320/2320-preview.mp3" type="audio/mpeg">
     </audio>
 
+    <audio id="audioLlego" preload="auto">
+        <source src="https://raw.githubusercontent.com/juan031977/PreetyTaxi/main/su%20taxi%20llego.mp3" type="audio/mpeg">
+    </audio>
+
     <button class="btn-volver" onclick="window.history.back()">⬅ Volver</button>
 
     <div class="header">
         <div>
             <div id="txtEstado" style="font-size: 16px;">Verificando estado...</div>
-            <div style="margin-top: 5px;">Unidad: <strong id="txtUnidad" style="color: #FFC107;">Cargando...</strong></div>
-            <div style="margin-top: 3px;">Conductor: <strong id="nombreConductor">Cargando...</strong></div>
+            <div style="margin-top: 5px;">Conductor: <strong id="nombreConductor">Cargando...</strong></div>
             <button class="btn-editar" onclick="mostrarFormulario()">✏️ Editar mis datos</button>
-            <button class="btn-historial" onclick="abrirHistorial()">📋 Ver Registros (6 días)</button>
         </div>
-        <div style="text-align: right;">
+        <div>
             <div style="font-size: 12px; color: #aaa;">GANANCIA HOY</div>
             <span id="ganancia" style="font-size: 18px; font-weight: bold; color: #FFC107;">B/. 0.00</span>
         </div>
@@ -78,21 +73,12 @@
         <label>Color</label> <input type="text" id="inColor" placeholder="Ej: Blanco">
         <label>Placa</label> <input type="text" id="inPlaca" placeholder="Ej: AB1234">
         <button class="btn-iniciar" onclick="guardarDatos()">GUARDAR DATOS</button>
-        <button style="background: #6c757d; color: white;" onclick="cerrarFormulario()">CANCELAR</button>
     </div>
 
     <div id="area-viajes"><div id="contenedor"></div></div>
 
-    <div id="modalHistorial" class="modal">
-        <div class="modal-content">
-            <span class="close-btn" onclick="cerrarHistorial()">&times;</span>
-            <h3 style="margin-bottom: 15px; color: #17a2b8;">Historial de Ganancias</h3>
-            <p style="font-size: 12px; color: #aaa; margin-bottom: 15px;">Registros de los últimos 6 días:</p>
-            <div id="listaHistorial" style="max-height: 300px; overflow-y: auto;">Cargando...</div>
-        </div>
-    </div>
-
     <script>
+        // CONFIGURACIÓN ACTUALIZADA CON DATOS PARA MENSAJERÍA PUSH
         const firebaseConfig = { 
             apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", 
             databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/",
@@ -103,6 +89,7 @@
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         const audio = document.getElementById('sonidoNotificacion');
+        const audioLlego = document.getElementById('audioLlego');
 
         function iniciarApp() {
             audio.play().then(() => {
@@ -135,97 +122,11 @@
             mostrarFormulario(); 
         } else { 
             document.getElementById('nombreConductor').textContent = datos.nombre; 
-            verificarReseteoDiarioYHistorial(datos.telefono);
-            estatutoAdmin(datos.telefono); 
-            pedirPermisoNotificaciones(datos.telefono);
+            escucharEstadoAdmin(datos.telefono); 
+            pedirPermisoNotificaciones(datos.telefono); // Llama a la función del Token
         }
 
-        // --- Obtener fecha local exacta (YYYY-MM-DD) ---
-        function obtenerFechaLocal() {
-            const d = new Date();
-            const year = d.getFullYear();
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        }
-
-        // --- Verificación y reseteo diario / limpieza de 6 días ---
-        function verificarReseteoDiarioYHistorial(telefono) {
-            const hoy = obtenerFechaLocal();
-            const refConductor = db.ref('conductores/' + telefono);
-
-            refConductor.once('value', snap => {
-                const val = snap.val() || {};
-                const ultimoDiaRegistrado = val.ultimoDiaRegistrado;
-
-                if (ultimoDiaRegistrado && ultimoDiaRegistrado !== hoy) {
-                    const gananciaAnterior = val.totalGeneradoHoy || 0;
-                    if (gananciaAnterior > 0) {
-                        db.ref(`conductores/${telefono}/historialGanancias/${ultimoDiaRegistrado}`).set({
-                            fecha: ultimoDiaRegistrado,
-                            total: gananciaAnterior
-                        });
-                    }
-                    refConductor.update({
-                        totalGeneradoHoy: 0,
-                        ultimoDiaRegistrado: hoy
-                    });
-                } else if (!ultimoDiaRegistrado) {
-                    refConductor.update({ ultimoDiaRegistrado: hoy });
-                }
-
-                limpiarRegistrosAntiguos(telefono);
-            });
-        }
-
-        function limpiarRegistrosAntiguos(telefono) {
-            const refHistorial = db.ref(`conductores/${telefono}/historialGanancias`);
-            refHistorial.once('value', snap => {
-                if (snap.exists()) {
-                    const ahora = new Date();
-                    snap.forEach(child => {
-                        const [y, m, d_part] = child.key.split('-').map(Number);
-                        const fechaRegistro = new Date(y, m - 1, d_part);
-                        const diferenciaDias = (ahora - fechaRegistro) / (1000 * 60 * 60 * 24);
-                        if (diferenciaDias > 6) {
-                            child.ref.remove();
-                        }
-                    });
-                }
-            });
-        }
-
-        function abrirHistorial() {
-            document.getElementById('modalHistorial').style.display = 'block';
-            const contenedor = document.getElementById('listaHistorial');
-            contenedor.innerHTML = "Cargando registros...";
-
-            if (!datos || !datos.telefono) return;
-
-            db.ref(`conductores/${datos.telefono}/historialGanancias`).once('value', snap => {
-                let html = "";
-                if (!snap.exists()) {
-                    html = "<p style='color:#777; text-align:center;'>No hay registros anteriores guardados.</p>";
-                } else {
-                    let registros = [];
-                    snap.forEach(child => { registros.push(child.val()); });
-                    registros.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-
-                    registros.forEach(reg => {
-                        html += `<div style="display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #333;">
-                                    <span>📅 ${reg.fecha}</span>
-                                    <strong style="color: #FFC107;">B/. ${parseFloat(reg.total).toFixed(2)}</strong>
-                               </div>`;
-                    });
-                }
-                contenedor.innerHTML = html;
-            });
-        }
-
-        function cerrarHistorial() {
-            document.getElementById('modalHistorial').style.display = 'none';
-        }
-
+        // FUNCIÓN PARA OBTENER EL TOKEN Y PERMITIR NOTIFICACIONES FLOTANTES
         function pedirPermisoNotificaciones(telefono) {
             if ('Notification' in window) {
                 Notification.requestPermission().then(perm => {
@@ -234,6 +135,7 @@
                         messaging.getToken({ vapidKey: 'BBUHPimNFxcFynE28L8yDonGLzDqi8P7x2L5sKlFPpqoId-_Lkl6WURXgPHH4lTTQVtlpa_WRNO9-Sq4SSxHFn0' }).then(token => {
                             if (token) {
                                 db.ref('conductores/' + telefono + '/fcmToken').set(token);
+                                console.log("Token FCM guardado.");
                             }
                         }).catch(err => console.log('Error FCM:', err));
                     }
@@ -242,35 +144,16 @@
         }
 
         function mostrarFormulario() { 
-            if (datos) {
-                document.getElementById('inNombre').value = datos.nombre || '';
-                document.getElementById('inTel').value = datos.telefono || '';
-                document.getElementById('inVehiculo').value = datos.vehiculo || '';
-                document.getElementById('inColor').value = datos.color || '';
-                document.getElementById('inPlaca').value = datos.placa || '';
-            }
             document.getElementById('area-viajes').style.display = 'none'; 
             document.getElementById('formularioDatos').style.display = 'block'; 
         }
 
-        function cerrarFormulario() {
-            if (!datos || !datos.telefono) return alert("Debes configurar tus datos para continuar.");
-            document.getElementById('formularioDatos').style.display = 'none';
-            document.getElementById('area-viajes').style.display = 'block';
-        }
-
-        function estatutoAdmin(telefono) {
+        function escucharEstadoAdmin(telefono) {
             db.ref('conductores/' + telefono).on('value', snap => {
                 const conductorData = snap.val();
                 adminEstado = conductorData ? (conductorData.estado || 'pendiente') : 'pendiente';
-                
-                if (conductorData && conductorData.unidad) {
-                    document.getElementById('txtUnidad').textContent = conductorData.unidad;
-                } else {
-                    document.getElementById('txtUnidad').textContent = "Sin Asignar";
-                }
-
-                if(conductorData && conductorData.totalGeneradoHoy !== undefined) {
+                // También puedes actualizar la ganancia aquí si lo deseas
+                if(conductorData && conductorData.totalGeneradoHoy) {
                     document.getElementById('ganancia').innerText = "B/. " + parseFloat(conductorData.totalGeneradoHoy).toFixed(2);
                 }
                 actualizarInterfaz();
@@ -353,17 +236,18 @@
             }
 
             db.ref('viajes').orderByChild('estado').equalTo('pendiente').on('child_added', (snap) => {
-                if (!estoyEnViajeActivo && conductorConectado) {
+                if (!estoyEnViajeActivo) {
                     const viaje = snap.val();
                     reproducirSonido();
                     mostrarPedido(snap.key, viaje);
 
+                    // ALERTA FLOTANTE ESTILO WHATSAPP (SI LA APP ESTÁ ABIERTA DE FONDO)
                     if (Notification.permission === 'granted') {
                         navigator.serviceWorker.ready.then(reg => {
                             reg.showNotification("🚕 ¡Nuevo viaje disponible!", {
                                 body: `De ${viaje.origen} a ${viaje.destino} - B/. ${viaje.precio}`,
                                 icon: './icon-192.png',
-                                badge: './badge.png',
+                                badge: './badge.png', // <-- EL SECRETO DEL ICONO BLANCO TRANSPARENTE
                                 vibrate: [200,100,200],
                                 requireInteraction: true,
                                 tag: 'viaje-nuevo'
@@ -395,27 +279,14 @@
 
         window.aceptar = (id) => {
             if (adminEstado === 'bloqueado' || adminEstado === 'pendiente') return alert("❌ No puedes aceptar viajes porque tu cuenta está bloqueada.");
-            const viajeRef = db.ref('viajes/' + id);
-            viajeRef.transaction(currentData => {
-                if (currentData && currentData.estado === 'pendiente') {
-                    currentData.estado = 'conductor_asignado';
-                    currentData.conductorNombre = datos.nombre;
-                    currentData.conductorCel = datos.telefono;
-                    currentData.conductorVehiculo = datos.vehiculo;
-                    currentData.conductorColor = datos.color;
-                    currentData.conductorPlaca = datos.placa;
-                    currentData.tiempoAsignacion = firebase.database.ServerValue.TIMESTAMP;
-                    return currentData;
-                }
-                return; 
-            }, (error, committed) => {
-                if (error) {
-                    console.error('Error al aceptar el viaje:', error);
-                } else if (!committed) {
-                    alert("⚠️ Lo siento, este viaje ya fue tomado por otro conductor.");
-                    const tarj = document.getElementById('pedido_' + id);
-                    if (tarj) tarj.remove();
-                }
+            db.ref('viajes/' + id).update({
+                estado: 'conductor_asignado',
+                conductorNombre: datos.nombre,
+                conductorCel: datos.telefono,
+                conductorVehiculo: datos.vehiculo,
+                conductorColor: datos.color,
+                conductorPlaca: datos.placa,
+                tiempoAsignacion: firebase.database.ServerValue.TIMESTAMP
             });
         };
 
@@ -426,87 +297,46 @@
                 relojHtml = `<div id="reloj-conductor" style="text-align:center; color:#ffc107; font-weight:bold; margin-bottom:15px; font-size:16px;">⏱️ Calculando tiempo...</div>`;
             }
 
+            // Validar teléfono del pasajero para botón de WhatsApp
             let celPasajero = String(v.telefono || "").replace(/\D/g, '');
             if (celPasajero.length === 8) celPasajero = "507" + celPasajero;
 
             document.getElementById('contenedor').innerHTML = `
                 <div class="card">
-                    <div style="background:${esLlegada ? '#28a745' : '#1a1a1a'}; border: 1px solid #28a745; padding:10px; border-radius:5px; text-align:center; margin-bottom:15px; font-weight:bold; color:${esLlegada ? '#fff' : '#28a745'};">
-                        ${esLlegada ? '🟢 PASAJERO NOTIFICADO (ESTADO VERDE)' : '✅ VIAJE EN CURSO'}
-                    </div>
-                    <div class="info-row">👤 <strong>Cliente:</strong> ${v.pasajero_nombre || 'Cliente'}</div>
+                    <div style="background:#28a745; padding:10px; border-radius:5px; text-align:center; margin-bottom:15px; font-weight:bold;">✅ VIAJE EN CURSO</div>
+                    <div class="info-row">👤 <strong>Cliente:</strong> ${v.pasajero_nombre}</div>
                     <div class="info-row">📍 <strong>Origen:</strong> ${v.origen}</div>
                     <div class="info-row">🏁 <strong>Destino:</strong> ${v.destino}</div>
                     <div class="precio">Total: B/. ${v.precio || "0.00"}</div>
                     ${relojHtml}
-                    <button style="background:${esLlegada ? '#6c757d' : '#28a745'}; color:white;" onclick="actualizar('${id}', 'conductor_llego')">${esLlegada ? '✓ PASAJERO YA NOTIFICADO' : '📍 LLEGUÉ AL PUNTO (NOTIFICAR VERDE)'}</button>
+                    <button style="background:${esLlegada ? '#6c757d' : '#007bff'}; color:white;" onclick="actualizar('${id}', 'conductor_llego')">${esLlegada ? '✓ PASAJERO NOTIFICADO' : '📍 LLEGUÉ AL PUNTO'}</button>
                     <button class="btn-whatsapp" onclick="window.open('https://wa.me/${celPasajero}', '_blank')">💬 WHATSAPP</button>
                     <button class="btn-iniciar" onclick="actualizar('${id}', 'viaje_iniciado')">▶️ INICIAR VIAJE</button>
-                    <button class="btn-finalizar" onclick="finalizarViajeSeguro('${id}')">🏁 FINALIZAR VIAJE</button>
+                    <button class="btn-finalizar" onclick="actualizar('${id}', 'completado')">🏁 FINALIZAR VIAJE</button>
                 </div>
             `;
         }
 
         window.actualizar = (id, estado) => {
-            db.ref('viajes/' + id).update({ estado: estado });
-        };
-
-        window.finalizarViajeSeguro = (id) => {
-            if (!datos || !datos.telefono) {
-                alert("⚠️ Error: No se encontraron los datos del conductor.");
-                return;
+            if (estado === 'conductor_llego') {
+                if (audioLlego) {
+                    audioLlego.currentTime = 0;
+                    audioLlego.play().catch(e => console.log("Error al reproducir audio llegó:", e));
+                }
             }
-
-            const viajeRef = db.ref('viajes/' + id);
-            viajeRef.once('value', snap => {
-                const viaje = snap.val();
-                if (!viaje) return;
-                const precioViaje = parseFloat(viaje.precio || 0);
-                const hoy = obtenerFechaLocal();
-
-                viajeRef.update({ estado: 'completado' }).then(() => {
-                    // 1. Actualizar acumulado de ganancias del conductor de forma segura
-                    const refConductor = db.ref('conductores/' + datos.telefono);
-                    refConductor.once('value', snapCond => {
-                        const actual = snapCond.val() || {};
-                        const gananciaActual = parseFloat(actual.totalGeneradoHoy || 0);
-                        const nuevoTotal = gananciaActual + precioViaje;
-                        
-                        refConductor.update({ 
-                            totalGeneradoHoy: nuevoTotal,
-                            ultimoDiaRegistrado: hoy
-                        }).catch(err => console.error("Error actualizando perfil del conductor:", err));
-                    });
-
-                    // 2. Guardar en reportes diarios
-                    db.ref(`reportes_diarios/${datos.telefono}/${hoy}/${id}`).set({
-                        origen: viaje.origen || 'No especificado',
-                        destino: viaje.destino || 'No especificado',
-                        precio: precioViaje,
-                        cliente: viaje.pasajero_nombre || 'Cliente',
-                        timestamp: firebase.database.ServerValue.TIMESTAMP
-                    }).catch(err => console.error("Error guardando reporte diario:", err));
-
+            db.ref('viajes/' + id).update({ estado: estado }).then(() => {
+                if(estado === 'completado') {
                     document.getElementById('contenedor').innerHTML = '';
                     estoyEnViajeActivo = false;
                     if(intervaloReloj) clearInterval(intervaloReloj);
-                }).catch(err => {
-                    console.error("Error al finalizar:", err);
-                    alert("No se pudo finalizar el viaje. Inténtalo de nuevo.");
-                });
+                }
             });
         };
         
         function guardarDatos() {
             const tel = document.getElementById('inTel').value.replace(/[^0-9]/g, '');
             if(tel.length < 8) return alert("Número inválido");
-            datos = { 
-                nombre: document.getElementById('inNombre').value, 
-                telefono: tel, 
-                vehiculo: document.getElementById('inVehiculo').value, 
-                color: document.getElementById('inColor').value, 
-                placa: document.getElementById('inPlaca').value 
-            };
+            datos = { nombre: document.getElementById('inNombre').value, telefono: tel, vehiculo: document.getElementById('inVehiculo').value, color: document.getElementById('inColor').value, placa: document.getElementById('inPlaca').value };
             localStorage.setItem('datos_conductor', JSON.stringify(datos));
             db.ref('conductores/' + tel).update(datos).then(() => location.reload());
         }

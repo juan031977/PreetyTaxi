@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reporte Diario - ClickGoTaxi</title>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<style>
+body{font-family:'Segoe UI',sans-serif;background:#f0f2f5;padding:15px;}
+.container{max-width:1000px;margin:auto;}
+.card{background:white;padding:20px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.1);margin-bottom:20px;}
+h2{text-align:center;margin:0 0 10px 0;}
+.controls{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:15px;}
+input,button{padding:12px;border-radius:8px;border:1px solid #ccc;font-size:14px;}
+button{background:#ffc107;font-weight:bold;cursor:pointer;border:none;}
+button.btn-green{background:#28a745;color:white;}
+button.btn-volver{background:#6c757d;color:white;}
+table{width:100%;border-collapse:collapse;background:white;border-radius:12px;overflow:hidden;}
+th,td{padding:12px;text-align:left;border-bottom:1px solid #eee;font-size:13px;}
+th{background:#000;color:#ffc107;}
+.total-box{display:flex;gap:15px;justify-content:center;flex-wrap:wrap;margin-top:15px;}
+.total-item{background:#111;color:white;padding:15px 20px;border-radius:10px;text-align:center;min-width:120px;}
+.total-item span{color:#ffc107;font-size:22px;font-weight:bold;display:block;}
+.badge{padding:3px 8px;border-radius:20px;font-size:11px;font-weight:bold;}
+</style>
+</head>
+<body>
+<div class="container">
+<button class="btn btn-volver" onclick="window.history.back()" style="margin-bottom: 15px;">⬅ Volver al Admin</button>
+<div class="card">
+<h2>📊 Reporte Diario de Viajes</h2>
+<p style="text-align:center;color:#666;font-size:13px;">Control de viajes realizados y ganancias por conductor</p>
+<div class="controls">
+<input type="date" id="fecha" />
+<button onclick="generarReporte()">🔍 Ver Reporte</button>
+<button onclick="setHoy()">Hoy</button>
+<button class="btn-green" onclick="exportarExcel()">📥 Exportar Excel</button>
+</div>
+<div class="total-box">
+<div class="total-item">Total Viajes<span id="total-viajes">0</span></div>
+<div class="total-item">Total Movido<span id="total-plata">B/. 0.00</span></div>
+<div class="total-item">Conductores Activos<span id="total-conductores">0</span></div>
+<div class="total-item">Deuda Acumulada (B/.1 x conductor)<span id="total-ganancia">B/. 0.00</span></div>
+</div>
+</div>
+
+<div class="card">
+<table>
+<thead>
+<tr>
+<th>Conductor</th>
+<th>Celular</th>
+<th>Viajes del Día</th>
+<th>Total Generado (tarifas)</th>
+<th>Promedio x Viaje</th>
+</tr>
+</thead>
+<tbody id="lista-reporte">
+<tr><td colspan="5" style="text-align:center;color:#999;">Selecciona una fecha y dale a Ver Reporte</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<script>
+const firebaseConfig = { 
+    apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", 
+    databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/",
+    projectId: "preetytaxiapp"
+};
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+function setHoy(){
+    const hoy = new Date().toISOString().split('T')[0];
+    document.getElementById('fecha').value = hoy;
+    generarReporte();
+}
+
+window.onload = setHoy;
+
+function generarReporte(){
+    const fechaStr = document.getElementById('fecha').value;
+    if(!fechaStr) return alert("Elige una fecha");
+    
+    const inicio = new Date(fechaStr + "T00:00:00").getTime();
+    const fin = new Date(fechaStr + "T23:59:59").getTime();
+    
+    document.getElementById('lista-reporte').innerHTML = '<tr><td colspan="5" style="text-align:center;">⏳ Cargando viajes...</td></tr>';
+
+    db.ref('viajes').once('value', snap=>{
+        const porConductor = {}; 
+        let totalViajes = 0;
+        let totalPlata = 0;
+
+        snap.forEach(child=>{
+            const v = child.val();
+            const ts = v.timestamp || parseInt(child.key);
+            if(!ts) return;
+            if(ts < inicio || ts > fin) return;
+            
+            // Solo procesar viajes completados
+            if(v.estado !== 'completado') return;
+
+            const cel = v.conductorCel || 'Sin conductor';
+            if(!porConductor[cel]){
+                porConductor[cel] = {nombre: v.conductorNombre || 'Desconocido', count:0, total:0};
+            }
+            porConductor[cel].count++;
+            
+            // Toma el precio numérico registrado al finalizar
+            const precio = parseFloat(v.precio_numerico || v.precio || 0);
+            porConductor[cel].total += precio;
+            totalViajes++;
+            totalPlata += precio;
+        });
+
+        const tbody = document.getElementById('lista-reporte');
+        tbody.innerHTML = "";
+
+        if(Object.keys(porConductor).length === 0){
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;">No hay viajes completados en esta fecha</td></tr>';
+        } else {
+            const lista = Object.entries(porConductor).sort((a,b)=> b[1].count - a[1].count);
+            lista.forEach(([cel, data])=>{
+                const promedio = data.count>0 ? (data.total/data.count).toFixed(2) : "0.00";
+                tbody.innerHTML += `<tr>
+                    <td><strong>${data.nombre}</strong></td>
+                    <td>${cel}</td>
+                    <td><span class="badge" style="background:#ffc107;color:black;">${data.count} viajes</span></td>
+                    <td>B/. ${data.total.toFixed(2)}</td>
+                    <td>B/. ${promedio}</td>
+                </tr>`;
+            });
+        }
+
+        document.getElementById('total-viajes').innerText = totalViajes;
+        document.getElementById('total-plata').innerText = 'B/. ' + totalPlata.toFixed(2);
+        document.getElementById('total-conductores').innerText = Object.keys(porConductor).length;
+        document.getElementById('total-ganancia').innerText = 'B/. ' + (Object.keys(porConductor).length * 1).toFixed(2);
+    });
+}
+
+function exportarExcel(){
+    const tabla = document.querySelector('table');
+    let csv = [];
+    for(let row of tabla.rows){
+        let cols = [];
+        for(let cell of row.cells){
+            cols.push('"' + cell.innerText.replace(/"/g,'""') + '"');
+        }
+        csv.push(cols.join(','));
+    }
+    const fecha = document.getElementById('fecha').value || 'reporte';
+    const blob = new Blob([csv.join('\n')], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `reporte_${fecha}.csv`;
+    a.click();
+}
+</script>
+</body>
+</html>

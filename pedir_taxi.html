@@ -261,10 +261,22 @@
 </div>
 <div id="modal-soporte" class="modal-overlay">
     <div class="modal-content">
-        <h3 style="color:#dc3545; margin-top:0;">Servicio al Cliente</h3>
-        <p style="font-size:14px; color:#ccc;">¿Tuviste algún problema con el conductor o el viaje?</p>
-        <textarea id="texto-queja" class="reporte-input" placeholder="Escribe tu reporte o queja aquí..."></textarea>
-        <button class="btn-soporte" onclick="enviarQueja()">Enviar Reporte al Administrador</button>
+        <h3 style="color:#dc3545; margin-top:0;">Quejas y Sugerencias</h3>
+        <p style="font-size:14px; color:#ccc;">Tu mensaje llegará a <strong>clkgotaxi@hotmail.com</strong></p>
+        
+        <label style="display:block; text-align:left; color:#aaa; font-size:12px; margin-top:10px;">Tu Nombre *</label>
+        <input type="text" id="queja-nombre" placeholder="Nombre completo" style="width:100%; padding:10px; margin-top:4px; border-radius:8px; border:1px solid #444; background:#111; color:white; box-sizing:border-box;">
+        
+        <label style="display:block; text-align:left; color:#aaa; font-size:12px; margin-top:10px;">Tu Teléfono *</label>
+        <input type="tel" id="queja-telefono" placeholder="Ej: 50760000000" style="width:100%; padding:10px; margin-top:4px; border-radius:8px; border:1px solid #444; background:#111; color:white; box-sizing:border-box;">
+        
+        <label style="display:block; text-align:left; color:#aaa; font-size:12px; margin-top:10px;">Tu Correo *</label>
+        <input type="email" id="queja-correo" placeholder="tucorreo@ejemplo.com" style="width:100%; padding:10px; margin-top:4px; border-radius:8px; border:1px solid #444; background:#111; color:white; box-sizing:border-box;">
+        
+        <label style="display:block; text-align:left; color:#aaa; font-size:12px; margin-top:10px;">Mensaje / Queja / Sugerencia *</label>
+        <textarea id="texto-queja" class="reporte-input" placeholder="Escribe tu queja o sugerencia aquí..." style="margin-top:4px;"></textarea>
+        
+        <button class="btn-soporte" id="btn-enviar-queja" onclick="enviarQueja()">Enviar a clkgotaxi@hotmail.com</button>
         <button style="background:transparent; color:#aaa; border:none; margin-top:15px; cursor:pointer;" onclick="cerrarSoporte()">Cancelar</button>
     </div>
 </div>
@@ -282,10 +294,6 @@
     let relojPasajeroInterval = null; 
     let calificacionSeleccionada = 0;
     let viajeCompletadoData = null; 
-    // Variables para mapa en vivo del conductor
-    let mapaVivo = null;
-    let markerConductor = null;
-    let listenerUbicacion = null;
     const PRECIOS_PH = { 'PH La Riviera Colonial': 1.75, 'Brisas del Pacífico': 1.75, 'PH Brisas Point': 1.75, 'PH Brisas Heights': 1.75, 'PH Golf Gardens': 2.50, 'Club De Golf': 2.50, 'PH Alpes': 2.50, 'PH Everest': 2.50, 'PH Bejin': 2.50, 'PH Olimpus': 2.50, 'PH Mont Blanc': 2.50, 'PH Sierra Nevada': 2.50, 'PH Aventura': 3.00, 'PH Vallarta': 3.00, 'PH Noura': 3.00, 'PH Cavana': 3.00, 'Parque Rash': 3.00, 'PH Lagun': 1.50, 'PH Royal Village': 2.00, 'Oxford School': 3.00, 'Green City': 6.00, 'Golf Garden': 2.50, 'PH Ventura': 3.00 };
     const PRECIOS_VILLAS = { 'Lomas del Golf (Garita)': 1.50, 'Lomas del Golf (Adentro)': 1.75, 'Villas del Golf (Garita)': 1.50, 'Villas del Golf (Adentro)': 1.75, 'Monticello 1 (Garita)': 1.50, 'Monticello 1 (Adentro)': 1.75, 'Monticello 2 (Garita)': 1.50, 'Monticello 2 (Adentro)': 1.75, 'Villa Lido (Garita)': 1.50, 'Villa Lido (Adentro)': 1.75, 'Villa Alta (Garita)': 1.50, 'Villa Alta (Adentro)': 1.75, 'Villa Tivoli (Garita)': 1.50, 'Villa Tivoli (Adentro)': 1.75, 'Villa Navona (Garita)': 1.50, 'Villa Navona (Adentro)': 1.75, 'Villa Tiber (Garita)': 1.50, 'Villa Tiber (Adentro)': 1.75 };
     const PRECIOS_ESCUELAS = { 'El IJA': 2.50, 'La Internacional': 2.50, 'Panamerican School': 2.50, 'Saint George': 1.75, 'SAP': 1.50, 'Smart Academy': 1.50, 'Preparatory High School': 1.50, 'AIP': 1.50, 'Oxford School': 3.00, 'Metropolitan School of Panama': 6.00 };
@@ -699,14 +707,6 @@
                             <p><strong>Tel:</strong> +${numeroConductor}</p>
                             <p><strong>Vehículo:</strong> ${viaje.conductorVehiculo} ${viaje.conductorColor}</p>
                             <p><strong>Placa:</strong> ${viaje.conductorPlaca}</p>
-                            
-                            <!-- MAPA EN VIVO DEL CONDUCTOR -->
-                            <div style="margin: 15px 0;">
-                                <p style="color:#ffc107; font-weight:bold; font-size:13px; margin-bottom:8px;">📍 Ubicación del conductor en vivo</p>
-                                <div id="mapa-vivo" style="width:100%; height:250px; border-radius:12px; border:2px solid #ffc107; background:#111;"></div>
-                                <p id="texto-ubicacion-vivo" style="font-size:11px; color:#888; margin-top:5px; text-align:center;">Esperando señal GPS del conductor...</p>
-                            </div>
-                            
                             <div style="text-align: center; margin-top: 15px; margin-bottom: 10px;">
                                 <img src="${fotoCarro}" style="width: 100%; border-radius: 8px; object-fit: cover; border: 1px solid #444;">
                             </div>
@@ -721,9 +721,6 @@
                             <button class="btn-whatsapp" onclick="event.stopPropagation(); window.open('https://wa.me/${numeroConductor}?text=Hola ${viaje.conductorNombre}, soy ${viaje.pasajero_nombre}', '_blank')">💬 Enviar WhatsApp</button>
                             <button class="btn-cancelar-viaje" onclick="cancelarViajeCliente('${id}')">❌ Cancelar Viaje</button>
                         </div>`;
-                        
-                        // Iniciar mapa en vivo cuando el pasajero vea el taxi en camino
-                        setTimeout(() => iniciarMapaVivo(id), 500);
                     if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
                     relojPasajeroInterval = setInterval(() => {
                         if(!viaje.tiempoAsignacion) return; 
@@ -811,67 +808,11 @@
         cerrarBanners();
         localStorage.removeItem('viajeActivoID');
         viajeID = null; 
-        detenerMapaVivo();
         const btnSolicitar = document.getElementById('btn-solicitar'); 
         btnSolicitar.disabled = false; 
         btnSolicitar.innerText = "SOLICITAR TAXI"; 
         document.getElementById('estado-viaje-container').innerHTML = ""; 
     } 
-
-    // ========== MAPA EN VIVO DEL CONDUCTOR ==========
-    function iniciarMapaVivo(viajeId) {
-        const divMapa = document.getElementById('mapa-vivo');
-        if (!divMapa || !google || !google.maps) return;
-
-        // Crear mapa centrado en Panamá (se actualizará con la ubicación real)
-        mapaVivo = new google.maps.Map(divMapa, {
-            zoom: 15,
-            center: { lat: 9.0729, lng: -79.4451 },
-            mapTypeControl: false,
-            streetViewControl: false,
-            fullscreenControl: false
-        });
-
-        // Icono de taxi
-        const iconoTaxi = {
-            url: "https://maps.google.com/mapfiles/kml/shapes/cabs.png",
-            scaledSize: new google.maps.Size(40, 40)
-        };
-
-        markerConductor = new google.maps.Marker({
-            map: mapaVivo,
-            icon: iconoTaxi,
-            title: "Tu conductor"
-        });
-
-        // Escuchar ubicación en tiempo real desde Firebase
-        if (listenerUbicacion) db.ref('viajes/' + viajeId + '/conductorUbicacion').off('value', listenerUbicacion);
-        
-        listenerUbicacion = db.ref('viajes/' + viajeId + '/conductorUbicacion').on('value', snap => {
-            const ubi = snap.val();
-            if (ubi && ubi.lat && ubi.lng) {
-                const pos = { lat: ubi.lat, lng: ubi.lng };
-                markerConductor.setPosition(pos);
-                mapaVivo.panTo(pos);
-                
-                const texto = document.getElementById('texto-ubicacion-vivo');
-                if (texto) {
-                    const hace = Math.round((Date.now() - (ubi.timestamp || Date.now())) / 1000);
-                    texto.innerHTML = `🟢 Conductor en movimiento · actualizado hace ${hace < 5 ? 'segundos' : hace + 's'}`;
-                    texto.style.color = '#28a745';
-                }
-            }
-        });
-    }
-
-    function detenerMapaVivo() {
-        if (listenerUbicacion && viajeID) {
-            db.ref('viajes/' + viajeID + '/conductorUbicacion').off('value');
-            listenerUbicacion = null;
-        }
-        mapaVivo = null;
-        markerConductor = null;
-    }
     function marcarEstrellas(valor, tipo) {
         calificacionSeleccionada = valor;
         const estrellas = document.querySelectorAll(`#estrellas-${tipo} span`);
@@ -902,23 +843,81 @@
         document.getElementById('modal-calificar').style.display = 'none';
         mostrarViajeFinalizado(viajeCompletadoData);
     }
-    function abrirSoporte() { document.getElementById('modal-soporte').style.display = 'flex'; }
+    function abrirSoporte() { 
+        const nombreGuardado = localStorage.getItem('nombre_pasajero') || localStorage.getItem('userName') || '';
+        const telGuardado = localStorage.getItem('telefono_pasajero') || localStorage.getItem('userCel') || '';
+        document.getElementById('queja-nombre').value = nombreGuardado;
+        document.getElementById('queja-telefono').value = telGuardado;
+        document.getElementById('queja-correo').value = '';
+        document.getElementById('texto-queja').value = '';
+        document.getElementById('modal-soporte').style.display = 'flex'; 
+    }
     function cerrarSoporte() { document.getElementById('modal-soporte').style.display = 'none'; }
+    
     function enviarQueja() {
-        const texto = document.getElementById('texto-queja').value;
-        if (!texto) return alert("Escribe un comentario.");
+        const nombre = document.getElementById('queja-nombre').value.trim();
+        const telefono = document.getElementById('queja-telefono').value.trim();
+        const correo = document.getElementById('queja-correo').value.trim();
+        const texto = document.getElementById('texto-queja').value.trim();
+        
+        if (!nombre) return alert("Por favor escribe tu nombre.");
+        if (!telefono) return alert("Por favor escribe tu número de teléfono.");
+        if (!correo || !correo.includes('@')) return alert("Por favor escribe un correo válido.");
+        if (!texto) return alert("Por favor escribe tu queja o sugerencia.");
+        
+        const btn = document.getElementById('btn-enviar-queja');
+        btn.disabled = true;
+        btn.innerText = "Enviando...";
+        
         const quejaID = Date.now();
+        
+        // 1. Guardar en Firebase
         db.ref('quejas/' + quejaID).set({
             viajeID: viajeID || 'Sin viaje activo',
-            pasajero: localStorage.getItem('nombre_pasajero') || 'Anónimo',
-            telefono_pasajero: localStorage.getItem('telefono_pasajero') || '',
+            nombre: nombre,
+            telefono: telefono,
+            correo: correo,
             mensaje: texto,
-            fecha: new Date().toLocaleString(),
+            fecha: new Date().toLocaleString('es-PA'),
             estado: 'pendiente_revision'
-        }).then(() => {
-            alert("Tu reporte ha sido enviado a la administración.");
+        });
+        
+        // 2. Enviar correo con Web3Forms (tu access key)
+        fetch("https://api.web3forms.com/submit", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            body: JSON.stringify({
+                access_key: "3e91680b-8172-40e7-b991-7b4a9c672222",
+                subject: "🚕 Nueva Queja/Sugerencia - ClickGoTaxi",
+                from_name: "ClickGoTaxi App",
+                name: nombre,
+                email: correo,
+                phone: telefono,
+                message: texto,
+                Viaje_ID: viajeID || "Sin viaje activo",
+                Fecha: new Date().toLocaleString("es-PA")
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert("✅ ¡Mensaje enviado correctamente a clkgotaxi@hotmail.com!");
+            } else {
+                alert("✅ Mensaje guardado. Revisa tu correo (también Spam).");
+            }
             cerrarSoporte();
-            document.getElementById('texto-queja').value = '';
+        })
+        .catch(err => {
+            console.error(err);
+            alert("✅ Tu mensaje fue registrado. El administrador lo verá en el sistema.");
+            cerrarSoporte();
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerText = "Enviar a clkgotaxi@hotmail.com";
         });
     }
 </script>

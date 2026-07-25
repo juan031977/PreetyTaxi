@@ -261,22 +261,10 @@
 </div>
 <div id="modal-soporte" class="modal-overlay">
     <div class="modal-content">
-        <h3 style="color:#dc3545; margin-top:0;">Quejas y Sugerencias</h3>
-        <p style="font-size:14px; color:#ccc;">Tu mensaje llegará a <strong>clkgotaxi@hotmail.com</strong></p>
-        
-        <label style="display:block; text-align:left; color:#aaa; font-size:12px; margin-top:10px;">Tu Nombre *</label>
-        <input type="text" id="queja-nombre" placeholder="Nombre completo" style="width:100%; padding:10px; margin-top:4px; border-radius:8px; border:1px solid #444; background:#111; color:white; box-sizing:border-box;">
-        
-        <label style="display:block; text-align:left; color:#aaa; font-size:12px; margin-top:10px;">Tu Teléfono *</label>
-        <input type="tel" id="queja-telefono" placeholder="Ej: 50760000000" style="width:100%; padding:10px; margin-top:4px; border-radius:8px; border:1px solid #444; background:#111; color:white; box-sizing:border-box;">
-        
-        <label style="display:block; text-align:left; color:#aaa; font-size:12px; margin-top:10px;">Tu Correo *</label>
-        <input type="email" id="queja-correo" placeholder="tucorreo@ejemplo.com" style="width:100%; padding:10px; margin-top:4px; border-radius:8px; border:1px solid #444; background:#111; color:white; box-sizing:border-box;">
-        
-        <label style="display:block; text-align:left; color:#aaa; font-size:12px; margin-top:10px;">Mensaje / Queja / Sugerencia *</label>
-        <textarea id="texto-queja" class="reporte-input" placeholder="Escribe tu queja o sugerencia aquí..." style="margin-top:4px;"></textarea>
-        
-        <button class="btn-soporte" id="btn-enviar-queja" onclick="enviarQueja()">Enviar a clkgotaxi@hotmail.com</button>
+        <h3 style="color:#dc3545; margin-top:0;">Servicio al Cliente</h3>
+        <p style="font-size:14px; color:#ccc;">¿Tuviste algún problema con el conductor o el viaje?</p>
+        <textarea id="texto-queja" class="reporte-input" placeholder="Escribe tu reporte o queja aquí..."></textarea>
+        <button class="btn-soporte" onclick="enviarQueja()">Enviar Reporte al Administrador</button>
         <button style="background:transparent; color:#aaa; border:none; margin-top:15px; cursor:pointer;" onclick="cerrarSoporte()">Cancelar</button>
     </div>
 </div>
@@ -293,6 +281,7 @@
     let destinoTipo = null, destinoSeleccionado = null, destinoPrecio = 0;
     let relojPasajeroInterval = null; 
     let calificacionSeleccionada = 0;
+    let ultimoEstadoViajeUI = null; // Evitar re-dibujar la card del conductor
     let viajeCompletadoData = null; 
     const PRECIOS_PH = { 'PH La Riviera Colonial': 1.75, 'Brisas del Pacífico': 1.75, 'PH Brisas Point': 1.75, 'PH Brisas Heights': 1.75, 'PH Golf Gardens': 2.50, 'Club De Golf': 2.50, 'PH Alpes': 2.50, 'PH Everest': 2.50, 'PH Bejin': 2.50, 'PH Olimpus': 2.50, 'PH Mont Blanc': 2.50, 'PH Sierra Nevada': 2.50, 'PH Aventura': 3.00, 'PH Vallarta': 3.00, 'PH Noura': 3.00, 'PH Cavana': 3.00, 'Parque Rash': 3.00, 'PH Lagun': 1.50, 'PH Royal Village': 2.00, 'Oxford School': 3.00, 'Green City': 6.00, 'Golf Garden': 2.50, 'PH Ventura': 3.00 };
     const PRECIOS_VILLAS = { 'Lomas del Golf (Garita)': 1.50, 'Lomas del Golf (Adentro)': 1.75, 'Villas del Golf (Garita)': 1.50, 'Villas del Golf (Adentro)': 1.75, 'Monticello 1 (Garita)': 1.50, 'Monticello 1 (Adentro)': 1.75, 'Monticello 2 (Garita)': 1.50, 'Monticello 2 (Adentro)': 1.75, 'Villa Lido (Garita)': 1.50, 'Villa Lido (Adentro)': 1.75, 'Villa Alta (Garita)': 1.50, 'Villa Alta (Adentro)': 1.75, 'Villa Tivoli (Garita)': 1.50, 'Villa Tivoli (Adentro)': 1.75, 'Villa Navona (Garita)': 1.50, 'Villa Navona (Adentro)': 1.75, 'Villa Tiber (Garita)': 1.50, 'Villa Tiber (Adentro)': 1.75 };
@@ -664,8 +653,15 @@
     function escucharEstadoViaje(id) { 
         db.ref('viajes/' + id).on('value', (snapshot) => { 
             const viaje = snapshot.val(); 
-            if (!viaje) return; 
-            if (viaje.estado === 'conductor_asignado') { 
+            if (!viaje) return;
+            
+            // Solo re-dibujar la UI cuando CAMBIA el estado (no en cada update de GPS)
+            if (viaje.estado === ultimoEstadoViajeUI && viaje.estado === 'conductor_asignado') {
+                return; // Ya se mostró la card, no volver a dibujar
+            }
+            
+            if (viaje.estado === 'conductor_asignado') {
+                ultimoEstadoViajeUI = 'conductor_asignado';
                 const numeroConductor = viaje.conductorCel || 'Sin número'; 
                 db.ref('conductores/' + numeroConductor).once('value').then(snap => {
                     const datosConductor = snap.val() || {};
@@ -693,7 +689,7 @@
                             <p style="font-size: 16px; font-weight: bold; margin: 5px 0;">${estrellasPromedio}</p>
                             <p style="color: #555; font-size: 13px; margin: 5px 0; padding: 0 10px;">${viaje.conductorVehiculo} ${viaje.conductorColor} - ${viaje.conductorPlaca}</p>
                             <div style="padding: 15px;">
-                                <button onclick="document.getElementById('ui-driver-card').style.display='none'; document.getElementById('ui-taxi-camino').style.display='block';" style="background: #28a745; color: white; width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer;">ACEPTAR VIAJE</button>
+                                <button onclick="aceptarConductorUI()" style="background: #28a745; color: white; width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer;">ACEPTAR VIAJE</button>
                                 <button onclick="rechazarConductorLocal('${id}')" style="background: #ffc107; color: black; width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin-top: 10px; cursor: pointer;">NO, BUSCAR OTRO</button>
                                 <button class="btn-cancelar-viaje" onclick="cancelarViajeCliente('${id}')" style="margin-top: 10px;">❌ Cancelar Viaje</button>
                             </div>
@@ -744,21 +740,21 @@
                     }, 1000);
                 });
             } 
-            if (viaje.estado === 'conductor_llego') {
+            if (viaje.estado === 'conductor_llego' && ultimoEstadoViajeUI !== 'conductor_llego') {
+                ultimoEstadoViajeUI = 'conductor_llego';
                 if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
                 let elContenedorReloj = document.getElementById('contenedor-reloj-pasajero');
                 if (elContenedorReloj) elContenedorReloj.innerHTML = `<p style="color: #28a745; font-weight: bold; margin: 0; text-align:center;">✅ El conductor ha llegado</p>`;
                 
-                // --- NUEVO: REPRODUCIR SONIDO DE LLEGADA ---
                 const audioLlego = document.getElementById('audioLlegoPasajero');
                 if (audioLlego) {
                     audioLlego.currentTime = 0;
                     audioLlego.play().catch(e => console.log("Error de audio:", e));
                 }
-                
                 mostrarNotificacionLlegada(viaje); 
             } 
-            if (viaje.estado === 'viaje_iniciado') { 
+            if (viaje.estado === 'viaje_iniciado' && ultimoEstadoViajeUI !== 'viaje_iniciado') {
+                ultimoEstadoViajeUI = 'viaje_iniciado';
                 if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
                 document.getElementById('estado-viaje-container').innerHTML = `
                     <div class="card-conductor">
@@ -769,14 +765,16 @@
                         <button class="btn-soporte" onclick="abrirSoporte()">🎧 Reportar Problema</button>
                     </div>`; 
             } 
-            if (viaje.estado === 'completado') { 
+            if (viaje.estado === 'completado' && ultimoEstadoViajeUI !== 'completado') {
+                ultimoEstadoViajeUI = 'completado';
                 if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
                 cerrarBanners();
                 localStorage.removeItem('viajeActivoID');
                 mostrarModalCalificacionConductor(viaje); 
                 db.ref('viajes/' + id).off(); 
             } 
-            if (viaje.estado === 'cancelado') { 
+            if (viaje.estado === 'cancelado' && ultimoEstadoViajeUI !== 'cancelado') {
+                ultimoEstadoViajeUI = 'cancelado';
                 if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
                 cerrarBanners();
                 alert("El viaje ha sido cancelado."); 
@@ -795,11 +793,23 @@
         const html = `<div style="position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:30px; border-radius:12px; z-index:10000; box-shadow:0 10px 40px rgba(0,0,0,0.3); text-align:center; max-width:400px;"><h3 style="color:#28a745; margin:0 0 15px;">Viaje Finalizado</h3><p style="color:#666;">Gracias por viajar con ClickGoTaxi</p><p style="font-size:24px; font-weight:bold; color:#333; margin:15px 0;">Total: B/. ${viaje.precio_numerico.toFixed(2)}</p><button onclick="location.reload()" style="background:#FFC107; color:#000; border:none; padding:12px 30px; border-radius:6px; cursor:pointer; font-weight:bold; margin-top:10px;">Nuevo Viaje</button></div>`; 
         document.body.insertAdjacentHTML('beforeend', html); 
     } 
+    function aceptarConductorUI() {
+        const card = document.getElementById('ui-driver-card');
+        const camino = document.getElementById('ui-taxi-camino');
+        if (card) card.style.display = 'none';
+        if (camino) camino.style.display = 'block';
+        // Iniciar mapa en vivo si existe la función
+        if (typeof iniciarMapaVivo === 'function' && viajeID) {
+            setTimeout(() => iniciarMapaVivo(viajeID), 300);
+        }
+    }
+
     function cancelarViajeCliente(id) { 
         if (confirm("¿Estás seguro de que deseas cancelar este viaje?")) { 
             if (relojPasajeroInterval) clearInterval(relojPasajeroInterval);
             cerrarBanners();
             localStorage.removeItem('viajeActivoID');
+            ultimoEstadoViajeUI = null;
             db.ref('viajes/' + id).off(); 
             db.ref('viajes/' + id).update({ estado: 'cancelado' }).then(() => { resetFormularioUI(); }); 
         } 
@@ -807,7 +817,8 @@
     function resetFormularioUI() { 
         cerrarBanners();
         localStorage.removeItem('viajeActivoID');
-        viajeID = null; 
+        viajeID = null;
+        ultimoEstadoViajeUI = null;
         const btnSolicitar = document.getElementById('btn-solicitar'); 
         btnSolicitar.disabled = false; 
         btnSolicitar.innerText = "SOLICITAR TAXI"; 
@@ -843,81 +854,23 @@
         document.getElementById('modal-calificar').style.display = 'none';
         mostrarViajeFinalizado(viajeCompletadoData);
     }
-    function abrirSoporte() { 
-        const nombreGuardado = localStorage.getItem('nombre_pasajero') || localStorage.getItem('userName') || '';
-        const telGuardado = localStorage.getItem('telefono_pasajero') || localStorage.getItem('userCel') || '';
-        document.getElementById('queja-nombre').value = nombreGuardado;
-        document.getElementById('queja-telefono').value = telGuardado;
-        document.getElementById('queja-correo').value = '';
-        document.getElementById('texto-queja').value = '';
-        document.getElementById('modal-soporte').style.display = 'flex'; 
-    }
+    function abrirSoporte() { document.getElementById('modal-soporte').style.display = 'flex'; }
     function cerrarSoporte() { document.getElementById('modal-soporte').style.display = 'none'; }
-    
     function enviarQueja() {
-        const nombre = document.getElementById('queja-nombre').value.trim();
-        const telefono = document.getElementById('queja-telefono').value.trim();
-        const correo = document.getElementById('queja-correo').value.trim();
-        const texto = document.getElementById('texto-queja').value.trim();
-        
-        if (!nombre) return alert("Por favor escribe tu nombre.");
-        if (!telefono) return alert("Por favor escribe tu número de teléfono.");
-        if (!correo || !correo.includes('@')) return alert("Por favor escribe un correo válido.");
-        if (!texto) return alert("Por favor escribe tu queja o sugerencia.");
-        
-        const btn = document.getElementById('btn-enviar-queja');
-        btn.disabled = true;
-        btn.innerText = "Enviando...";
-        
+        const texto = document.getElementById('texto-queja').value;
+        if (!texto) return alert("Escribe un comentario.");
         const quejaID = Date.now();
-        
-        // 1. Guardar en Firebase
         db.ref('quejas/' + quejaID).set({
             viajeID: viajeID || 'Sin viaje activo',
-            nombre: nombre,
-            telefono: telefono,
-            correo: correo,
+            pasajero: localStorage.getItem('nombre_pasajero') || 'Anónimo',
+            telefono_pasajero: localStorage.getItem('telefono_pasajero') || '',
             mensaje: texto,
-            fecha: new Date().toLocaleString('es-PA'),
+            fecha: new Date().toLocaleString(),
             estado: 'pendiente_revision'
-        });
-        
-        // 2. Enviar correo con Web3Forms (tu access key)
-        fetch("https://api.web3forms.com/submit", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            },
-            body: JSON.stringify({
-                access_key: "3e91680b-8172-40e7-b991-7b4a9c672222",
-                subject: "🚕 Nueva Queja/Sugerencia - ClickGoTaxi",
-                from_name: "ClickGoTaxi App",
-                name: nombre,
-                email: correo,
-                phone: telefono,
-                message: texto,
-                Viaje_ID: viajeID || "Sin viaje activo",
-                Fecha: new Date().toLocaleString("es-PA")
-            })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                alert("✅ ¡Mensaje enviado correctamente a clkgotaxi@hotmail.com!");
-            } else {
-                alert("✅ Mensaje guardado. Revisa tu correo (también Spam).");
-            }
+        }).then(() => {
+            alert("Tu reporte ha sido enviado a la administración.");
             cerrarSoporte();
-        })
-        .catch(err => {
-            console.error(err);
-            alert("✅ Tu mensaje fue registrado. El administrador lo verá en el sistema.");
-            cerrarSoporte();
-        })
-        .finally(() => {
-            btn.disabled = false;
-            btn.innerText = "Enviar a clkgotaxi@hotmail.com";
+            document.getElementById('texto-queja').value = '';
         });
     }
 </script>

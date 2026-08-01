@@ -1,38 +1,66 @@
-// SW Mejorado: Limpieza forzada de caché y notificaciones
-const CACHE_NAME = "clickgotaxi-v3"; // Subimos la versión para forzar el cambio
-const urlsToCache = ["./", "./index.html", "./manifest.json"];
+// SW Mejorado - Actualización más agresiva
+const CACHE_NAME = "clickgotaxi-v4"; // ← Cambia este número cada vez que subas cambios importantes
+const urlsToCache = [
+  "./",
+  "./index.html",
+  "./pedir_taxi.html",   // ← Agrega este si es tu archivo principal
+  "./manifest.json"
+];
 
-self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE_NAME).then(c => c.addAll(urlsToCache))
-  );
-  self.skipWaiting(); // Fuerza a activar este SW de inmediato
-});
-
-self.addEventListener('activate', e => {
-  e.waitUntil(
-    // Borra cualquier caché viejita (como la v2 o anteriores) para que no se quede "casado"
-    caches.keys().then(keyList => {
-      return Promise.all(keyList.map(key => {
-        if (key !== CACHE_NAME) {
-          console.log('[SW] Borrando caché vieja:', key);
-          return caches.delete(key);
-        }
-      }));
+// Instalar y activar inmediatamente
+self.addEventListener('install', event => {
+  self.skipWaiting(); // Fuerza la activación inmediata
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache => {
+      return cache.addAll(urlsToCache);
     })
   );
-  self.clients.claim(); // Toma el control de las pestañas abiertas al instante
 });
 
-self.addEventListener('fetch', e => {
-  e.respondWith(
-    caches.match(e.request).then(r => r || fetch(e.request)).catch(() => caches.match("./index.html"))
+// Activar y limpiar cachés viejos
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(cacheNames => {
+      return Promise.all(
+        cacheNames.map(cache => {
+          if (cache !== CACHE_NAME) {
+            console.log('[SW] Eliminando caché antigua:', cache);
+            return caches.delete(cache);
+          }
+        })
+      );
+    }).then(() => {
+      return self.clients.claim(); // Toma control inmediato de las pestañas
+    })
   );
 });
 
-// Importar FCM para que las notificaciones suenen con la pantalla apagada
+// Estrategia: Network First (prioriza internet sobre el caché)
+self.addEventListener('fetch', event => {
+  // Solo manejamos peticiones GET
+  if (event.request.method !== 'GET') return;
+
+  event.respondWith(
+    fetch(event.request)
+      .then(networkResponse => {
+        // Si la red responde bien, actualizamos el caché
+        return caches.open(CACHE_NAME).then(cache => {
+          cache.put(event.request, networkResponse.clone());
+          return networkResponse;
+        });
+      })
+      .catch(() => {
+        // Si no hay internet, usamos el caché
+        return caches.match(event.request).then(cachedResponse => {
+          return cachedResponse || caches.match('./index.html');
+        });
+      })
+  );
+});
+
+// Importar FCM
 try {
   importScripts('./firebase-messaging-sw.js');
-} catch(e) {
-  console.log("FCM SW cargado de forma separada o falló el import:", e);
+} catch (e) {
+  console.log("FCM SW no cargado:", e);
 }

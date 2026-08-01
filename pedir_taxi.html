@@ -39,7 +39,7 @@
         .cat-interna-btn { background: #222; color: #fff; border: 1px solid #444; padding: 10px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; text-align: center; margin: 5px; flex: 1; }
         .cat-interna-btn.active { background: var(--gold); color: #000; border-color: var(--gold); }
         .subcat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 10px; max-height: 300px; overflow-y: auto; }
-        .btn-subcat { background: #1a1a; color: #aaa; border: 1px solid #333; padding: 8px; border-radius: 6px; font-size: 11px; cursor: pointer; text-align: left; }
+        .btn-subcat { background: #1a1a; color: var(--gold); border: 1px solid #333; padding: 8px; border-radius: 6px; font-size: 11px; cursor: pointer; text-align: left; }
         .btn-subcat.active { background: var(--gold); color: #000; border-color: var(--gold); font-weight: bold; }
         .seccion-interna { background: #151515; padding: 15px; border-radius: 12px; margin-top: 15px; border: 1px solid #333; }
         #origen-seccion { background: #1f1a00; border-color: #ffc107; }
@@ -285,8 +285,40 @@
     const PRECIOS_PH = { 'PH La Riviera Colonial': 1.75, 'Brisas del Pacífico': 1.75, 'PH Brisas Point': 1.75, 'PH Brisas Heights': 1.75, 'PH Golf Gardens': 2.50, 'Club De Golf': 2.50, 'PH Alpes': 2.50, 'PH Everest': 2.50, 'PH Bejin': 2.50, 'PH Olimpus': 2.50, 'PH Mont Blanc': 2.50, 'PH Sierra Nevada': 2.50, 'PH Aventura': 3.00, 'PH Vallarta': 3.00, 'PH Noura': 3.00, 'PH Cavana': 3.00, 'Parque Rash': 3.00, 'PH Lagun': 1.50, 'PH Royal Village': 2.00, 'Oxford School': 3.00, 'Green City': 6.00, 'Golf Garden': 2.50, 'PH Ventura': 3.00 };
     const PRECIOS_VILLAS = { 'Lomas del Golf (Garita)': 1.50, 'Lomas del Golf (Adentro)': 1.75, 'Villas del Golf (Garita)': 1.50, 'Villas del Golf (Adentro)': 1.75, 'Monticello 1 (Garita)': 1.50, 'Monticello 1 (Adentro)': 1.75, 'Monticello 2 (Garita)': 1.50, 'Monticello 2 (Adentro)': 1.75, 'Villa Lido (Garita)': 1.50, 'Villa Lido (Adentro)': 1.75, 'Villa Alta (Garita)': 1.50, 'Villa Alta (Adentro)': 1.75, 'Villa Tivoli (Garita)': 1.50, 'Villa Tivoli (Adentro)': 1.75, 'Villa Navona (Garita)': 1.50, 'Villa Navona (Adentro)': 1.75, 'Villa Tiber (Garita)': 1.50, 'Villa Tiber (Adentro)': 1.75 };
     const PRECIOS_ESCUELAS = { 'El IJA': 2.50, 'La Internacional': 2.50, 'Panamerican School': 2.50, 'Saint George': 1.75, 'SAP': 1.50, 'Smart Academy': 1.50, 'Preparatory High School': 1.50, 'AIP': 1.50, 'Oxford School': 3.00, 'Metropolitan School of Panama': 6.00 };
-    const PRECIOS_OTROS = { 'Cerro Viento Rural': 1.75, 'Las Trancas': 1.50 };
-    const PRECIOS_MALL = { 'Super 99 Brisas del Golf': 1.50, 'Machetazo': 1.50, 'Riba Smith': 1.50, 'Super Xtra': 1.50, 'El Rey Brisas del Golf': 1.50, 'Brisas Capital': 1.50, 'Kennedy Golf Plaza': 1.50, 'Signature': 1.50, 'Premier Plaza': 1.50, 'Plaza Point': 1.50, 'Plaza Caja de Ahorro': 1.50, 'Brisas Mall': 1.50, 'Plaza Mcdonalds': 1.50, 'Paseo Drive': 2.50, 'Northside Galleries': 2.00, 'Yappy Park': 3.50 };
+    
+    // Lista base (se muestra en Rutas Externas)
+    const PRECIOS_OTROS_BASE = { 
+        'Cerro Viento Rural': 1.75, 
+        'Las Trancas': 1.50
+    };
+
+    // Lista completa solo para Rutas Internas
+    const PRECIOS_OTROS_INTERNAS = { 
+        'Cerro Viento Rural': 1.75, 
+        'Las Trancas': 1.50, 
+        'San Antonio': 2.50,
+        'Los Pueblos': 2.50,
+        'Metromall': 2.50
+    };
+
+    const PRECIOS_MALL = { 
+        'Super 99 Brisas del Golf': 1.50, 
+        'Machetazo': 1.50, 
+        'Riba Smith': 1.50, 
+        'Super Xtra': 1.50, 
+        'El Rey Brisas del Golf': 1.50, 
+        'Brisas Capital': 1.50, 
+        'Kennedy Golf Plaza': 1.50, 
+        'Signature': 1.50, 
+        'Premier Plaza': 1.50, 
+        'Plaza Point': 1.50, 
+        'Plaza Caja de Ahorro': 1.50, 
+        'Brisas Mall': 1.50, 
+        'Plaza Mcdonalds': 1.50, 
+        'Paseo Drive': 2.50, 
+        'Northside Galleries': 2.00, 
+        'Yappy Park': 3.50
+    };
     
     window.onload = function() {
         initMap(); 
@@ -342,7 +374,11 @@
         else if (tipo === 'ph') html = generarBotones(PRECIOS_PH);
         else if (tipo === 'villas') html = generarBotones(PRECIOS_VILLAS);
         else if (tipo === 'escuelas') html = generarBotones(PRECIOS_ESCUELAS);
-        else if (tipo === 'otros') html = generarBotones(PRECIOS_OTROS);
+        else if (tipo === 'otros') {
+            // Aquí está la magia: solo muestra las 3 rutas en modo interno
+            const listaOtros = modoActual === 'interna' ? PRECIOS_OTROS_INTERNAS : PRECIOS_OTROS_BASE;
+            html = generarBotones(listaOtros);
+        }
         else if (tipo === 'estacion') { 
             seleccionarOrigenSubcat(null, 'Estación Brisas del Golf Línea 2', 0); 
             html = '<p style="color:#aaa; font-size:12px; margin-top:10px;">Origen seleccionado.</p>'; 
@@ -368,7 +404,14 @@
         else if (tipo === 'ph') { html = '<div class="subcat-grid">'; Object.keys(PRECIOS_PH).forEach(nombre => { html += `<button class="btn-subcat" onclick="seleccionarDestinoSubcat(this, '${nombre}', ${PRECIOS_PH[nombre]})">${nombre}<br>B/. ${PRECIOS_PH[nombre].toFixed(2)}</button>`; }); html += '</div>'; } 
         else if (tipo === 'villas') { html = '<div class="subcat-grid">'; Object.keys(PRECIOS_VILLAS).forEach(nombre => { html += `<button class="btn-subcat" onclick="seleccionarDestinoSubcat(this, '${nombre}', ${PRECIOS_VILLAS[nombre]})">${nombre}<br>B/. ${PRECIOS_VILLAS[nombre].toFixed(2)}</button>`; }); html += '</div>'; } 
         else if (tipo === 'escuelas') { html = '<div class="subcat-grid">'; Object.keys(PRECIOS_ESCUELAS).forEach(nombre => { html += `<button class="btn-subcat" onclick="seleccionarDestinoSubcat(this, '${nombre}', ${PRECIOS_ESCUELAS[nombre]})">${nombre}<br>B/. ${PRECIOS_ESCUELAS[nombre].toFixed(2)}</button>`; }); html += '</div>'; } 
-        else if (tipo === 'otros') { html = '<div class="subcat-grid">'; Object.keys(PRECIOS_OTROS).forEach(nombre => { html += `<button class="btn-subcat" onclick="seleccionarDestinoSubcat(this, '${nombre}', ${PRECIOS_OTROS[nombre]})">${nombre}<br>B/. ${PRECIOS_OTROS[nombre].toFixed(2)}</button>`; }); html += '</div>'; } 
+        else if (tipo === 'otros') { 
+            // Solo se usa en Rutas Internas, así que siempre mostramos la lista completa
+            html = '<div class="subcat-grid">'; 
+            Object.keys(PRECIOS_OTROS_INTERNAS).forEach(nombre => { 
+                html += `<button class="btn-subcat" onclick="seleccionarDestinoSubcat(this, '${nombre}', ${PRECIOS_OTROS_INTERNAS[nombre]})">${nombre}<br>B/. ${PRECIOS_OTROS_INTERNAS[nombre].toFixed(2)}</button>`; 
+            }); 
+            html += '</div>'; 
+        } 
         else if (tipo === 'estacion') { seleccionarDestinoSubcat(null, 'Estación Brisas del Golf Línea 2', 0); html = '<p style="color:#aaa; font-size:12px; margin-top:10px;">Destino seleccionado.</p>'; }
         document.getElementById('destino-subcat-container').innerHTML = html; 
         actualizarRuta();

@@ -1,10 +1,12 @@
 // SW Mejorado - Actualización más agresiva
-const CACHE_NAME = "clickgotaxi-v4"; // ← Cambia este número cada vez que subas cambios importantes
+const CACHE_NAME = "clickgotaxi-v5"; // ← Cambia este número cada vez que subas cambios importantes
 const urlsToCache = [
   "./",
   "./index.html",
   "./pedir_taxi.html",   // ← Agrega este si es tu archivo principal
-  "./manifest.json"
+  "./manifest.json",
+  "./icon-192.png",
+  "./icon-512.png"
 ];
 
 // Instalar y activar inmediatamente

@@ -1,9 +1,9 @@
 // SW Mejorado - Actualización más agresiva
-const CACHE_NAME = "clickgotaxi-v5"; // ← Cambia este número cada vez que subas cambios importantes
+const CACHE_NAME = "clickgotaxi-v6"; // Actualizado a v6 para forzar la actualización del logo
 const urlsToCache = [
   "./",
   "./index.html",
-  "./pedir_taxi.html",   // ← Agrega este si es tu archivo principal
+  "./pedir_taxi.html",
   "./manifest.json",
   "./icon-192.png",
   "./icon-512.png"

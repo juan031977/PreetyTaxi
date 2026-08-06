@@ -2,21 +2,21 @@
   "name": "ClickGoTaxi - Brisas del Golf",
   "short_name": "ClickGoTaxi",
   "description": "Pide tu taxi en Brisas del Golf rapido y seguro",
-  "start_url": "./index.html",
-  "scope": "./",
+  "start_url": "/PreetyTaxi/index.html",
+  "scope": "/PreetyTaxi/",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#000000",
   "gcm_sender_id": "1083536462057",
   "icons": [
     {
-      "src": "./icon-192.png",
+      "src": "/PreetyTaxi/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "./icon-512.png",
+      "src": "/PreetyTaxi/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

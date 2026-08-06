@@ -2,9 +2,9 @@
 // Click & Go Taxi - Service Worker unificado
 // Caché PWA + FCM (segundo plano) + click notificación
 // ============================================
-const CACHE_NAME = "clickgotaxi-v9"; // ← ¡Subido a v9 para forzar actualización total!
+const CACHE_NAME = "clickgotaxi-v10"; // Actualizado a v10 para forzar la recarga
 
-// RUTAS ABSOLUTAS para GitHub Pages (El secreto para matar el 404)
+// RUTAS ABSOLUTAS para GitHub Pages
 const urlsToCache = [
   "/PreetyTaxi/",
   "/PreetyTaxi/index.html",
@@ -34,14 +34,19 @@ function noCachear(url) {
   );
 }
 
-// ---------- INSTALAR ----------
+// ---------- INSTALAR (Blindado a prueba de errores 404) ----------
 self.addEventListener("install", (event) => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(urlsToCache).catch((err) => {
-        console.log("[SW] Algunos archivos no se cachearon:", err);
-      });
+      console.log("[SW] Cacheando archivos de forma segura...");
+      return Promise.allSettled(
+        urlsToCache.map((url) => {
+          return cache.add(url).catch((err) => {
+            console.warn("[SW] No se pudo cachear el archivo:", url, err);
+          });
+        })
+      );
     })
   );
 });
@@ -89,7 +94,6 @@ self.addEventListener("fetch", (event) => {
       })
       .catch(() => {
         return caches.match(event.request).then((cached) => {
-          // Si falla, busca la ruta absoluta del index
           return cached || caches.match("/PreetyTaxi/index.html"); 
         });
       })
@@ -126,8 +130,8 @@ try {
 
     const options = {
       body: body,
-      icon: "/PreetyTaxi/icon-192.png", // ← Ruta corregida
-      badge: "/PreetyTaxi/badge.png",   // ← Ruta corregida
+      icon: "/PreetyTaxi/icon-192.png",
+      badge: "/PreetyTaxi/badge.png",
       vibrate: [200, 100, 200, 100, 200],
       requireInteraction: true,
       tag: "viaje-nuevo",
@@ -135,7 +139,7 @@ try {
       data: {
         url:
           (payload.data && payload.data.url) ||
-          "/PreetyTaxi/panel_trabajo.html", // ← Ruta corregida
+          "/PreetyTaxi/panel_trabajo.html",
         viajeId: (payload.data && payload.data.viajeId) || ""
       }
     };
@@ -153,7 +157,7 @@ self.addEventListener("notificationclick", function (event) {
 
   const urlToOpen =
     (event.notification.data && event.notification.data.url) ||
-    "/PreetyTaxi/panel_trabajo.html"; // ← Ruta corregida
+    "/PreetyTaxi/panel_trabajo.html";
 
   event.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {

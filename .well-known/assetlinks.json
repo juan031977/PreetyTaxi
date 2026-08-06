@@ -1,14 +1,8 @@
-[
-  {
-    "relation": [
-      "delegate_permission/common.handle_all_urls"
-    ],
-    "target": {
-      "namespace": "android_app",
-      "package_name": "io.github.juan031977.twa",
-      "sha256_cert_fingerprints": [
-        "07:60:01:08:38:90:4C:4A:66:FF:52:BF:BA:B8:2B:07:89:7C:D2:30:43:5F:97:04:EF:BA:C0:7E:42:CD:9C:4C"
-      ]
-    }
-  }
-]
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "io.github.juan031977.twa",
+        "sha256_cert_fingerprints": ["08:F6:58:35:5D:29:F7:8C:8A:F2:2D:4C:F7:5F:5F:BA:DA:7C:88:07:AA:AB:40:49:C7:4E:D8:AC:15:4B:C8:B1"]
+      }
+    }]

@@ -12,7 +12,7 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// ESTO ES LO QUE HACE QUE SALGA ARRIBA A LA IZQ COMO WHATSAPP AUNQUE ESTÉS EN OTRA APP
+// NOTIFICACIÓN EN SEGUNDO PLANO (Barras superior estilo WhatsApp)
 messaging.onBackgroundMessage(function(payload) {
   console.log('[FCM SW] Mensaje recibido en segundo plano:', payload);
   
@@ -21,15 +21,15 @@ messaging.onBackgroundMessage(function(payload) {
   
   const options = {
     body: body,
-    icon: './icon-192.png', // El icono cuadrado normal al centro
-    badge: './badge.png',   // LA CLAVE: Tu silueta blanca en PNG transparente para la barra superior
+    icon: '/PreetyTaxi/icon-192.png', // Ruta absoluta blindada
+    badge: '/PreetyTaxi/badge.png',   // Silueta en la barra de estado de Android
     vibrate: [200, 100, 200, 100, 200],
     sound: 'default',
-    requireInteraction: true, // Se queda arriba hasta que le den clic
-    tag: 'viaje-nuevo', // Si llega otro viaje, reemplaza el anterior
+    requireInteraction: true, // Se queda fija hasta interactuar
+    tag: 'viaje-nuevo',       // Reemplaza notificaciones acumuladas
     renotify: true,
     data: {
-      url: payload.data?.url || payload.fcmOptions?.link || "./panel_trabajo.html",
+      url: payload.data?.url || payload.fcmOptions?.link || "/PreetyTaxi/panel_trabajo.html",
       viajeId: payload.data?.viajeId || ""
     }
   };
@@ -37,12 +37,12 @@ messaging.onBackgroundMessage(function(payload) {
   return self.registration.showNotification(title, options);
 });
 
-// CUANDO LE DAS CLIC A LA NOTIFICACION ARRIBA A LA IZQ SE ENFOCA EL PANEL
+// CLIC EN LA NOTIFICACIÓN
 self.addEventListener('notificationclick', function(event) {
   console.log('[FCM SW] Click en notificacion:', event);
   event.notification.close();
   
-  const urlToOpen = event.notification.data?.url || "./panel_trabajo.html";
+  const urlToOpen = event.notification.data?.url || "/PreetyTaxi/panel_trabajo.html";
   
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {

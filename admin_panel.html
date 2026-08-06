@@ -2,277 +2,440 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Admin PreetyTaxi - Control Total</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#2EC4E6">
+    <title>Admin Click & Go Taxi</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script> 
-    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; }
-        .container { max-width: 1200px; margin: auto; }
-        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 20px; text-align: center; }
-        table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; }
-        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; vertical-align: top; }
-        th { background: #ffc107; color: black; }
-        .btn { padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin: 3px; }
-        .btn-block { background: #dc3545; color: white; }
-        .btn-active { background: #28a745; color: white; }
-        .btn-reset { background: #007bff; color: white; }
-        .btn-corte { background: #800080; color: white; padding: 15px; font-size: 16px; width: 100%; margin-bottom: 10px; }
-        .btn-reporte { background: #17a2b8; color: white; padding: 15px; font-size: 16px; width: 100%; margin-bottom: 10px; }
-        .btn-info { background: #17a2b8; color: white; font-size: 11px; padding: 5px 8px; }
-        .btn-danger { background: #bd2130; color: white; margin-top: 5px; width: 100%; }
-        
-        .badge-activo { color: #28a745; font-weight: bold; }
-        .badge-bloqueado { color: #dc3545; font-weight: bold; }
-        .badge-pendiente { color: #ffc107; font-weight: bold; }
-        .input-buscador { width: 100%; padding: 14px; margin-top: 15px; border-radius: 8px; border: 2px solid #ffc107; font-size: 16px; box-sizing: border-box; outline: none; }
-        
-        .foto-controls { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ccc; }
-        .foto-controls input { margin-bottom: 5px; width: 100%; font-size: 11px; }
-        
-        /* Estilos del Modal */
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
-        .modal-content { background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 500px; border-radius: 10px; position: relative; }
-        .close-btn { position: absolute; top: 10px; right: 15px; font-size: 24px; cursor: pointer; font-weight: bold; }
+        :root {
+            --cyan: #2EC4E6;
+            --cyan-dark: #1A9CB8;
+            --yellow: #FFC107;
+            --green: #28a745;
+            --red: #dc3545;
+            --purple: #6f42c1;
+            --dark: #0b0b0b;
+            --card: #121a1f;
+            --border: #2a3a45;
+            --text: #ffffff;
+            --muted: #9aadb8;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: var(--dark);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 12px;
+            padding-bottom: 40px;
+        }
+        .top {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 14px;
+            text-align: center;
+        }
+        .top h1 {
+            font-size: 20px;
+            color: var(--cyan);
+            margin-bottom: 6px;
+        }
+        #estadoSistema {
+            font-size: 13px;
+            color: var(--muted);
+            margin-bottom: 14px;
+            line-height: 1.4;
+        }
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 16px 14px;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 800;
+            cursor: pointer;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .btn:active { transform: scale(0.98); opacity: 0.9; }
+        .btn-corte { background: var(--purple); color: #fff; }
+        .btn-reporte { background: var(--cyan); color: #0b0b0b; }
+        .btn-semana { background: #333; color: #fff; border: 1px solid var(--border); }
+        .btn-active { background: var(--green); color: #fff; }
+        .btn-block { background: var(--red); color: #fff; }
+        .btn-reset { background: #0d6efd; color: #fff; }
+        .btn-danger { background: #a71d2a; color: #fff; }
+        .btn-info { background: var(--cyan-dark); color: #fff; font-size: 13px; padding: 12px; }
+        .btn-sm {
+            display: inline-block;
+            width: auto;
+            min-width: 48%;
+            padding: 12px 10px;
+            font-size: 13px;
+            margin: 4px 1%;
+        }
+        .buscador {
+            width: 100%;
+            padding: 14px 16px;
+            border-radius: 12px;
+            border: 2px solid var(--cyan);
+            background: #152028;
+            color: #fff;
+            font-size: 16px;
+            outline: none;
+            margin-top: 6px;
+        }
+        .lista { display: flex; flex-direction: column; gap: 12px; }
+        .driver-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 16px;
+        }
+        .driver-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .driver-name { font-size: 17px; font-weight: 800; color: #fff; }
+        .driver-cel { font-size: 13px; color: var(--cyan); margin-top: 2px; }
+        .badge {
+            font-size: 11px;
+            font-weight: 800;
+            padding: 6px 10px;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+        .badge-activo { background: rgba(40,167,69,0.2); color: #28a745; }
+        .badge-bloqueado { background: rgba(220,53,69,0.2); color: #dc3545; }
+        .badge-pendiente { background: rgba(255,193,7,0.2); color: #ffc107; }
+        .meta {
+            font-size: 13px;
+            color: var(--muted);
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+        .meta strong { color: var(--yellow); }
+        .fotos-ok { font-size: 12px; margin-bottom: 10px; }
+        .foto-controls {
+            background: #0d1418;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 12px;
+            border: 1px dashed var(--border);
+        }
+        .foto-controls label {
+            display: block;
+            font-size: 11px;
+            color: var(--muted);
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+        .foto-controls input[type="file"] {
+            width: 100%;
+            font-size: 13px;
+            color: #ccc;
+            margin-bottom: 8px;
+        }
+        .acciones {
+            display: flex;
+            flex-wrap: wrap;
+            margin: 0 -4px;
+        }
+        .acciones .btn { margin-bottom: 8px; }
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: rgba(0,0,0,0.75);
+            align-items: flex-end;
+            justify-content: center;
+        }
+        .modal.open { display: flex; }
+        .modal-sheet {
+            background: #152028;
+            width: 100%;
+            max-width: 500px;
+            max-height: 80vh;
+            border-radius: 20px 20px 0 0;
+            padding: 20px;
+            overflow-y: auto;
+            border-top: 3px solid var(--cyan);
+        }
+        .modal-sheet h3 { color: var(--cyan); margin-bottom: 12px; font-size: 18px; }
+        .close-btn {
+            float: right;
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-size: 28px;
+            line-height: 1;
+            cursor: pointer;
+            padding: 0 6px;
+        }
+        .comentario {
+            border-bottom: 1px solid var(--border);
+            padding: 12px 0;
+            font-size: 14px;
+        }
+        .comentario .stars { color: var(--yellow); font-weight: 800; }
+        .comentario .fecha { font-size: 11px; color: var(--muted); }
+        .empty {
+            text-align: center;
+            color: var(--muted);
+            padding: 30px 10px;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="card">
-            <h2>Panel de Control Administrativo 🚕</h2>
-            <div id="estadoSistema" style="margin-bottom: 10px; font-size: 14px; color: #555; font-weight: bold;">Verificando estado del ciclo diario...</div>
-            <button class="btn btn-corte" onclick="corteDiario()">🌙 CORTE DIARIO MANUAL</button>
-            <!-- Enlace corregido con el nombre exacto del archivo -->
-            <button class="btn btn-reporte" onclick="window.open('admin_reporte_diario.html', '_blank')">📊 ABRIR REPORTE DIARIO</button>
-            <button class="btn btn-block" onclick="cierreSemanal()" style="width: 100%; padding: 12px; font-size: 15px; margin-bottom: 10px;">RESETEO SEMANAL</button>
-            <input type="text" id="buscador" onkeyup="filtrarConductores()" placeholder="🔍 Buscar conductor..." class="input-buscador">
-        </div>
+    <div class="top">
+        <h1>🚕 Admin Click & Go</h1>
+        <div id="estadoSistema">Verificando ciclo diario...</div>
 
-        <table>
-            <thead>
-                <tr>
-                    <th>Celular</th>
-                    <th>Nombre y Fotos</th>
-                    <th>Estado/Deuda</th>
-                    <th>Calificaciones</th>
-                    <th>Acción</th>
-                </tr>
-            </thead>
-            <tbody id="lista-conductores"></tbody>
-        </table>
+        <button class="btn btn-corte" onclick="corteDiario()">🌙 CORTE DIARIO MANUAL</button>
+        <button class="btn btn-reporte" onclick="window.open('admin_reporte_diario.html', '_blank')">📊 REPORTE DIARIO</button>
+        <button class="btn btn-semana" onclick="cierreSemanal()">🔄 RESETEO SEMANAL</button>
+
+        <input type="text" id="buscador" class="buscador" onkeyup="filtrarConductores()" placeholder="🔍 Buscar conductor o celular...">
     </div>
 
-    <!-- Modal de Comentarios -->
-    <div id="modalComentarios" class="modal">
-        <div class="modal-content">
-            <span class="close-btn" onclick="cerrarModal()">&times;</span>
-            <h3>Comentarios del Conductor</h3>
-            <div id="lista-detallada" style="max-height: 400px; overflow-y: auto;"></div>
+    <div class="lista" id="lista-conductores"></div>
+
+    <div id="modalComentarios" class="modal" onclick="if(event.target===this)cerrarModal()">
+        <div class="modal-sheet">
+            <button class="close-btn" onclick="cerrarModal()">&times;</button>
+            <h3>Comentarios</h3>
+            <div id="lista-detallada"></div>
         </div>
     </div>
 
-    <script>
-        const firebaseConfig = { 
-            apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg", 
-            databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/",
-            storageBucket: "preetytaxiapp.firebasestorage.app"
-        };
-        
-        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-        const storage = firebase.storage();
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg",
+        databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/",
+        storageBucket: "preetytaxiapp.firebasestorage.app"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const storage = firebase.storage();
 
-        function cargarDatos() {
-            verificarCorteAutomatico();
-
-            db.ref('conductores').on('value', snap => {
-                const tbody = document.getElementById('lista-conductores');
-                tbody.innerHTML = "";
-                
-                snap.forEach(child => {
-                    const d = child.val();
-                    const cel = child.key;
-                    
-                    const califs = d.calificaciones || {};
-                    let totalEstrellas = 0;
-                    let conteo = 0;
-                    Object.values(califs).forEach(c => {
-                        totalEstrellas += (parseFloat(c.estrellas) || 0);
-                        conteo++;
-                    });
-                    const promedio = conteo > 0 ? (totalEstrellas / conteo).toFixed(1) : "0.0";
-                    
-                    let btnEstado = d.estado === "pendiente" ? `<button class="btn btn-active" onclick="cambiarEstado('${cel}', 'activo')">ACEPTAR</button>` : `<button class="btn btn-block" onclick="cambiarEstado('${cel}', 'bloqueado')">BLOQUEAR</button>`;
-                    const claseEstado = d.estado === "pendiente" ? "badge-pendiente" : (d.estado === "activo" ? "badge-activo" : "badge-bloqueado");
-                    const tieneFotoPerfil = d.foto_conductor ? '<span style="color:green; font-size:10px;">✅ Perfil OK</span>' : '<span style="color:red; font-size:10px;">❌ Falta Perfil</span>';
-                    const tieneFotoCarro = d.foto_carro ? '<span style="color:green; font-size:10px;">✅ Carro OK</span>' : '<span style="color:red; font-size:10px;">❌ Falta Carro</span>';
-
-                    tbody.innerHTML += `
-                        <tr>
-                            <td><strong>${cel}</strong></td>
-                            <td>
-                                <strong>${d.nombre}</strong><br>
-                                ${tieneFotoPerfil}<br>${tieneFotoCarro}
-                                <div class="foto-controls">
-                                    <input type="file" id="file-${cel}-perfil" accept="image/*">
-                                    <button class="btn btn-info" onclick="subirImagen('${cel}', 'perfil')">Subir Perfil</button>
-                                    <input type="file" id="file-${cel}-carro" accept="image/*">
-                                    <button class="btn btn-info" onclick="subirImagen('${cel}', 'carro')">Subir Carro</button>
-                                </div>
-                            </td>
-                            <td><span class="${claseEstado}">${(d.estado || 'pendiente').toUpperCase()}</span><br>B/. ${parseFloat(d.deuda || 0).toFixed(2)}</td>
-                            <td>
-                                <strong>${promedio} ★ (${conteo} viajes)</strong><br>
-                                <button class="btn btn-info" onclick="abrirModal('${cel}')">Ver Comentarios</button>
-                            </td>
-                            <td>
-                                ${btnEstado}
-                                <button class="btn btn-reset" onclick="pagarDeuda('${cel}')">PAGÓ</button>
-                                <button class="btn btn-danger" onclick="eliminarConductor('${cel}')">Eliminar</button>
-                            </td>
-                        </tr>`;
-                });
-            });
-        }
-
-        function verificarCorteAutomatico() {
-            const hoy = new Date().toISOString().split('T')[0];
-            
-            db.ref('sistema/ultimoCorte').once('value', snap => {
-                const ultimoCorte = snap.val();
-                
-                if (ultimoCorte !== hoy) {
-                    console.log("Detectado nuevo día. Aplicando bloqueo y corte automático...");
-                    document.getElementById('estadoSistema').innerHTML = `<span style="color: #dc3545;">⚠️ Aplicando corte automático de medianoche para el nuevo día...</span>`;
-                    
-                    db.ref('conductores').once('value', conductoresSnap => {
-                        let updates = {};
-                        conductoresSnap.forEach(c => {
-                            let deudaActual = parseFloat(c.val().deuda || 0);
-                            updates[c.key + '/estado'] = 'bloqueado';
-                            updates[c.key + '/deuda'] = deudaActual + 1.00;
-                        });
-                        
-                        db.ref('conductores').update(updates).then(() => {
-                            db.ref('sistema').update({ ultimoCorte: hoy });
-                            document.getElementById('estadoSistema').innerHTML = `<span style="color: #28a745;">✅ Corte diario aplicado correctamente. Unidades bloqueadas hasta pago.</span>`;
-                        });
-                    });
-                } else {
-                    document.getElementById('estadoSistema').innerHTML = `<span style="color: #28a745;">✅ Sistema al día. Ciclo activo.</span>`;
-                }
-            });
-        }
-
-        function abrirModal(cel) {
-            document.getElementById('modalComentarios').style.display = 'block';
-            const contenedor = document.getElementById('lista-detallada');
-            contenedor.innerHTML = "Cargando...";
-
-            db.ref('conductores/' + cel + '/calificaciones').once('value', snap => {
-                let html = "";
-                if (!snap.exists()) {
-                    html = "No hay comentarios registrados.";
-                } else {
-                    let listaComentarios = [];
-                    snap.forEach(c => { listaComentarios.push(c.val()); });
-                    
-                    listaComentarios.sort((a, b) => (b.fecha || 0) - (a.fecha || 0));
-
-                    listaComentarios.forEach(data => {
-                        const texto = data.comentario || data.comentario_pasajero || "Sin comentario";
-                        const fechaLegible = data.fecha ? new Date(data.fecha).toLocaleDateString() : "";
-                        html += `<div style="border-bottom:1px solid #eee; padding:10px;">
-                                    <strong>${data.estrellas} ★</strong> <span style="font-size:11px; color:#888;">${fechaLegible}</span><br>
-                                    <span style="font-size:14px;">${texto}</span>
-                               </div>`;
-                    });
-                    html += `<hr><button class="btn btn-danger" style="width:100%" onclick="limpiarTextosComentarios('${cel}')">🗑️ Borrar SOLO textos (mantener estrellas)</button>`;
-                }
-                contenedor.innerHTML = html;
-            });
-        }
-
-        function cerrarModal() { document.getElementById('modalComentarios').style.display = 'none'; }
-
-        function limpiarTextosComentarios(cel) {
-            if(confirm("¿Seguro? Borrarás los textos pero mantendrás las estrellas.")) {
-                db.ref('conductores/' + cel + '/calificaciones').once('value', snap => {
-                    snap.forEach(child => {
-                        child.ref.update({ comentario: null, comentario_pasajero: null });
-                    });
-                    alert("Textos eliminados.");
-                    cerrarModal();
-                });
+    function cargarDatos() {
+        verificarCorteAutomatico();
+        db.ref('conductores').on('value', snap => {
+            const lista = document.getElementById('lista-conductores');
+            lista.innerHTML = "";
+            if (!snap.exists()) {
+                lista.innerHTML = '<div class="empty">No hay conductores registrados</div>';
+                return;
             }
-        }
-
-        function subirImagen(cel, tipo) {
-            const fileInput = document.getElementById(`file-${cel}-${tipo}`);
-            const file = fileInput.files[0];
-            if (!file) return alert("Selecciona un archivo");
-            const nombreCampoDB = tipo === 'perfil' ? 'foto_conductor' : 'foto_carro';
-            const storageRef = storage.ref(`conductores/${cel}/${tipo}.jpg`);
-            alert("Subiendo...");
-            storageRef.put(file).then(snapshot => {
-                snapshot.ref.getDownloadURL().then(url => {
-                    db.ref('conductores/' + cel).update({ [nombreCampoDB]: url });
-                    alert("¡Foto subida!");
+            snap.forEach(child => {
+                const d = child.val() || {};
+                const cel = child.key;
+                const califs = d.calificaciones || {};
+                let totalEstrellas = 0, conteo = 0;
+                Object.values(califs).forEach(c => {
+                    totalEstrellas += (parseFloat(c.estrellas) || 0);
+                    conteo++;
                 });
-            });
-        }
+                const promedio = conteo > 0 ? (totalEstrellas / conteo).toFixed(1) : "0.0";
+                const estado = d.estado || 'pendiente';
+                const claseBadge = estado === 'pendiente' ? 'badge-pendiente' : (estado === 'activo' ? 'badge-activo' : 'badge-bloqueado');
+                const tienePerfil = d.foto_conductor ? '✅ Perfil' : '❌ Perfil';
+                const tieneCarro = d.foto_carro ? '✅ Carro' : '❌ Carro';
 
-        function cambiarEstado(cel, nuevoEstado) { db.ref('conductores/' + cel).update({ estado: nuevoEstado }); }
-        
-        function pagarDeuda(cel) { 
-            db.ref('conductores/' + cel).update({ deuda: 0, estado: 'activo' }); 
-        }
-        
-        function eliminarConductor(cel) { if(confirm("¿Eliminar?")) db.ref('conductores/' + cel).remove(); }
-        
-        function corteDiario() {
-            if(confirm("¿Estás seguro de ejecutar el corte diario manual y bloquear todas las unidades?")) {
-                const hoy = new Date().toISOString().split('T')[0];
-                db.ref('conductores').once('value', snap => {
+                let btnEstado = '';
+                if (estado === 'pendiente') {
+                    btnEstado = `<button class="btn btn-active btn-sm" onclick="cambiarEstado('${cel}','activo')">✅ ACEPTAR</button>`;
+                } else if (estado === 'activo') {
+                    btnEstado = `<button class="btn btn-block btn-sm" onclick="cambiarEstado('${cel}','bloqueado')">⛔ BLOQUEAR</button>`;
+                } else {
+                    btnEstado = `<button class="btn btn-active btn-sm" onclick="cambiarEstado('${cel}','activo')">✅ ACTIVAR</button>`;
+                }
+
+                lista.innerHTML += `
+                <div class="driver-card" data-search="${(d.nombre||'')+' '+cel}">
+                    <div class="driver-head">
+                        <div>
+                            <div class="driver-name">${d.nombre || 'Sin nombre'}</div>
+                            <div class="driver-cel">${cel}</div>
+                        </div>
+                        <span class="badge ${claseBadge}">${estado.toUpperCase()}</span>
+                    </div>
+                    <div class="meta">
+                        Deuda: <strong>B/. ${parseFloat(d.deuda || 0).toFixed(2)}</strong><br>
+                        ⭐ ${promedio} · ${conteo} viajes
+                    </div>
+                    <div class="fotos-ok">${tienePerfil} &nbsp; ${tieneCarro}</div>
+                    <div class="foto-controls">
+                        <label>Foto perfil</label>
+                        <input type="file" id="file-${cel}-perfil" accept="image/*">
+                        <button class="btn btn-info" onclick="subirImagen('${cel}','perfil')">📷 Subir Perfil</button>
+                        <label style="margin-top:10px;">Foto carro</label>
+                        <input type="file" id="file-${cel}-carro" accept="image/*">
+                        <button class="btn btn-info" onclick="subirImagen('${cel}','carro')">🚗 Subir Carro</button>
+                    </div>
+                    <div class="acciones">
+                        ${btnEstado}
+                        <button class="btn btn-reset btn-sm" onclick="pagarDeuda('${cel}')">💰 PAGÓ</button>
+                        <button class="btn btn-info btn-sm" onclick="abrirModal('${cel}')">💬 Comentarios</button>
+                        <button class="btn btn-danger btn-sm" onclick="eliminarConductor('${cel}')">🗑️ Eliminar</button>
+                    </div>
+                </div>`;
+            });
+        });
+    }
+
+    function verificarCorteAutomatico() {
+        const hoy = new Date().toISOString().split('T')[0];
+        db.ref('sistema/ultimoCorte').once('value', snap => {
+            const ultimoCorte = snap.val();
+            if (ultimoCorte !== hoy) {
+                document.getElementById('estadoSistema').innerHTML = '<span style="color:#dc3545;">⚠️ Aplicando corte automático...</span>';
+                db.ref('conductores').once('value', conductoresSnap => {
                     let updates = {};
-                    snap.forEach(c => {
-                        let deudaActual = parseFloat(c.val().deuda || 0);
+                    conductoresSnap.forEach(c => {
+                        let deudaActual = parseFloat((c.val() || {}).deuda || 0);
                         updates[c.key + '/estado'] = 'bloqueado';
                         updates[c.key + '/deuda'] = deudaActual + 1.00;
                     });
                     db.ref('conductores').update(updates).then(() => {
                         db.ref('sistema').update({ ultimoCorte: hoy });
-                        alert("Corte diario ejecutado. Todas las unidades bloqueadas.");
+                        document.getElementById('estadoSistema').innerHTML = '<span style="color:#28a745;">✅ Corte diario aplicado. Unidades bloqueadas.</span>';
                     });
                 });
+            } else {
+                document.getElementById('estadoSistema').innerHTML = '<span style="color:#28a745;">✅ Sistema al día</span>';
             }
-        }
+        });
+    }
 
-        function cierreSemanal() {
-            if(confirm("¿Deseas realizar el reseteo semanal de viajes y limpiar deudas?")) {
-                db.ref('viajes').remove();
-                db.ref('conductores').once('value', snap => {
-                    let updates = {};
-                    snap.forEach(c => {
-                        updates[c.key + '/deuda'] = 0;
-                        updates[c.key + '/estado'] = 'activo';
-                    });
-                    db.ref('conductores').update(updates).then(() => {
-                        alert("Reseteo semanal completado.");
-                    });
-                });
+    function abrirModal(cel) {
+        const modal = document.getElementById('modalComentarios');
+        modal.classList.add('open');
+        modal.style.display = 'flex';
+        const contenedor = document.getElementById('lista-detallada');
+        contenedor.innerHTML = 'Cargando...';
+        db.ref('conductores/' + cel + '/calificaciones').once('value', snap => {
+            if (!snap.exists()) {
+                contenedor.innerHTML = '<div class="empty">No hay comentarios</div>';
+                return;
             }
-        }
-
-        function filtrarConductores() {
-            const input = document.getElementById('buscador').value.toLowerCase();
-            document.querySelectorAll('#lista-conductores tr').forEach(fila => {
-                fila.style.display = fila.textContent.toLowerCase().includes(input) ? "" : "none";
+            let lista = [];
+            snap.forEach(c => lista.push(c.val()));
+            lista.sort((a, b) => (b.fecha || 0) - (a.fecha || 0));
+            let html = '';
+            lista.forEach(data => {
+                const texto = data.comentario || data.comentario_pasajero || 'Sin comentario';
+                const fechaLegible = data.fecha ? new Date(data.fecha).toLocaleDateString() : '';
+                html += `<div class="comentario">
+                    <span class="stars">${data.estrellas} ★</span>
+                    <span class="fecha"> ${fechaLegible}</span><br>
+                    ${texto}
+                </div>`;
             });
-        }
+            html += `<button class="btn btn-danger" style="margin-top:12px;" onclick="limpiarTextosComentarios('${cel}')">🗑️ Borrar SOLO textos</button>`;
+            contenedor.innerHTML = html;
+        });
+    }
 
-        window.onload = cargarDatos;
-    </script>
+    function cerrarModal() {
+        const modal = document.getElementById('modalComentarios');
+        modal.classList.remove('open');
+        modal.style.display = 'none';
+    }
+
+    function limpiarTextosComentarios(cel) {
+        if (!confirm('¿Borrar textos y mantener estrellas?')) return;
+        db.ref('conductores/' + cel + '/calificaciones').once('value', snap => {
+            snap.forEach(child => {
+                child.ref.update({ comentario: null, comentario_pasajero: null });
+            });
+            alert('Textos eliminados.');
+            cerrarModal();
+        });
+    }
+
+    function subirImagen(cel, tipo) {
+        const fileInput = document.getElementById('file-' + cel + '-' + tipo);
+        const file = fileInput && fileInput.files[0];
+        if (!file) return alert('Selecciona un archivo');
+        const nombreCampoDB = tipo === 'perfil' ? 'foto_conductor' : 'foto_carro';
+        const storageRef = storage.ref('conductores/' + cel + '/' + tipo + '.jpg');
+        alert('Subiendo...');
+        storageRef.put(file).then(snapshot => {
+            snapshot.ref.getDownloadURL().then(url => {
+                db.ref('conductores/' + cel).update({ [nombreCampoDB]: url });
+                alert('¡Foto subida!');
+            });
+        }).catch(err => alert('Error: ' + err.message));
+    }
+
+    function cambiarEstado(cel, nuevoEstado) {
+        db.ref('conductores/' + cel).update({ estado: nuevoEstado });
+    }
+
+    function pagarDeuda(cel) {
+        db.ref('conductores/' + cel).update({ deuda: 0, estado: 'activo' });
+    }
+
+    function eliminarConductor(cel) {
+        if (confirm('¿Eliminar conductor ' + cel + '?')) {
+            db.ref('conductores/' + cel).remove();
+        }
+    }
+
+    function corteDiario() {
+        if (!confirm('¿Ejecutar corte diario y bloquear todas las unidades?')) return;
+        const hoy = new Date().toISOString().split('T')[0];
+        db.ref('conductores').once('value', snap => {
+            let updates = {};
+            snap.forEach(c => {
+                let deudaActual = parseFloat((c.val() || {}).deuda || 0);
+                updates[c.key + '/estado'] = 'bloqueado';
+                updates[c.key + '/deuda'] = deudaActual + 1.00;
+            });
+            db.ref('conductores').update(updates).then(() => {
+                db.ref('sistema').update({ ultimoCorte: hoy });
+                alert('Corte diario ejecutado.');
+            });
+        });
+    }
+
+    function cierreSemanal() {
+        if (!confirm('¿Reseteo semanal de viajes y deudas?')) return;
+        db.ref('viajes').remove();
+        db.ref('conductores').once('value', snap => {
+            let updates = {};
+            snap.forEach(c => {
+                updates[c.key + '/deuda'] = 0;
+                updates[c.key + '/estado'] = 'activo';
+            });
+            db.ref('conductores').update(updates).then(() => {
+                alert('Reseteo semanal completado.');
+            });
+        });
+    }
+
+    function filtrarConductores() {
+        const q = (document.getElementById('buscador').value || '').toLowerCase();
+        document.querySelectorAll('.driver-card').forEach(card => {
+            const txt = (card.getAttribute('data-search') || card.textContent || '').toLowerCase();
+            card.style.display = txt.includes(q) ? '' : 'none';
+        });
+    }
+
+    window.onload = cargarDatos;
+</script>
 </body>
 </html>

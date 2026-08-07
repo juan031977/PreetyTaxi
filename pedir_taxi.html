@@ -319,6 +319,17 @@
             if(nomInput) { nomInput.value = savedName; nomInput.readOnly = true; }
         }
 
+        
+        // Cargar foto de perfil del pasajero para los viajes
+        (function cargarFotoPasajero() {
+            const cel = localStorage.getItem('userCel') || localStorage.getItem('telefono_pasajero');
+            if (!cel) return;
+            if (localStorage.getItem('foto_pasajero')) return;
+            db.ref('pasajeros/' + String(cel).replace(/\D/g, '') + '/foto_pasajero').once('value').then(s => {
+                if (s.val()) localStorage.setItem('foto_pasajero', s.val());
+            }).catch(() => {});
+        })();
+
         const viajeRecuperado = localStorage.getItem('viajeActivoID');
         if (viajeRecuperado) {
             viajeID = viajeRecuperado;
@@ -629,17 +640,31 @@
         `; 
         viajeID = Date.now();
         localStorage.setItem('viajeActivoID', viajeID);
-        db.ref('viajes/' + viajeID).set({ 
-            origen: origenFinal,
-            destino: destinoFinal, 
-            precio: precio, 
-            precio_numerico: parseFloat(precio.replace('B/. ', '')), 
-            estado: 'pendiente', 
-            timestamp: viajeID, 
-            pasajero_nombre: nombrePasajeroActual,
-            telefono: telefono, 
-            tipo_ruta: modoActual 
-        }).then(() => { escucharEstadoViaje(viajeID); }); 
+        // Incluir foto de perfil del pasajero (si la tiene) para que el conductor la vea
+        const fotoLocal = localStorage.getItem('foto_pasajero') || '';
+        const crearViajeConFoto = (fotoUrl) => {
+            db.ref('viajes/' + viajeID).set({ 
+                origen: origenFinal,
+                destino: destinoFinal, 
+                precio: precio, 
+                precio_numerico: parseFloat(precio.replace('B/. ', '')), 
+                estado: 'pendiente', 
+                timestamp: viajeID, 
+                pasajero_nombre: nombrePasajeroActual,
+                telefono: telefono,
+                foto_pasajero: fotoUrl || null,
+                tipo_ruta: modoActual 
+            }).then(() => { escucharEstadoViaje(viajeID); });
+        };
+        if (fotoLocal) {
+            crearViajeConFoto(fotoLocal);
+        } else {
+            db.ref('pasajeros/' + telefono + '/foto_pasajero').once('value').then(s => {
+                const url = s.val() || '';
+                if (url) localStorage.setItem('foto_pasajero', url);
+                crearViajeConFoto(url);
+            }).catch(() => crearViajeConFoto(''));
+        } 
     } 
     window.revertirViaje = function(id) {
         if (confirm("¿El conductor demoró mucho? Vamos a quitarle el viaje y a buscarte otro taxi cercano.")) {

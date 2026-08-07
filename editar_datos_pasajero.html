@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Editar mis datos - Click & Go Taxi</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+        :root { --cyan: #2EC4E6; --yellow: #FFC107; --dark: #0b0b0b; }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: var(--dark); color: #fff;
+            margin: 0; min-height: 100vh;
+            display: flex; justify-content: center; align-items: center;
+            padding: 20px;
+        }
+        .box {
+            position: relative;
+            width: 100%; max-width: 380px;
+            background: #121a1f;
+            border: 1px solid #2a3a45;
+            border-radius: 18px;
+            padding: 24px 20px;
+        }
+        h2 { color: var(--cyan); margin: 0 0 6px; text-align: center; font-size: 20px; }
+        p.sub { color: #9aadb8; font-size: 13px; text-align: center; margin: 0 0 18px; }
+        label { display: block; font-size: 11px; color: #9aadb8; font-weight: 700; text-transform: uppercase; margin: 10px 0 4px; }
+        input {
+            width: 100%; padding: 13px; border-radius: 10px;
+            border: 1px solid #2a3a45; background: #152028; color: #fff; font-size: 16px;
+        }
+        button {
+            width: 100%; padding: 15px; margin-top: 16px; border: none; border-radius: 12px;
+            background: var(--yellow); color: #0b0b0b; font-weight: 800; font-size: 15px; cursor: pointer;
+        }
+        .btn-sec {
+            background: transparent; border: 1px solid #2a3a45; color: #9aadb8;
+            margin-top: 10px; font-weight: 700;
+        }
+        .btn-volver {
+            position: absolute; top: 14px; left: 14px;
+            background: transparent; border: none; color: #aaa; font-size: 14px;
+            font-weight: bold; width: auto; padding: 0; margin: 0; cursor: pointer;
+        }
+        .aviso {
+            background: #0d1f24; border-left: 3px solid var(--cyan);
+            padding: 10px 12px; border-radius: 8px; font-size: 12px; color: #a8b8c0;
+            margin-bottom: 12px; line-height: 1.4;
+        }
+        .ok { color: #28a745; text-align: center; font-size: 14px; margin-top: 10px; display: none; }
+        .err { color: #dc3545; text-align: center; font-size: 13px; margin-top: 10px; display: none; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <button type="button" class="btn-volver" onclick="window.history.back()">⬅ Volver</button>
+        <h2>✏️ Editar mis datos</h2>
+        <p class="sub">Cambia nombre, correo, clave o celular sin perder tu cuenta</p>
+
+        <div class="aviso">
+            Si cambias el <b>número de celular</b>, tu cuenta se mueve al número nuevo.
+            Tus viajes anteriores quedan vinculados al historial de la cuenta.
+            Confirma con tu clave actual.
+        </div>
+
+        <label>Celular actual (el de tu cuenta)</label>
+        <input type="tel" id="celActual" placeholder="Ej: 65235852">
+
+        <label>Contraseña actual</label>
+        <input type="password" id="passActual" placeholder="Tu clave">
+
+        <label>Nombre</label>
+        <input type="text" id="nombre" placeholder="Tu nombre">
+
+        <label>Correo</label>
+        <input type="email" id="email" placeholder="correo@ejemplo.com">
+
+        <label>Celular nuevo (opcional)</label>
+        <input type="tel" id="celNuevo" placeholder="Solo si cambió de número">
+
+        <label>Nueva contraseña (opcional)</label>
+        <input type="password" id="passNueva" placeholder="Dejar vacío para no cambiar">
+
+        <button type="button" onclick="guardarCambios()">GUARDAR CAMBIOS</button>
+        <button type="button" class="btn-sec" onclick="cargarDatos()">Cargar mis datos</button>
+
+        <p class="ok" id="msgOk">✅ Datos actualizados</p>
+        <p class="err" id="msgErr"></p>
+    </div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg",
+        databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // Prefill desde sesión
+    (function () {
+        const cel = localStorage.getItem('userCel') || localStorage.getItem('telefono_pasajero') || '';
+        if (cel) document.getElementById('celActual').value = cel;
+        const nom = localStorage.getItem('userName') || localStorage.getItem('nombre_pasajero') || '';
+        if (nom) document.getElementById('nombre').value = nom;
+    })();
+
+    function mostrarErr(t) {
+        const e = document.getElementById('msgErr');
+        const o = document.getElementById('msgOk');
+        o.style.display = 'none';
+        e.style.display = 'block';
+        e.textContent = t;
+    }
+    function mostrarOk(t) {
+        const e = document.getElementById('msgErr');
+        const o = document.getElementById('msgOk');
+        e.style.display = 'none';
+        o.style.display = 'block';
+        o.textContent = t || '✅ Datos actualizados';
+    }
+
+    function cargarDatos() {
+        const cel = (document.getElementById('celActual').value || '').replace(/\D/g, '');
+        const pass = document.getElementById('passActual').value || '';
+        if (!cel || !pass) return mostrarErr('Escribe celular actual y contraseña');
+
+        db.ref('pasajeros/' + cel).once('value').then(snap => {
+            const u = snap.val();
+            if (!u || String(u.password) !== String(pass)) {
+                return mostrarErr('Celular o contraseña incorrectos');
+            }
+            document.getElementById('nombre').value = u.nombre || '';
+            document.getElementById('email').value = u.email || '';
+            document.getElementById('celNuevo').value = '';
+            document.getElementById('passNueva').value = '';
+            mostrarOk('Datos cargados. Ya puedes editar y guardar.');
+        }).catch(() => mostrarErr('Error de conexión'));
+    }
+
+    function guardarCambios() {
+        const celActual = (document.getElementById('celActual').value || '').replace(/\D/g, '');
+        const passActual = document.getElementById('passActual').value || '';
+        const nombre = (document.getElementById('nombre').value || '').trim();
+        const email = (document.getElementById('email').value || '').trim();
+        let celNuevo = (document.getElementById('celNuevo').value || '').replace(/\D/g, '');
+        const passNueva = document.getElementById('passNueva').value || '';
+
+        if (!celActual || !passActual) return mostrarErr('Celular actual y contraseña son obligatorios');
+        if (!nombre) return mostrarErr('El nombre no puede estar vacío');
+
+        db.ref('pasajeros/' + celActual).once('value').then(snap => {
+            const u = snap.val();
+            if (!u || String(u.password) !== String(passActual)) {
+                return mostrarErr('Celular o contraseña incorrectos');
+            }
+
+            const datos = {
+                nombre: nombre,
+                email: email || u.email || '',
+                password: passNueva || u.password,
+                celular: celNuevo || celActual
+            };
+
+            // Sin cambio de número
+            if (!celNuevo || celNuevo === celActual) {
+                return db.ref('pasajeros/' + celActual).update(datos).then(() => {
+                    localStorage.setItem('userCel', celActual);
+                    localStorage.setItem('userName', nombre);
+                    localStorage.setItem('telefono_pasajero', celActual);
+                    localStorage.setItem('nombre_pasajero', nombre);
+                    mostrarOk('✅ Datos guardados (mismo número)');
+                });
+            }
+
+            // Cambio de número: migrar cuenta
+            return db.ref('pasajeros/' + celNuevo).once('value').then(snap2 => {
+                if (snap2.exists()) {
+                    return mostrarErr('Ese número nuevo ya tiene una cuenta. Usa otro o recupera esa cuenta.');
+                }
+
+                // 1) Crear en número nuevo con todos los datos viejos + nuevos
+                const migrado = Object.assign({}, u, datos, {
+                    celular: celNuevo,
+                    telefono_anterior: celActual,
+                    migrado_en: new Date().toISOString()
+                });
+
+                return db.ref('pasajeros/' + celNuevo).set(migrado).then(() => {
+                    // 2) Marcar viajes del pasajero con el nuevo teléfono (no borra historial)
+                    return db.ref('viajes').orderByChild('telefono').equalTo(celActual).once('value').then(vSnap => {
+                        const updates = {};
+                        if (vSnap.exists()) {
+                            vSnap.forEach(ch => {
+                                updates['viajes/' + ch.key + '/telefono'] = celNuevo;
+                                updates['viajes/' + ch.key + '/telefono_anterior'] = celActual;
+                            });
+                        }
+                        // 3) Borrar nodo viejo
+                        updates['pasajeros/' + celActual] = null;
+                        return db.ref().update(updates);
+                    });
+                }).then(() => {
+                    localStorage.setItem('userCel', celNuevo);
+                    localStorage.setItem('userName', nombre);
+                    localStorage.setItem('telefono_pasajero', celNuevo);
+                    localStorage.setItem('nombre_pasajero', nombre);
+                    document.getElementById('celActual').value = celNuevo;
+                    document.getElementById('celNuevo').value = '';
+                    document.getElementById('passActual').value = passNueva || passActual;
+                    mostrarOk('✅ Número actualizado. Tu cuenta se migró sin perder datos.');
+                });
+            });
+        }).catch(err => {
+            console.error(err);
+            mostrarErr('Error: ' + (err.message || 'no se pudo guardar'));
+        });
+    }
+</script>
+</body>
+</html>

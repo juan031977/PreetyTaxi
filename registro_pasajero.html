@@ -2,20 +2,27 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Registro Pasajero - ClickGoTaxi</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #0f0f0f; color: white; text-align: center; padding: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
-        .box { position: relative; background: #121a1f; padding: 30px; border-radius: 20px; border: 1px solid #2a3a45; width: 90%; max-width: 350px; }
-        h2 { color: #2EC4E6; margin-bottom: 20px; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #2a3a45; background: #152028; color: white; box-sizing: border-box; font-size: 16px; }
-        button { background: #FFC107; width: 100%; padding: 15px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; color:#0b0b0b; font-size: 16px; }
-        
-        /* ESTILO DEL BOTÓN DE RETROCESO */
+        body { font-family: 'Segoe UI', sans-serif; background: #0f0f0f; color: white; text-align: center; padding: 40px 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+        .box { position: relative; background: #121a1f; padding: 30px 22px; border-radius: 20px; border: 1px solid #2a3a45; width: 90%; max-width: 350px; }
+        h2 { color: #2EC4E6; margin-bottom: 16px; margin-top: 8px; }
+        input { width: 100%; padding: 12px; margin: 8px 0; border-radius: 8px; border: 1px solid #2a3a45; background: #152028; color: white; box-sizing: border-box; font-size: 16px; }
+        button.main { background: #FFC107; width: 100%; padding: 15px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; color:#0b0b0b; font-size: 16px; margin-top: 8px; }
         .btn-volver { position: absolute; top: 15px; left: 15px; background: transparent; color: #aaa; border: none; font-size: 14px; font-weight: bold; cursor: pointer; z-index: 20; width: auto; padding: 0; margin: 0; }
         .btn-volver:hover { color: white; }
+        .foto-wrap { margin: 10px 0 14px; }
+        .foto-wrap img {
+            width: 90px; height: 90px; border-radius: 50%; object-fit: cover;
+            border: 3px solid #2EC4E6; background: #152028; display: block; margin: 0 auto 8px;
+        }
+        .foto-wrap label { display: block; font-size: 12px; color: #9aadb8; margin-bottom: 6px; }
+        .foto-wrap input[type="file"] { font-size: 13px; color: #ccc; border: none; background: transparent; padding: 0; }
+        .hint { font-size: 11px; color: #6a7a85; margin-top: 4px; }
     </style>
 </head>
 <body>
@@ -23,40 +30,138 @@
         <button class="btn-volver" onclick="window.history.back()">⬅ Volver</button>
 
         <h2>Crear Cuenta Pasajero 👤</h2>
+
+        <div class="foto-wrap">
+            <img id="previewFoto" src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" alt="Foto">
+            <label>Foto de perfil (opcional)</label>
+            <input type="file" id="fotoFile" accept="image/*" onchange="previsualizar()">
+            <div class="hint">Así te verá el conductor al aceptar el viaje</div>
+        </div>
+
         <input type="text" id="nom" placeholder="Nombre Completo">
         <input type="tel" id="tel" placeholder="Número Celular">
         <input type="email" id="email" placeholder="Correo Electrónico">
         <input type="password" id="pass" placeholder="Crea tu Clave">
-        <button onclick="registrar()">REGISTRARME</button>
+        <button class="main" id="btnReg" onclick="registrar()">REGISTRARME</button>
     </div>
 
     <script>
-        const firebaseConfig = { 
+        const firebaseConfig = {
             apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg",
-            databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/" 
+            databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/",
+            storageBucket: "preetytaxiapp.firebasestorage.app"
         };
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+        const storage = firebase.storage();
+
+
+        // Comprime y redimensiona la foto antes de subir (más liviana)
+        function comprimirImagen(file, maxLado, calidad) {
+            maxLado = maxLado || 800;
+            calidad = calidad || 0.7;
+            return new Promise(function(resolve, reject) {
+                if (!file || !file.type || file.type.indexOf('image') !== 0) {
+                    return reject(new Error('Archivo no es imagen'));
+                }
+                var img = new Image();
+                var url = URL.createObjectURL(file);
+                img.onload = function() {
+                    var w = img.width, h = img.height;
+                    if (w > maxLado || h > maxLado) {
+                        if (w >= h) { h = Math.round(h * maxLado / w); w = maxLado; }
+                        else { w = Math.round(w * maxLado / h); h = maxLado; }
+                    }
+                    var canvas = document.createElement('canvas');
+                    canvas.width = w;
+                    canvas.height = h;
+                    var ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    URL.revokeObjectURL(url);
+                    canvas.toBlob(function(blob) {
+                        if (!blob) return reject(new Error('No se pudo comprimir'));
+                        resolve(blob);
+                    }, 'image/jpeg', calidad);
+                };
+                img.onerror = function() {
+                    URL.revokeObjectURL(url);
+                    reject(new Error('No se pudo leer la imagen'));
+                };
+                img.src = url;
+            });
+        }
+
+        function previsualizar() {
+            const file = document.getElementById('fotoFile').files[0];
+            if (!file) return;
+            const url = URL.createObjectURL(file);
+            document.getElementById('previewFoto').src = url;
+        }
 
         function registrar() {
-            const n = document.getElementById('nom').value;
-            const t = document.getElementById('tel').value;
-            const p = document.getElementById('pass').value;
-            const e = document.getElementById('email').value;
+            const n = (document.getElementById('nom').value || '').trim();
+            const t = (document.getElementById('tel').value || '').replace(/\D/g, '');
+            const p = document.getElementById('pass').value || '';
+            const e = (document.getElementById('email').value || '').trim();
+            const file = document.getElementById('fotoFile').files[0];
+            const btn = document.getElementById('btnReg');
 
-            if(n && t && p && e) {
-                db.ref('pasajeros/' + t).set({
+            if (!n || !t || !p || !e) {
+                return alert("Completa todos los datos, incluyendo tu correo.");
+            }
+            if (t.length < 8) return alert("Número de celular inválido");
+
+            btn.disabled = true;
+            btn.innerText = "Registrando...";
+
+            db.ref('pasajeros/' + t).once('value').then(snap => {
+                if (snap.exists()) {
+                    btn.disabled = false;
+                    btn.innerText = "REGISTRARME";
+                    return alert("Ese número ya tiene cuenta. Inicia sesión o edita tus datos.");
+                }
+
+                const base = {
                     nombre: n,
                     celular: t,
                     password: p,
-                    email: e
-                }).then(() => { 
-                    alert("¡Éxito! Bienvenido a ClickGoTaxi."); 
-                    window.location.href = "pedir_taxi.html"; 
-                }).catch(err => alert("Error: " + err.message));
-            } else { 
-                alert("Completa todos los datos, incluyendo tu correo."); 
-            }
+                    email: e,
+                    foto_pasajero: null
+                };
+
+                const terminar = (fotoUrl) => {
+                    base.foto_pasajero = fotoUrl || null;
+                    return db.ref('pasajeros/' + t).set(base).then(() => {
+                        localStorage.setItem('userCel', t);
+                        localStorage.setItem('userName', n);
+                        localStorage.setItem('telefono_pasajero', t);
+                        localStorage.setItem('nombre_pasajero', n);
+                        if (fotoUrl) localStorage.setItem('foto_pasajero', fotoUrl);
+                        alert("¡Éxito! Bienvenido a ClickGoTaxi.");
+                        window.location.href = "pedir_taxi.html";
+                    });
+                };
+
+                if (!file) {
+                    return terminar(null);
+                }
+                if (file.size > 5 * 1024 * 1024) {
+                    btn.disabled = false;
+                    btn.innerText = "REGISTRARME";
+                    return alert("La foto debe pesar menos de 5 MB");
+                }
+
+                btn.innerText = "Optimizando foto...";
+                const ref = storage.ref('pasajeros/' + t + '/perfil.jpg');
+                return comprimirImagen(file, 800, 0.72).then(blob => {
+                    btn.innerText = "Subiendo foto...";
+                    return ref.put(blob, { contentType: 'image/jpeg' });
+                }).then(s => s.ref.getDownloadURL()).then(url => terminar(url));
+            }).catch(err => {
+                btn.disabled = false;
+                btn.innerText = "REGISTRARME";
+                alert("Error: " + (err.message || "no se pudo registrar"));
+            });
         }
     </script>
 </body>

@@ -51,34 +51,26 @@
             line-height: 1.4;
         }
         .btn {
-            display: block;
-            width: 100%;
-            padding: 16px 14px;
+            display: inline-block;
+            padding: 10px 12px;
             border: none;
-            border-radius: 12px;
-            font-size: 15px;
-            font-weight: 800;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
             cursor: pointer;
-            margin-bottom: 10px;
+            margin: 3px 2px;
             text-align: center;
+            white-space: nowrap;
         }
         .btn:active { transform: scale(0.98); opacity: 0.9; }
-        .btn-corte { background: var(--purple); color: #fff; }
-        .btn-reporte { background: var(--cyan); color: #0b0b0b; }
-        .btn-semana { background: #333; color: #fff; border: 1px solid var(--border); }
+        .btn-corte { background: var(--purple); color: #fff; width: 100%; padding: 16px; font-size: 15px; margin-bottom: 10px; }
+        .btn-reporte { background: var(--cyan); color: #0b0b0b; width: 100%; padding: 16px; font-size: 15px; margin-bottom: 10px; }
+        .btn-semana { background: #333; color: #fff; border: 1px solid var(--border); width: 100%; padding: 16px; font-size: 15px; margin-bottom: 10px; }
         .btn-active { background: var(--green); color: #fff; }
         .btn-block { background: var(--red); color: #fff; }
         .btn-reset { background: #0d6efd; color: #fff; }
         .btn-danger { background: #a71d2a; color: #fff; }
-        .btn-info { background: var(--cyan-dark); color: #fff; font-size: 13px; padding: 12px; }
-        .btn-sm {
-            display: inline-block;
-            width: auto;
-            min-width: 48%;
-            padding: 12px 10px;
-            font-size: 13px;
-            margin: 4px 1%;
-        }
+        .btn-info { background: var(--cyan-dark); color: #fff; }
         .buscador {
             width: 100%;
             padding: 14px 16px;
@@ -89,68 +81,166 @@
             font-size: 16px;
             outline: none;
             margin-top: 6px;
+            margin-bottom: 12px;
         }
-        .lista { display: flex; flex-direction: column; gap: 12px; }
-        .driver-card {
+
+        /* ===== BOTONES DE FILTRO CON COLORES ===== */
+        .filtros {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+            justify-content: center;
+        }
+        .filtro-btn {
+            padding: 10px 16px;
+            border-radius: 20px;
+            border: 2px solid transparent;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            opacity: 0.75;
+        }
+        .filtro-btn:active { transform: scale(0.96); }
+        
+        /* Todos - Blanco */
+        .filtro-btn[data-filtro="todos"] {
+            background: #ffffff;
+            color: #0b0b0b;
+            border-color: #ffffff;
+        }
+        .filtro-btn[data-filtro="todos"].activo {
+            opacity: 1;
+            box-shadow: 0 0 0 3px rgba(255,255,255,0.35);
+        }
+        
+        /* Pendientes - Amarillo */
+        .filtro-btn[data-filtro="pendiente"] {
+            background: #FFC107;
+            color: #0b0b0b;
+            border-color: #FFC107;
+        }
+        .filtro-btn[data-filtro="pendiente"].activo {
+            opacity: 1;
+            box-shadow: 0 0 0 3px rgba(255,193,7,0.4);
+        }
+        
+        /* Activos - Verde */
+        .filtro-btn[data-filtro="activo"] {
+            background: #28a745;
+            color: #ffffff;
+            border-color: #28a745;
+        }
+        .filtro-btn[data-filtro="activo"].activo {
+            opacity: 1;
+            box-shadow: 0 0 0 3px rgba(40,167,69,0.4);
+        }
+        
+        /* Bloqueados - Rojo */
+        .filtro-btn[data-filtro="bloqueado"] {
+            background: #dc3545;
+            color: #ffffff;
+            border-color: #dc3545;
+        }
+        .filtro-btn[data-filtro="bloqueado"].activo {
+            opacity: 1;
+            box-shadow: 0 0 0 3px rgba(220,53,69,0.4);
+        }
+
+        #contadorResultados {
+            font-size: 13px;
+            color: var(--muted);
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        /* ===== TABLA ESTILO BASE DE DATOS ===== */
+        .table-wrap {
             background: var(--card);
             border: 1px solid var(--border);
             border-radius: 16px;
-            padding: 16px;
+            overflow: hidden;
+            margin-top: 6px;
         }
-        .driver-head {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 10px;
-            margin-bottom: 10px;
+        .table-container {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
-        .driver-name { font-size: 17px; font-weight: 800; color: #fff; }
-        .driver-cel { font-size: 13px; color: var(--cyan); margin-top: 2px; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 780px;
+        }
+        thead {
+            background: #0d1418;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        th {
+            padding: 14px 12px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--cyan);
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            border-bottom: 2px solid var(--border);
+            white-space: nowrap;
+        }
+        td {
+            padding: 14px 12px;
+            font-size: 13px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+        tbody tr:hover {
+            background: rgba(46, 196, 230, 0.06);
+        }
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+        .nombre-cell {
+            font-weight: 700;
+            color: #fff;
+        }
+        .tel-cell {
+            color: var(--cyan);
+            font-weight: 600;
+        }
+        .email-cell {
+            color: var(--muted);
+            font-size: 12px;
+        }
         .badge {
             font-size: 11px;
             font-weight: 800;
-            padding: 6px 10px;
+            padding: 5px 10px;
             border-radius: 20px;
             white-space: nowrap;
+            display: inline-block;
         }
         .badge-activo { background: rgba(40,167,69,0.2); color: #28a745; }
         .badge-bloqueado { background: rgba(220,53,69,0.2); color: #dc3545; }
         .badge-pendiente { background: rgba(255,193,7,0.2); color: #ffc107; }
-        .meta {
-            font-size: 13px;
-            color: var(--muted);
-            margin-bottom: 10px;
-            line-height: 1.5;
-        }
-        .meta strong { color: var(--yellow); }
-        .fotos-ok { font-size: 12px; margin-bottom: 10px; }
-        .foto-controls {
-            background: #0d1418;
-            border-radius: 12px;
-            padding: 12px;
-            margin-bottom: 12px;
-            border: 1px dashed var(--border);
-        }
-        .foto-controls label {
-            display: block;
-            font-size: 11px;
-            color: var(--muted);
-            margin-bottom: 4px;
-            text-transform: uppercase;
+        .deuda {
+            color: var(--yellow);
             font-weight: 700;
         }
-        .foto-controls input[type="file"] {
-            width: 100%;
-            font-size: 13px;
-            color: #ccc;
-            margin-bottom: 8px;
+        .acciones-cell {
+            white-space: nowrap;
         }
-        .acciones {
-            display: flex;
-            flex-wrap: wrap;
-            margin: 0 -4px;
+        .fotos-ok {
+            font-size: 12px;
+            color: var(--muted);
         }
-        .acciones .btn { margin-bottom: 8px; }
+        .empty {
+            text-align: center;
+            color: var(--muted);
+            padding: 40px 10px;
+            font-size: 14px;
+        }
         /* Modal */
         .modal {
             display: none;
@@ -190,13 +280,6 @@
         }
         .comentario .stars { color: var(--yellow); font-weight: 800; }
         .comentario .fecha { font-size: 11px; color: var(--muted); }
-        .empty {
-            text-align: center;
-            color: var(--muted);
-            padding: 30px 10px;
-            font-size: 14px;
-        }
-
         /* LOGIN ADMIN */
         #pantallaLogin {
             position: fixed; inset: 0; z-index: 10000;
@@ -232,10 +315,31 @@
             padding: 10px; border-radius: 10px; font-size: 13px; font-weight: 700;
             width: 100%; margin-top: 8px; cursor: pointer;
         }
+        /* Modal de fotos */
+        .foto-controls {
+            background: #0d1418;
+            border-radius: 12px;
+            padding: 14px;
+            margin: 10px 0;
+            border: 1px dashed var(--border);
+        }
+        .foto-controls label {
+            display: block;
+            font-size: 11px;
+            color: var(--muted);
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+        .foto-controls input[type="file"] {
+            width: 100%;
+            font-size: 13px;
+            color: #ccc;
+            margin-bottom: 8px;
+        }
     </style>
 </head>
 <body>
-
 <div id="pantallaLogin">
     <div class="login-box">
         <h2>🔒 Admin Click & Go</h2>
@@ -246,28 +350,69 @@
         <p id="loginError" style="color:#dc3545; margin-top:12px; font-size:13px; display:none;"></p>
     </div>
 </div>
-
 <div id="appAdmin">
     <div class="top">
         <h1>🚕 Admin Click & Go</h1>
         <div id="adminNombreTop" style="font-size:13px;color:#9aadb8;margin-bottom:8px;"></div>
         <div id="estadoSistema">Verificando ciclo diario...</div>
-
         <button class="btn btn-corte" onclick="corteDiario()">🌙 CORTE DIARIO MANUAL</button>
         <button class="btn btn-reporte" onclick="window.open('admin_reporte_diario.html', '_blank')">📊 REPORTE DIARIO</button>
         <button class="btn btn-semana" onclick="cierreSemanal()">🔄 RESETEO SEMANAL</button>
-
-        <input type="text" id="buscador" class="buscador" onkeyup="filtrarConductores()" placeholder="🔍 Buscar conductor o celular...">
+        
+        <input type="text" id="buscador" class="buscador" onkeyup="aplicarFiltros()" placeholder="🔍 Buscar por teléfono, correo o nombre...">
+        
+        <!-- BOTONES DE FILTRO CON COLORES -->
+        <div class="filtros">
+            <button class="filtro-btn activo" data-filtro="todos" onclick="setFiltro('todos')">Todos</button>
+            <button class="filtro-btn" data-filtro="pendiente" onclick="setFiltro('pendiente')">Pendientes</button>
+            <button class="filtro-btn" data-filtro="activo" onclick="setFiltro('activo')">Activos</button>
+            <button class="filtro-btn" data-filtro="bloqueado" onclick="setFiltro('bloqueado')">Bloqueados</button>
+        </div>
+        
+        <div id="contadorResultados">Cargando...</div>
+        
         <button type="button" class="btn-logout" onclick="logoutAdmin()">🚪 Cerrar sesión</button>
     </div>
 
-    <div class="lista" id="lista-conductores"></div>
+    <!-- TABLA TIPO BASE DE DATOS -->
+    <div class="table-wrap">
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Nombre</th>
+                        <th>Teléfono</th>
+                        <th>Correo</th>
+                        <th>Estado</th>
+                        <th>Deuda</th>
+                        <th>Rating</th>
+                        <th>Fotos</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="lista-conductores">
+                    <!-- Se llena con JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
 
+    <!-- Modal Comentarios -->
     <div id="modalComentarios" class="modal" onclick="if(event.target===this)cerrarModal()">
         <div class="modal-sheet">
             <button class="close-btn" onclick="cerrarModal()">&times;</button>
             <h3>Comentarios</h3>
             <div id="lista-detallada"></div>
+        </div>
+    </div>
+
+    <!-- Modal Fotos -->
+    <div id="modalFotos" class="modal" onclick="if(event.target===this)cerrarModalFotos()">
+        <div class="modal-sheet">
+            <button class="close-btn" onclick="cerrarModalFotos()">&times;</button>
+            <h3>Fotos del conductor</h3>
+            <div id="contenidoFotos"></div>
         </div>
     </div>
 
@@ -281,18 +426,61 @@
     const db = firebase.database();
     const storage = firebase.storage();
 
+    let filtroActual = 'todos';
+    let totalConductores = 0;
+
+    function setFiltro(filtro) {
+        filtroActual = filtro;
+        document.querySelectorAll('.filtro-btn').forEach(btn => {
+            btn.classList.remove('activo');
+            if (btn.getAttribute('data-filtro') === filtro) {
+                btn.classList.add('activo');
+            }
+        });
+        aplicarFiltros();
+    }
+
+    function aplicarFiltros() {
+        const q = (document.getElementById('buscador').value || '').toLowerCase().trim();
+        let visibles = 0;
+        
+        document.querySelectorAll('.driver-row').forEach(row => {
+            const texto = (row.getAttribute('data-search') || '').toLowerCase();
+            const estado = (row.getAttribute('data-estado') || '').toLowerCase();
+            
+            const coincideTexto = !q || texto.includes(q);
+            const coincideEstado = filtroActual === 'todos' || estado === filtroActual;
+            
+            if (coincideTexto && coincideEstado) {
+                row.style.display = '';
+                visibles++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+        
+        document.getElementById('contadorResultados').textContent = 
+            visibles + ' conductores' + (filtroActual !== 'todos' ? ' · ' + filtroActual : '') + ' · ' + totalConductores + ' total';
+    }
+
     function cargarDatos() {
         verificarCorteAutomatico();
         db.ref('conductores').on('value', snap => {
-            const lista = document.getElementById('lista-conductores');
-            lista.innerHTML = "";
+            const tbody = document.getElementById('lista-conductores');
+            tbody.innerHTML = "";
+            totalConductores = 0;
+            
             if (!snap.exists()) {
-                lista.innerHTML = '<div class="empty">No hay conductores registrados</div>';
+                tbody.innerHTML = '<tr><td colspan="9" class="empty">No hay conductores registrados</td></tr>';
+                document.getElementById('contadorResultados').textContent = '0 conductores';
                 return;
             }
+            
+            let index = 1;
             snap.forEach(child => {
                 const d = child.val() || {};
                 const cel = child.key;
+                const email = d.email || d.correo || '—';
                 const califs = d.calificaciones || {};
                 let totalEstrellas = 0, conteo = 0;
                 Object.values(califs).forEach(c => {
@@ -302,48 +490,43 @@
                 const promedio = conteo > 0 ? (totalEstrellas / conteo).toFixed(1) : "0.0";
                 const estado = d.estado || 'pendiente';
                 const claseBadge = estado === 'pendiente' ? 'badge-pendiente' : (estado === 'activo' ? 'badge-activo' : 'badge-bloqueado');
-                const tienePerfil = d.foto_conductor ? '✅ Perfil' : '❌ Perfil';
-                const tieneCarro = d.foto_carro ? '✅ Carro' : '❌ Carro';
+                const tienePerfil = d.foto_conductor ? '✅' : '❌';
+                const tieneCarro = d.foto_carro ? '✅' : '❌';
 
                 let btnEstado = '';
                 if (estado === 'pendiente') {
-                    btnEstado = `<button class="btn btn-active btn-sm" onclick="cambiarEstado('${cel}','activo')">✅ ACEPTAR</button>`;
+                    btnEstado = `<button class="btn btn-active" onclick="cambiarEstado('${cel}','activo')">✅ ACEPTAR</button>`;
                 } else if (estado === 'activo') {
-                    btnEstado = `<button class="btn btn-block btn-sm" onclick="cambiarEstado('${cel}','bloqueado')">⛔ BLOQUEAR</button>`;
+                    btnEstado = `<button class="btn btn-block" onclick="cambiarEstado('${cel}','bloqueado')">⛔ BLOQUEAR</button>`;
                 } else {
-                    btnEstado = `<button class="btn btn-active btn-sm" onclick="cambiarEstado('${cel}','activo')">✅ ACTIVAR</button>`;
+                    btnEstado = `<button class="btn btn-active" onclick="cambiarEstado('${cel}','activo')">✅ ACTIVAR</button>`;
                 }
 
-                lista.innerHTML += `
-                <div class="driver-card" data-search="${(d.nombre||'')+' '+cel}">
-                    <div class="driver-head">
-                        <div>
-                            <div class="driver-name">${d.nombre || 'Sin nombre'}</div>
-                            <div class="driver-cel">${cel}</div>
-                        </div>
-                        <span class="badge ${claseBadge}">${estado.toUpperCase()}</span>
-                    </div>
-                    <div class="meta">
-                        Deuda: <strong>B/. ${parseFloat(d.deuda || 0).toFixed(2)}</strong><br>
-                        ⭐ ${promedio} · ${conteo} viajes
-                    </div>
-                    <div class="fotos-ok">${tienePerfil} &nbsp; ${tieneCarro}</div>
-                    <div class="foto-controls">
-                        <label>Foto perfil</label>
-                        <input type="file" id="file-${cel}-perfil" accept="image/*">
-                        <button class="btn btn-info" onclick="subirImagen('${cel}','perfil')">📷 Subir Perfil</button>
-                        <label style="margin-top:10px;">Foto carro</label>
-                        <input type="file" id="file-${cel}-carro" accept="image/*">
-                        <button class="btn btn-info" onclick="subirImagen('${cel}','carro')">🚗 Subir Carro</button>
-                    </div>
-                    <div class="acciones">
+                const searchText = ((d.nombre || '') + ' ' + cel + ' ' + email).toLowerCase();
+                totalConductores++;
+
+                tbody.innerHTML += `
+                <tr class="driver-row" data-search="${searchText}" data-estado="${estado}">
+                    <td style="color:var(--muted);font-size:12px;">${index}</td>
+                    <td class="nombre-cell">${d.nombre || 'Sin nombre'}</td>
+                    <td class="tel-cell">${cel}</td>
+                    <td class="email-cell">${email}</td>
+                    <td><span class="badge ${claseBadge}">${estado.toUpperCase()}</span></td>
+                    <td class="deuda">B/. ${parseFloat(d.deuda || 0).toFixed(2)}</td>
+                    <td>⭐ ${promedio} <small style="color:var(--muted)">(${conteo})</small></td>
+                    <td class="fotos-ok">${tienePerfil} Perfil<br>${tieneCarro} Carro</td>
+                    <td class="acciones-cell">
                         ${btnEstado}
-                        <button class="btn btn-reset btn-sm" onclick="pagarDeuda('${cel}')">💰 PAGÓ</button>
-                        <button class="btn btn-info btn-sm" onclick="abrirModal('${cel}')">💬 Comentarios</button>
-                        <button class="btn btn-danger btn-sm" onclick="eliminarConductor('${cel}')">🗑️ Eliminar</button>
-                    </div>
-                </div>`;
+                        <button class="btn btn-reset" onclick="pagarDeuda('${cel}')">💰 PAGÓ</button>
+                        <button class="btn btn-info" onclick="abrirModal('${cel}')">💬</button>
+                        <button class="btn btn-info" onclick="abrirModalFotos('${cel}')">📷</button>
+                        <button class="btn btn-danger" onclick="eliminarConductor('${cel}')">🗑️</button>
+                    </td>
+                </tr>`;
+                index++;
             });
+            
+            aplicarFiltros();
         });
     }
 
@@ -378,7 +561,6 @@
         const contenedor = document.getElementById('lista-detallada');
         contenedor.innerHTML = 'Cargando...';
         const celLimpio = String(cel).replace(/\D/g, '');
-
         function pintarLista(lista) {
             if (!lista.length) {
                 contenedor.innerHTML = '<div class="empty">No hay comentarios aún para este conductor.<br><br>Aparecen cuando el pasajero califica al terminar el viaje.</div>';
@@ -402,10 +584,9 @@
                 if (data.pasajero) html += '<span style="color:#2EC4E6;font-size:12px;">👤 ' + data.pasajero + '</span><br>';
                 html += '<span>' + data.texto + '</span></div>';
             });
-            html += '<button class="btn btn-danger" style="margin-top:12px;" onclick="limpiarTextosComentarios(\'' + cel + '\')">🗑️ Borrar SOLO textos</button>';
+            html += '<button class="btn btn-danger" style="margin-top:12px;width:100%;" onclick="limpiarTextosComentarios(\'' + cel + '\')">🗑️ Borrar SOLO textos</button>';
             contenedor.innerHTML = html;
         }
-
         function mapSnap(snap) {
             var lista = [];
             if (!snap || !snap.exists()) return lista;
@@ -421,7 +602,6 @@
             });
             return lista;
         }
-
         db.ref('conductores/' + cel + '/calificaciones').once('value').then(function(snap) {
             var lista = mapSnap(snap);
             if (lista.length) { pintarLista(lista); return; }
@@ -435,8 +615,34 @@
             contenedor.innerHTML = '<div class="empty">Error al cargar: ' + (err.message || '') + '</div>';
         });
     }
+
     function cerrarModal() {
         const modal = document.getElementById('modalComentarios');
+        modal.classList.remove('open');
+        modal.style.display = 'none';
+    }
+
+    function abrirModalFotos(cel) {
+        const modal = document.getElementById('modalFotos');
+        modal.classList.add('open');
+        modal.style.display = 'flex';
+        const cont = document.getElementById('contenidoFotos');
+        cont.innerHTML = `
+            <div class="foto-controls">
+                <label>Foto de perfil</label>
+                <input type="file" id="file-${cel}-perfil" accept="image/*">
+                <button class="btn btn-info" style="width:100%;margin-top:6px;" onclick="subirImagen('${cel}','perfil')">📷 Subir Perfil</button>
+            </div>
+            <div class="foto-controls">
+                <label>Foto del carro</label>
+                <input type="file" id="file-${cel}-carro" accept="image/*">
+                <button class="btn btn-info" style="width:100%;margin-top:6px;" onclick="subirImagen('${cel}','carro')">🚗 Subir Carro</button>
+            </div>
+        `;
+    }
+
+    function cerrarModalFotos() {
+        const modal = document.getElementById('modalFotos');
         modal.classList.remove('open');
         modal.style.display = 'none';
     }
@@ -463,6 +669,7 @@
             snapshot.ref.getDownloadURL().then(url => {
                 db.ref('conductores/' + cel).update({ [nombreCampoDB]: url });
                 alert('¡Foto subida!');
+                cerrarModalFotos();
             });
         }).catch(err => alert('Error: ' + err.message));
     }
@@ -513,52 +720,33 @@
         });
     }
 
-    function filtrarConductores() {
-        const q = (document.getElementById('buscador').value || '').toLowerCase();
-        document.querySelectorAll('.driver-card').forEach(card => {
-            const txt = (card.getAttribute('data-search') || card.textContent || '').toLowerCase();
-            card.style.display = txt.includes(q) ? '' : 'none';
-        });
-    }
-
-    // ---- LOGIN ADMIN BLINDADO CONTRA ERRORES DE FIREBASE ----
+    // ---- LOGIN ADMIN ----
     function loginAdmin() {
         const user = (document.getElementById('adminUser').value || '').trim().toLowerCase();
         const pass = document.getElementById('adminPass').value || '';
         const err = document.getElementById('loginError');
-
         if (!user || !pass) {
             err.style.display = 'block';
             err.textContent = 'Completa usuario y contraseña';
             return;
         }
-
         db.ref('admins/' + user).once('value').then(snap => {
             const data = snap.val();
-
             if (!data) {
                 err.style.display = 'block';
                 err.textContent = 'Usuario o contraseña incorrectos';
                 return;
             }
-
             let esValido = false;
-
-            // 1. Si la contraseña se guardó de forma perfecta en Firebase
             if (String(data.password) === String(pass)) {
                 esValido = true;
-            } 
-            // 2. Si ocurrió el error común y se guardó como una subcarpeta (clave en vez de valor)
-            else if (data.password && typeof data.password === 'object') {
+            } else if (data.password && typeof data.password === 'object') {
                 if (data.password[pass] !== undefined) {
                     esValido = true;
                 }
-            } 
-            // 3. Si se guardó directo sobre el usuario
-            else if (data[pass] !== undefined) {
+            } else if (data[pass] !== undefined) {
                 esValido = true;
             }
-
             if (esValido) {
                 sessionStorage.setItem('admin_ok', '1');
                 sessionStorage.setItem('admin_user', user);

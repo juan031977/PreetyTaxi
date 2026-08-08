@@ -880,17 +880,28 @@
     }
     function enviarCalificacionConductor() {
         if (calificacionSeleccionada === 0) return alert("Por favor selecciona una estrella.");
-        const comentario = document.getElementById('comentario-cliente').value || "Sin comentario";
-        db.ref('viajes/' + viajeID).update({
-            calificacion_conductor: calificacionSeleccionada,
-            comentario_pasajero: comentario 
-        });
-        if (viajeCompletadoData && viajeCompletadoData.conductorCel) {
-            db.ref('conductores/' + viajeCompletadoData.conductorCel + '/calificaciones/' + viajeID).set({
+        const comentario = (document.getElementById('comentario-cliente').value || '').trim() || "Sin comentario";
+        const celCond = viajeCompletadoData && (viajeCompletadoData.conductorCel || viajeCompletadoData.telefono_conductor);
+        const idViaje = viajeID || (viajeCompletadoData && (viajeCompletadoData.timestamp || viajeCompletadoData.id)) || Date.now();
+        if (viajeID) {
+            db.ref('viajes/' + viajeID).update({
+                calificacion_conductor: calificacionSeleccionada,
+                comentario_pasajero: comentario
+            });
+        }
+        if (celCond) {
+            const celLimpio = String(celCond).replace(/\D/g, '');
+            db.ref('conductores/' + celLimpio + '/calificaciones/' + idViaje).set({
                 estrellas: calificacionSeleccionada,
                 comentario: comentario,
-                fecha: new Date().toISOString()
-            });
+                comentario_pasajero: comentario,
+                pasajero: localStorage.getItem('nombre_pasajero') || localStorage.getItem('userName') || 'Pasajero',
+                telefono_pasajero: localStorage.getItem('telefono_pasajero') || localStorage.getItem('userCel') || '',
+                fecha: Date.now(),
+                fecha_texto: new Date().toLocaleString()
+            }).catch(function(e){ console.error('Error guardando calificacion', e); });
+        } else {
+            console.warn('No hay conductorCel para guardar calificacion');
         }
         document.getElementById('modal-calificar').style.display = 'none';
         mostrarViajeFinalizado(viajeCompletadoData);

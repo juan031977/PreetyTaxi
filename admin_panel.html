@@ -247,7 +247,7 @@
     </div>
 </div>
 
-    <div id="appAdmin">
+<div id="appAdmin">
     <div class="top">
         <h1>🚕 Admin Click & Go</h1>
         <div id="adminNombreTop" style="font-size:13px;color:#9aadb8;margin-bottom:8px;"></div>
@@ -521,57 +521,57 @@
         });
     }
 
-    // ---- LOGIN ADMIN ----
-    // Crea en Firebase: admins/juan { password: "tuclave", nombre: "Juan" }
-    //                  admins/socio { password: "suclave", nombre: "Socio" }
+    // ---- LOGIN ADMIN BLINDADO CONTRA ERRORES DE FIREBASE ----
     function loginAdmin() {
-        const user = (document.getElementById('adminUser').value || '').trim();
+        const user = (document.getElementById('adminUser').value || '').trim().toLowerCase();
         const pass = document.getElementById('adminPass').value || '';
         const err = document.getElementById('loginError');
+
         if (!user || !pass) {
             err.style.display = 'block';
             err.textContent = 'Completa usuario y contraseña';
             return;
         }
-        // Busca el usuario sin importar mayúsculas (Hector = hector)
-        db.ref('admins').once('value').then(snap => {
-            if (!snap.exists()) {
-                err.style.display = 'block';
-                err.textContent = 'No hay administradores en Firebase (nodo admins)';
-                return;
-            }
-            let encontrado = null;
-            let claveReal = '';
-            snap.forEach(child => {
-                if (String(child.key).toLowerCase() === user.toLowerCase()) {
-                    encontrado = child.val();
-                    claveReal = child.key;
-                }
-            });
-            if (!encontrado) {
+
+        db.ref('admins/' + user).once('value').then(snap => {
+            const data = snap.val();
+
+            if (!data) {
                 err.style.display = 'block';
                 err.textContent = 'Usuario o contraseña incorrectos';
                 return;
             }
-            // password puede ser texto o número (ej: 1021)
-            let claveGuardada = encontrado.password;
-            if (claveGuardada && typeof claveGuardada === 'object') {
-                // mal creado en Firebase (nodo anidado) — toma el primer valor
-                const vals = Object.values(claveGuardada);
-                claveGuardada = vals.length ? vals[0] : '';
+
+            let esValido = false;
+
+            // 1. Si la contraseña se guardó de forma perfecta en Firebase
+            if (String(data.password) === String(pass)) {
+                esValido = true;
+            } 
+            // 2. Si ocurrió el error común y se guardó como una subcarpeta (clave en vez de valor)
+            else if (data.password && typeof data.password === 'object') {
+                if (data.password[pass] !== undefined) {
+                    esValido = true;
+                }
+            } 
+            // 3. Si se guardó directo sobre el usuario
+            else if (data[pass] !== undefined) {
+                esValido = true;
             }
-            if (String(claveGuardada) === String(pass)) {
+
+            if (esValido) {
                 sessionStorage.setItem('admin_ok', '1');
-                sessionStorage.setItem('admin_user', claveReal);
-                sessionStorage.setItem('admin_nombre', encontrado.nombre || claveReal);
+                sessionStorage.setItem('admin_user', user);
+                sessionStorage.setItem('admin_nombre', data.nombre || user);
                 mostrarAdmin();
             } else {
                 err.style.display = 'block';
                 err.textContent = 'Usuario o contraseña incorrectos';
             }
-        }).catch(function() {
+        }).catch((error) => {
+            console.error("Error de conexión:", error);
             err.style.display = 'block';
-            err.textContent = 'Error de conexión';
+            err.textContent = 'Error de conexión con la base de datos';
         });
     }
 
@@ -606,6 +606,5 @@
 
     window.onload = checkSesion;
 </script>
-</div><!-- /appAdmin -->
-</body>
+</div></body>
 </html>

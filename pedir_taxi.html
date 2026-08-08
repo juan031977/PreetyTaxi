@@ -320,13 +320,20 @@
         }
 
         
-        // Cargar foto de perfil del pasajero para los viajes
+        // Cargar foto del pasajero ACTUAL (por número, no foto global de otra persona)
         (function cargarFotoPasajero() {
-            const cel = localStorage.getItem('userCel') || localStorage.getItem('telefono_pasajero');
+            const cel = String(localStorage.getItem('userCel') || localStorage.getItem('telefono_pasajero') || '').replace(/\D/g, '');
             if (!cel) return;
-            if (localStorage.getItem('foto_pasajero')) return;
-            db.ref('pasajeros/' + String(cel).replace(/\D/g, '') + '/foto_pasajero').once('value').then(s => {
-                if (s.val()) localStorage.setItem('foto_pasajero', s.val());
+            db.ref('pasajeros/' + cel + '/foto_pasajero').once('value').then(s => {
+                const url = s.val() || '';
+                if (url) {
+                    localStorage.setItem('foto_pasajero_' + cel, url);
+                    localStorage.setItem('foto_pasajero', url); // compatibilidad
+                } else {
+                    localStorage.removeItem('foto_pasajero_' + cel);
+                    // Si la foto global era de otro usuario, limpiarla
+                    localStorage.removeItem('foto_pasajero');
+                }
             }).catch(() => {});
         })();
 
@@ -640,9 +647,14 @@
         `; 
         viajeID = Date.now();
         localStorage.setItem('viajeActivoID', viajeID);
-        // Incluir foto de perfil del pasajero (si la tiene) para que el conductor la vea
-        const fotoLocal = localStorage.getItem('foto_pasajero') || '';
+        // Foto SIEMPRE del número que pide el viaje (nunca de otro pasajero del mismo celular)
         const crearViajeConFoto = (fotoUrl) => {
+            if (fotoUrl) {
+                localStorage.setItem('foto_pasajero_' + telefono, fotoUrl);
+                localStorage.setItem('foto_pasajero', fotoUrl);
+            } else {
+                localStorage.removeItem('foto_pasajero_' + telefono);
+            }
             db.ref('viajes/' + viajeID).set({ 
                 origen: origenFinal,
                 destino: destinoFinal, 
@@ -656,15 +668,13 @@
                 tipo_ruta: modoActual 
             }).then(() => { escucharEstadoViaje(viajeID); });
         };
-        if (fotoLocal) {
-            crearViajeConFoto(fotoLocal);
-        } else {
-            db.ref('pasajeros/' + telefono + '/foto_pasajero').once('value').then(s => {
-                const url = s.val() || '';
-                if (url) localStorage.setItem('foto_pasajero', url);
-                crearViajeConFoto(url);
-            }).catch(() => crearViajeConFoto(''));
-        } 
+        // Prioridad: Firebase del teléfono actual → cache solo de ESE teléfono
+        db.ref('pasajeros/' + telefono + '/foto_pasajero').once('value').then(s => {
+            const url = s.val() || localStorage.getItem('foto_pasajero_' + telefono) || '';
+            crearViajeConFoto(url);
+        }).catch(() => {
+            crearViajeConFoto(localStorage.getItem('foto_pasajero_' + telefono) || '');
+        }); 
     } 
     window.revertirViaje = function(id) {
         if (confirm("¿El conductor demoró mucho? Vamos a quitarle el viaje y a buscarte otro taxi cercano.")) {

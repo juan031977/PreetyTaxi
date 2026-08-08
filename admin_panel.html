@@ -196,11 +196,61 @@
             padding: 30px 10px;
             font-size: 14px;
         }
+
+        /* LOGIN ADMIN */
+        #pantallaLogin {
+            position: fixed; inset: 0; z-index: 10000;
+            background: #0b0b0b;
+            display: flex; align-items: center; justify-content: center;
+            padding: 20px;
+        }
+        #pantallaLogin.oculto { display: none; }
+        .login-box {
+            width: 100%; max-width: 360px;
+            background: #121a1f;
+            border: 1px solid #2a3a45;
+            border-radius: 18px;
+            padding: 24px 20px;
+            text-align: center;
+        }
+        .login-box h2 { color: #2EC4E6; margin-bottom: 6px; font-size: 22px; }
+        .login-box p { color: #9aadb8; font-size: 13px; margin-bottom: 18px; }
+        .login-box input {
+            width: 100%; padding: 14px; margin-bottom: 12px;
+            border-radius: 12px; border: 1px solid #2a3a45;
+            background: #152028; color: #fff; font-size: 16px;
+        }
+        .login-box .btn-login {
+            width: 100%; padding: 16px; border: none; border-radius: 12px;
+            background: #FFC107; color: #0b0b0b; font-weight: 800; font-size: 16px;
+            cursor: pointer; margin-top: 4px;
+        }
+        #appAdmin { display: none; }
+        #appAdmin.visible { display: block; }
+        .btn-logout {
+            background: transparent; border: 1px solid #2a3a45; color: #9aadb8;
+            padding: 10px; border-radius: 10px; font-size: 13px; font-weight: 700;
+            width: 100%; margin-top: 8px; cursor: pointer;
+        }
     </style>
 </head>
 <body>
+
+<div id="pantallaLogin">
+    <div class="login-box">
+        <h2>🔒 Admin Click & Go</h2>
+        <p>Solo acceso autorizado</p>
+        <input type="text" id="adminUser" placeholder="Usuario" autocomplete="username">
+        <input type="password" id="adminPass" placeholder="Contraseña" autocomplete="current-password">
+        <button class="btn-login" onclick="loginAdmin()">ENTRAR</button>
+        <p id="loginError" style="color:#dc3545; margin-top:12px; font-size:13px; display:none;"></p>
+    </div>
+</div>
+
+<div id="appAdmin">
     <div class="top">
         <h1>🚕 Admin Click & Go</h1>
+        <div id="adminNombreTop" style="font-size:13px;color:#9aadb8;margin-bottom:8px;"></div>
         <div id="estadoSistema">Verificando ciclo diario...</div>
 
         <button class="btn btn-corte" onclick="corteDiario()">🌙 CORTE DIARIO MANUAL</button>
@@ -208,6 +258,7 @@
         <button class="btn btn-semana" onclick="cierreSemanal()">🔄 RESETEO SEMANAL</button>
 
         <input type="text" id="buscador" class="buscador" onkeyup="filtrarConductores()" placeholder="🔍 Buscar conductor o celular...">
+        <button type="button" class="btn-logout" onclick="logoutAdmin()">🚪 Cerrar sesión</button>
     </div>
 
     <div class="lista" id="lista-conductores"></div>
@@ -326,29 +377,64 @@
         modal.style.display = 'flex';
         const contenedor = document.getElementById('lista-detallada');
         contenedor.innerHTML = 'Cargando...';
-        db.ref('conductores/' + cel + '/calificaciones').once('value', snap => {
-            if (!snap.exists()) {
-                contenedor.innerHTML = '<div class="empty">No hay comentarios</div>';
+        const celLimpio = String(cel).replace(/\D/g, '');
+
+        function pintarLista(lista) {
+            if (!lista.length) {
+                contenedor.innerHTML = '<div class="empty">No hay comentarios aún para este conductor.<br><br>Aparecen cuando el pasajero califica al terminar el viaje.</div>';
                 return;
             }
-            let lista = [];
-            snap.forEach(c => lista.push(c.val()));
-            lista.sort((a, b) => (b.fecha || 0) - (a.fecha || 0));
-            let html = '';
-            lista.forEach(data => {
-                const texto = data.comentario || data.comentario_pasajero || 'Sin comentario';
-                const fechaLegible = data.fecha ? new Date(data.fecha).toLocaleDateString() : '';
-                html += `<div class="comentario">
-                    <span class="stars">${data.estrellas} ★</span>
-                    <span class="fecha"> ${fechaLegible}</span><br>
-                    ${texto}
-                </div>`;
+            lista.sort(function(a, b) {
+                var fa = typeof a.fecha === 'number' ? a.fecha : (Date.parse(a.fecha) || 0);
+                var fb = typeof b.fecha === 'number' ? b.fecha : (Date.parse(b.fecha) || 0);
+                return fb - fa;
             });
-            html += `<button class="btn btn-danger" style="margin-top:12px;" onclick="limpiarTextosComentarios('${cel}')">🗑️ Borrar SOLO textos</button>`;
+            var html = '';
+            lista.forEach(function(data) {
+                var fechaLegible = '';
+                if (data.fecha) {
+                    var d = typeof data.fecha === 'number' ? new Date(data.fecha) : new Date(data.fecha);
+                    fechaLegible = isNaN(d.getTime()) ? String(data.fecha) : d.toLocaleString();
+                }
+                html += '<div class="comentario">';
+                html += '<span class="stars">' + (data.estrellas || 0) + ' ★</span>';
+                html += '<span class="fecha"> ' + fechaLegible + '</span><br>';
+                if (data.pasajero) html += '<span style="color:#2EC4E6;font-size:12px;">👤 ' + data.pasajero + '</span><br>';
+                html += '<span>' + data.texto + '</span></div>';
+            });
+            html += '<button class="btn btn-danger" style="margin-top:12px;" onclick="limpiarTextosComentarios(\'' + cel + '\')">🗑️ Borrar SOLO textos</button>';
             contenedor.innerHTML = html;
+        }
+
+        function mapSnap(snap) {
+            var lista = [];
+            if (!snap || !snap.exists()) return lista;
+            snap.forEach(function(c) {
+                var data = c.val() || {};
+                lista.push({
+                    id: c.key,
+                    estrellas: data.estrellas || data.calificacion || 0,
+                    texto: data.comentario || data.comentario_pasajero || data.texto || 'Sin comentario',
+                    pasajero: data.pasajero || data.nombre_pasajero || '',
+                    fecha: data.fecha || data.fecha_texto || 0
+                });
+            });
+            return lista;
+        }
+
+        db.ref('conductores/' + cel + '/calificaciones').once('value').then(function(snap) {
+            var lista = mapSnap(snap);
+            if (lista.length) { pintarLista(lista); return; }
+            if (celLimpio && celLimpio !== cel) {
+                return db.ref('conductores/' + celLimpio + '/calificaciones').once('value').then(function(snap2) {
+                    pintarLista(mapSnap(snap2));
+                });
+            }
+            pintarLista([]);
+        }).catch(function(err) {
+            contenedor.innerHTML = '<div class="empty">Error al cargar: ' + (err.message || '') + '</div>';
         });
     }
-
     function cerrarModal() {
         const modal = document.getElementById('modalComentarios');
         modal.classList.remove('open');
@@ -435,7 +521,90 @@
         });
     }
 
-    window.onload = cargarDatos;
+    // ---- LOGIN ADMIN BLINDADO CONTRA ERRORES DE FIREBASE ----
+    function loginAdmin() {
+        const user = (document.getElementById('adminUser').value || '').trim().toLowerCase();
+        const pass = document.getElementById('adminPass').value || '';
+        const err = document.getElementById('loginError');
+
+        if (!user || !pass) {
+            err.style.display = 'block';
+            err.textContent = 'Completa usuario y contraseña';
+            return;
+        }
+
+        db.ref('admins/' + user).once('value').then(snap => {
+            const data = snap.val();
+
+            if (!data) {
+                err.style.display = 'block';
+                err.textContent = 'Usuario o contraseña incorrectos';
+                return;
+            }
+
+            let esValido = false;
+
+            // 1. Si la contraseña se guardó de forma perfecta en Firebase
+            if (String(data.password) === String(pass)) {
+                esValido = true;
+            } 
+            // 2. Si ocurrió el error común y se guardó como una subcarpeta (clave en vez de valor)
+            else if (data.password && typeof data.password === 'object') {
+                if (data.password[pass] !== undefined) {
+                    esValido = true;
+                }
+            } 
+            // 3. Si se guardó directo sobre el usuario
+            else if (data[pass] !== undefined) {
+                esValido = true;
+            }
+
+            if (esValido) {
+                sessionStorage.setItem('admin_ok', '1');
+                sessionStorage.setItem('admin_user', user);
+                sessionStorage.setItem('admin_nombre', data.nombre || user);
+                mostrarAdmin();
+            } else {
+                err.style.display = 'block';
+                err.textContent = 'Usuario o contraseña incorrectos';
+            }
+        }).catch((error) => {
+            console.error("Error de conexión:", error);
+            err.style.display = 'block';
+            err.textContent = 'Error de conexión con la base de datos';
+        });
+    }
+
+    function logoutAdmin() {
+        sessionStorage.removeItem('admin_ok');
+        sessionStorage.removeItem('admin_user');
+        sessionStorage.removeItem('admin_nombre');
+        location.reload();
+    }
+
+    function mostrarAdmin() {
+        document.getElementById('pantallaLogin').classList.add('oculto');
+        document.getElementById('appAdmin').classList.add('visible');
+        const nom = sessionStorage.getItem('admin_nombre') || 'Admin';
+        const el = document.getElementById('adminNombreTop');
+        if (el) el.textContent = 'Hola, ' + nom;
+        cargarDatos();
+    }
+
+    function checkSesion() {
+        if (sessionStorage.getItem('admin_ok') === '1') {
+            mostrarAdmin();
+        }
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && document.getElementById('pantallaLogin') &&
+            !document.getElementById('pantallaLogin').classList.contains('oculto')) {
+            loginAdmin();
+        }
+    });
+
+    window.onload = checkSesion;
 </script>
-</body>
+</div></body>
 </html>

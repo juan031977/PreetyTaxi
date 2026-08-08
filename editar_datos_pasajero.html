@@ -6,6 +6,7 @@
     <title>Editar mis datos - Click & Go Taxi</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
     <style>
         :root { --cyan: #2EC4E6; --yellow: #FFC107; --dark: #0b0b0b; }
         * { box-sizing: border-box; }
@@ -71,6 +72,14 @@
         <label>Contraseña actual</label>
         <input type="password" id="passActual" placeholder="Tu clave">
 
+        <div style="text-align:center;margin:12px 0;">
+            <img id="previewFoto" src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" alt="Foto"
+                 style="width:90px;height:90px;border-radius:50%;object-fit:cover;border:3px solid #2EC4E6;background:#152028;">
+            <label style="margin-top:10px;">Foto de perfil</label>
+            <input type="file" id="fotoFile" accept="image/*" style="font-size:13px;color:#ccc;">
+            <button type="button" onclick="subirFoto()" style="background:#1A9CB8;color:#fff;margin-top:8px;">📷 Subir / cambiar foto</button>
+        </div>
+
         <label>Nombre</label>
         <input type="text" id="nombre" placeholder="Tu nombre">
 
@@ -93,10 +102,12 @@
 <script>
     const firebaseConfig = {
         apiKey: "AIzaSyD1c5lxn2ehGS_Wo5Htbkwi0gUcdpauiMg",
-        databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/"
+        databaseURL: "https://preetytaxiapp-default-rtdb.firebaseio.com/",
+        storageBucket: "preetytaxiapp.firebasestorage.app"
     };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+    const storage = firebase.storage();
 
     // Prefill desde sesión
     (function () {
@@ -135,8 +146,76 @@
             document.getElementById('email').value = u.email || '';
             document.getElementById('celNuevo').value = '';
             document.getElementById('passNueva').value = '';
+            if (u.foto_pasajero) {
+                document.getElementById('previewFoto').src = u.foto_pasajero;
+                localStorage.setItem('foto_pasajero', u.foto_pasajero);
+            }
             mostrarOk('Datos cargados. Ya puedes editar y guardar.');
         }).catch(() => mostrarErr('Error de conexión'));
+    }
+
+
+        // Comprime y redimensiona la foto antes de subir (más liviana)
+        function comprimirImagen(file, maxLado, calidad) {
+            maxLado = maxLado || 800;
+            calidad = calidad || 0.7;
+            return new Promise(function(resolve, reject) {
+                if (!file || !file.type || file.type.indexOf('image') !== 0) {
+                    return reject(new Error('Archivo no es imagen'));
+                }
+                var img = new Image();
+                var url = URL.createObjectURL(file);
+                img.onload = function() {
+                    var w = img.width, h = img.height;
+                    if (w > maxLado || h > maxLado) {
+                        if (w >= h) { h = Math.round(h * maxLado / w); w = maxLado; }
+                        else { w = Math.round(w * maxLado / h); h = maxLado; }
+                    }
+                    var canvas = document.createElement('canvas');
+                    canvas.width = w;
+                    canvas.height = h;
+                    var ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    URL.revokeObjectURL(url);
+                    canvas.toBlob(function(blob) {
+                        if (!blob) return reject(new Error('No se pudo comprimir'));
+                        resolve(blob);
+                    }, 'image/jpeg', calidad);
+                };
+                img.onerror = function() {
+                    URL.revokeObjectURL(url);
+                    reject(new Error('No se pudo leer la imagen'));
+                };
+                img.src = url;
+            });
+        }
+
+    function subirFoto() {
+        const cel = (document.getElementById('celActual').value || '').replace(/\D/g, '');
+        const pass = document.getElementById('passActual').value || '';
+        const fileInput = document.getElementById('fotoFile');
+        const file = fileInput && fileInput.files[0];
+        if (!cel || !pass) return mostrarErr('Primero pon celular y contraseña');
+        if (!file) return mostrarErr('Selecciona una imagen');
+        if (file.size > 5 * 1024 * 1024) return mostrarErr('La foto debe pesar menos de 5 MB');
+
+        db.ref('pasajeros/' + cel).once('value').then(snap => {
+            const u = snap.val();
+            if (!u || String(u.password) !== String(pass)) return mostrarErr('Celular o contraseña incorrectos');
+            mostrarOk('Comprimiendo y subiendo foto...');
+            const ref = storage.ref('pasajeros/' + cel + '/perfil.jpg');
+            return comprimirImagen(file, 800, 0.72).then(blob => {
+                const kb = Math.round(blob.size / 1024);
+                console.log('Foto comprimida ~' + kb + ' KB');
+                return ref.put(blob, { contentType: 'image/jpeg' });
+            }).then(snap => snap.ref.getDownloadURL()).then(url => {
+                return db.ref('pasajeros/' + cel).update({ foto_pasajero: url }).then(() => {
+                    document.getElementById('previewFoto').src = url;
+                    localStorage.setItem('foto_pasajero', url);
+                    mostrarOk('✅ Foto guardada (optimizada). El conductor la verá en tus viajes.');
+                });
+            });
+        }).catch(err => mostrarErr('Error: ' + (err.message || 'no se pudo subir')));
     }
 
     function guardarCambios() {
@@ -160,7 +239,8 @@
                 nombre: nombre,
                 email: email || u.email || '',
                 password: passNueva || u.password,
-                celular: celNuevo || celActual
+                celular: celNuevo || celActual,
+                foto_pasajero: u.foto_pasajero || localStorage.getItem('foto_pasajero') || null
             };
 
             // Sin cambio de número

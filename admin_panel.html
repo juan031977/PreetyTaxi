@@ -247,7 +247,7 @@
     </div>
 </div>
 
-<div id="appAdmin">
+    <div id="appAdmin">
     <div class="top">
         <h1>🚕 Admin Click & Go</h1>
         <div id="adminNombreTop" style="font-size:13px;color:#9aadb8;margin-bottom:8px;"></div>
@@ -257,14 +257,6 @@
         <button class="btn btn-reporte" onclick="window.open('admin_reporte_diario.html', '_blank')">📊 REPORTE DIARIO</button>
         <button class="btn btn-semana" onclick="cierreSemanal()">🔄 RESETEO SEMANAL</button>
 
-        <div style="background: #152028; padding: 15px; border-radius: 12px; border: 1px solid var(--cyan); margin: 15px 0;">
-            <h3 style="color: var(--cyan); font-size: 14px; margin-bottom: 8px; text-align: left;">📢 Aviso Global para Conductores</h3>
-            <textarea id="textoAviso" placeholder="Escribe un anuncio para todos (ej: Zona de alta demanda...)" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--dark); color: #fff; margin-bottom: 10px; font-family: inherit; font-size: 14px; resize: none;" rows="2"></textarea>
-            <div style="display: flex; gap: 10px;">
-                <button class="btn btn-active btn-sm" onclick="publicarAviso()" style="margin:0; flex:1; padding: 10px;">🚀 PUBLICAR</button>
-                <button class="btn btn-danger btn-sm" onclick="borrarAviso()" style="margin:0; flex:1; padding: 10px;">🗑️ QUITAR</button>
-            </div>
-        </div>
         <input type="text" id="buscador" class="buscador" onkeyup="filtrarConductores()" placeholder="🔍 Buscar conductor o celular...">
         <button type="button" class="btn-logout" onclick="logoutAdmin()">🚪 Cerrar sesión</button>
     </div>
@@ -291,17 +283,6 @@
 
     function cargarDatos() {
         verificarCorteAutomatico();
-        
-        // Escuchar si hay un aviso activo para sincronizar el panel
-        db.ref('sistema/aviso_global').on('value', snap => {
-            const aviso = snap.val();
-            if (aviso && aviso.activo && document.getElementById('textoAviso')) {
-                document.getElementById('textoAviso').value = aviso.texto;
-            } else if (document.getElementById('textoAviso')) {
-                document.getElementById('textoAviso').value = '';
-            }
-        });
-
         db.ref('conductores').on('value', snap => {
             const lista = document.getElementById('lista-conductores');
             lista.innerHTML = "";
@@ -364,35 +345,6 @@
                 </div>`;
             });
         });
-    }
-
-    function publicarAviso() {
-        const texto = document.getElementById('textoAviso').value.trim();
-        if (!texto) return alert('Por favor, escribe un aviso antes de publicar.');
-        
-        if (confirm('¿Seguro que deseas enviar este aviso a TODAS las pantallas de los conductores?')) {
-            db.ref('sistema/aviso_global').set({
-                texto: texto,
-                fecha: new Date().toISOString(),
-                activo: true
-            }).then(() => {
-                alert('¡Aviso publicado con éxito!');
-            }).catch(err => {
-                alert('Error al publicar: ' + err.message);
-            });
-        }
-    }
-
-    function borrarAviso() {
-        if (confirm('¿Deseas quitar el aviso actual de las pantallas?')) {
-            db.ref('sistema/aviso_global').update({ 
-                activo: false, 
-                texto: '' 
-            }).then(() => {
-                document.getElementById('textoAviso').value = '';
-                alert('Aviso eliminado exitosamente.');
-            });
-        }
     }
 
     function verificarCorteAutomatico() {
@@ -569,52 +521,57 @@
         });
     }
 
-    // ---- LOGIN ADMIN BLINDADO CONTRA ERRORES DE FIREBASE ----
+    // ---- LOGIN ADMIN ----
+    // Crea en Firebase: admins/juan { password: "tuclave", nombre: "Juan" }
+    //                  admins/socio { password: "suclave", nombre: "Socio" }
     function loginAdmin() {
-        const user = (document.getElementById('adminUser').value || '').trim().toLowerCase();
+        const user = (document.getElementById('adminUser').value || '').trim();
         const pass = document.getElementById('adminPass').value || '';
         const err = document.getElementById('loginError');
-
         if (!user || !pass) {
             err.style.display = 'block';
             err.textContent = 'Completa usuario y contraseña';
             return;
         }
-
-        db.ref('admins/' + user).once('value').then(snap => {
-            const data = snap.val();
-
-            if (!data) {
+        // Busca el usuario sin importar mayúsculas (Hector = hector)
+        db.ref('admins').once('value').then(snap => {
+            if (!snap.exists()) {
+                err.style.display = 'block';
+                err.textContent = 'No hay administradores en Firebase (nodo admins)';
+                return;
+            }
+            let encontrado = null;
+            let claveReal = '';
+            snap.forEach(child => {
+                if (String(child.key).toLowerCase() === user.toLowerCase()) {
+                    encontrado = child.val();
+                    claveReal = child.key;
+                }
+            });
+            if (!encontrado) {
                 err.style.display = 'block';
                 err.textContent = 'Usuario o contraseña incorrectos';
                 return;
             }
-
-            let esValido = false;
-
-            if (String(data.password) === String(pass)) {
-                esValido = true;
-            } else if (data.password && typeof data.password === 'object') {
-                if (data.password[pass] !== undefined) {
-                    esValido = true;
-                }
-            } else if (data[pass] !== undefined) {
-                esValido = true;
+            // password puede ser texto o número (ej: 1021)
+            let claveGuardada = encontrado.password;
+            if (claveGuardada && typeof claveGuardada === 'object') {
+                // mal creado en Firebase (nodo anidado) — toma el primer valor
+                const vals = Object.values(claveGuardada);
+                claveGuardada = vals.length ? vals[0] : '';
             }
-
-            if (esValido) {
+            if (String(claveGuardada) === String(pass)) {
                 sessionStorage.setItem('admin_ok', '1');
-                sessionStorage.setItem('admin_user', user);
-                sessionStorage.setItem('admin_nombre', data.nombre || user);
+                sessionStorage.setItem('admin_user', claveReal);
+                sessionStorage.setItem('admin_nombre', encontrado.nombre || claveReal);
                 mostrarAdmin();
             } else {
                 err.style.display = 'block';
                 err.textContent = 'Usuario o contraseña incorrectos';
             }
-        }).catch((error) => {
-            console.error("Error de conexión:", error);
+        }).catch(function() {
             err.style.display = 'block';
-            err.textContent = 'Error de conexión con la base de datos';
+            err.textContent = 'Error de conexión';
         });
     }
 
@@ -649,5 +606,6 @@
 
     window.onload = checkSesion;
 </script>
-</div></body>
+</div><!-- /appAdmin -->
+</body>
 </html>

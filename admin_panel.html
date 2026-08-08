@@ -257,6 +257,14 @@
         <button class="btn btn-reporte" onclick="window.open('admin_reporte_diario.html', '_blank')">📊 REPORTE DIARIO</button>
         <button class="btn btn-semana" onclick="cierreSemanal()">🔄 RESETEO SEMANAL</button>
 
+        <div style="background: #152028; padding: 15px; border-radius: 12px; border: 1px solid var(--cyan); margin: 15px 0;">
+            <h3 style="color: var(--cyan); font-size: 14px; margin-bottom: 8px; text-align: left;">📢 Aviso Global para Conductores</h3>
+            <textarea id="textoAviso" placeholder="Escribe un anuncio para todos (ej: Zona de alta demanda...)" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--dark); color: #fff; margin-bottom: 10px; font-family: inherit; font-size: 14px; resize: none;" rows="2"></textarea>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-active btn-sm" onclick="publicarAviso()" style="margin:0; flex:1; padding: 10px;">🚀 PUBLICAR</button>
+                <button class="btn btn-danger btn-sm" onclick="borrarAviso()" style="margin:0; flex:1; padding: 10px;">🗑️ QUITAR</button>
+            </div>
+        </div>
         <input type="text" id="buscador" class="buscador" onkeyup="filtrarConductores()" placeholder="🔍 Buscar conductor o celular...">
         <button type="button" class="btn-logout" onclick="logoutAdmin()">🚪 Cerrar sesión</button>
     </div>
@@ -283,6 +291,17 @@
 
     function cargarDatos() {
         verificarCorteAutomatico();
+        
+        // Escuchar si hay un aviso activo para sincronizar el panel
+        db.ref('sistema/aviso_global').on('value', snap => {
+            const aviso = snap.val();
+            if (aviso && aviso.activo && document.getElementById('textoAviso')) {
+                document.getElementById('textoAviso').value = aviso.texto;
+            } else if (document.getElementById('textoAviso')) {
+                document.getElementById('textoAviso').value = '';
+            }
+        });
+
         db.ref('conductores').on('value', snap => {
             const lista = document.getElementById('lista-conductores');
             lista.innerHTML = "";
@@ -345,6 +364,35 @@
                 </div>`;
             });
         });
+    }
+
+    function publicarAviso() {
+        const texto = document.getElementById('textoAviso').value.trim();
+        if (!texto) return alert('Por favor, escribe un aviso antes de publicar.');
+        
+        if (confirm('¿Seguro que deseas enviar este aviso a TODAS las pantallas de los conductores?')) {
+            db.ref('sistema/aviso_global').set({
+                texto: texto,
+                fecha: new Date().toISOString(),
+                activo: true
+            }).then(() => {
+                alert('¡Aviso publicado con éxito!');
+            }).catch(err => {
+                alert('Error al publicar: ' + err.message);
+            });
+        }
+    }
+
+    function borrarAviso() {
+        if (confirm('¿Deseas quitar el aviso actual de las pantallas?')) {
+            db.ref('sistema/aviso_global').update({ 
+                activo: false, 
+                texto: '' 
+            }).then(() => {
+                document.getElementById('textoAviso').value = '';
+                alert('Aviso eliminado exitosamente.');
+            });
+        }
     }
 
     function verificarCorteAutomatico() {
@@ -544,18 +592,13 @@
 
             let esValido = false;
 
-            // 1. Si la contraseña se guardó de forma perfecta en Firebase
             if (String(data.password) === String(pass)) {
                 esValido = true;
-            } 
-            // 2. Si ocurrió el error común y se guardó como una subcarpeta (clave en vez de valor)
-            else if (data.password && typeof data.password === 'object') {
+            } else if (data.password && typeof data.password === 'object') {
                 if (data.password[pass] !== undefined) {
                     esValido = true;
                 }
-            } 
-            // 3. Si se guardó directo sobre el usuario
-            else if (data[pass] !== undefined) {
+            } else if (data[pass] !== undefined) {
                 esValido = true;
             }
 

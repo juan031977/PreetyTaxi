@@ -354,14 +354,13 @@
     <div class="top">
         <h1>🚕 Admin Click & Go</h1>
         <div id="adminNombreTop" style="font-size:13px;color:#9aadb8;margin-bottom:8px;"></div>
-        <div id="estadoSistema">Verificando ciclo diario...</div>
-        <button class="btn btn-corte" onclick="corteDiario()">🌙 CORTE DIARIO MANUAL</button>
+        <div id="estadoSistema">Verificando estado del sistema...</div>
+        <button class="btn btn-corte" onclick="corteDiario()">🌙 BLOQUEO GENERAL (Forzar Cuota B/. 2.00)</button>
         <button class="btn btn-reporte" onclick="window.open('admin_reporte_diario.html', '_blank')">📊 REPORTE DIARIO</button>
-        <button class="btn btn-semana" onclick="cierreSemanal()">🔄 RESETEO SEMANAL</button>
+        <button class="btn btn-semana" onclick="cierreSemanal()">🔄 RESETEO TOTAL (Borrar Deudas y Viajes)</button>
         
         <input type="text" id="buscador" class="buscador" onkeyup="aplicarFiltros()" placeholder="🔍 Buscar por teléfono, correo o nombre...">
         
-        <!-- BOTONES DE FILTRO CON COLORES -->
         <div class="filtros">
             <button class="filtro-btn activo" data-filtro="todos" onclick="setFiltro('todos')">Todos</button>
             <button class="filtro-btn" data-filtro="pendiente" onclick="setFiltro('pendiente')">Pendientes</button>
@@ -374,7 +373,6 @@
         <button type="button" class="btn-logout" onclick="logoutAdmin()">🚪 Cerrar sesión</button>
     </div>
 
-    <!-- TABLA TIPO BASE DE DATOS -->
     <div class="table-wrap">
         <div class="table-container">
             <table>
@@ -392,13 +390,11 @@
                     </tr>
                 </thead>
                 <tbody id="lista-conductores">
-                    <!-- Se llena con JS -->
-                </tbody>
+                    </tbody>
             </table>
         </div>
     </div>
 
-    <!-- Modal Comentarios -->
     <div id="modalComentarios" class="modal" onclick="if(event.target===this)cerrarModal()">
         <div class="modal-sheet">
             <button class="close-btn" onclick="cerrarModal()">&times;</button>
@@ -407,7 +403,6 @@
         </div>
     </div>
 
-    <!-- Modal Fotos -->
     <div id="modalFotos" class="modal" onclick="if(event.target===this)cerrarModalFotos()">
         <div class="modal-sheet">
             <button class="close-btn" onclick="cerrarModalFotos()">&times;</button>
@@ -428,6 +423,13 @@
 
     let filtroActual = 'todos';
     let totalConductores = 0;
+
+    function obtenerFechaPanama() {
+        const date = new Date();
+        const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
+        const panamaDate = new Date(utc - (3600000 * 5)); 
+        return panamaDate.toISOString().split('T')[0];
+    }
 
     function setFiltro(filtro) {
         filtroActual = filtro;
@@ -464,7 +466,8 @@
     }
 
     function cargarDatos() {
-        verificarCorteAutomatico();
+        document.getElementById('estadoSistema').innerHTML = '<span style="color:#28a745;">✅ Sistema monitoreando</span>';
+        
         db.ref('conductores').on('value', snap => {
             const tbody = document.getElementById('lista-conductores');
             tbody.innerHTML = "";
@@ -502,6 +505,14 @@
                     btnEstado = `<button class="btn btn-active" onclick="cambiarEstado('${cel}','activo')">✅ ACTIVAR</button>`;
                 }
 
+                // SI DEBE ALGO, SE PONE ROJO EN LA TABLA
+                let htmlDeuda = `B/. ${parseFloat(d.deuda || 0).toFixed(2)}`;
+                if(parseFloat(d.deuda || 0) > 0) {
+                    htmlDeuda = `<span style="color:#dc3545;font-weight:bold;">${htmlDeuda}</span>`;
+                } else {
+                    htmlDeuda = `<span style="color:#28a745;">${htmlDeuda}</span>`;
+                }
+
                 const searchText = ((d.nombre || '') + ' ' + cel + ' ' + email).toLowerCase();
                 totalConductores++;
 
@@ -512,7 +523,7 @@
                     <td class="tel-cell">${cel}</td>
                     <td class="email-cell">${email}</td>
                     <td><span class="badge ${claseBadge}">${estado.toUpperCase()}</span></td>
-                    <td class="deuda">B/. ${parseFloat(d.deuda || 0).toFixed(2)}</td>
+                    <td class="deuda">${htmlDeuda}</td>
                     <td>⭐ ${promedio} <small style="color:var(--muted)">(${conteo})</small></td>
                     <td class="fotos-ok">${tienePerfil} Perfil<br>${tieneCarro} Carro</td>
                     <td class="acciones-cell">
@@ -527,30 +538,6 @@
             });
             
             aplicarFiltros();
-        });
-    }
-
-    function verificarCorteAutomatico() {
-        const hoy = new Date().toISOString().split('T')[0];
-        db.ref('sistema/ultimoCorte').once('value', snap => {
-            const ultimoCorte = snap.val();
-            if (ultimoCorte !== hoy) {
-                document.getElementById('estadoSistema').innerHTML = '<span style="color:#dc3545;">⚠️ Aplicando corte automático...</span>';
-                db.ref('conductores').once('value', conductoresSnap => {
-                    let updates = {};
-                    conductoresSnap.forEach(c => {
-                        let deudaActual = parseFloat((c.val() || {}).deuda || 0);
-                        updates[c.key + '/estado'] = 'bloqueado';
-                        updates[c.key + '/deuda'] = deudaActual + 1.00;
-                    });
-                    db.ref('conductores').update(updates).then(() => {
-                        db.ref('sistema').update({ ultimoCorte: hoy });
-                        document.getElementById('estadoSistema').innerHTML = '<span style="color:#28a745;">✅ Corte diario aplicado. Unidades bloqueadas.</span>';
-                    });
-                });
-            } else {
-                document.getElementById('estadoSistema').innerHTML = '<span style="color:#28a745;">✅ Sistema al día</span>';
-            }
         });
     }
 
@@ -678,8 +665,14 @@
         db.ref('conductores/' + cel).update({ estado: nuevoEstado });
     }
 
+    // EL BOTÓN MÁGICO PARA REGISTRAR EL PAGO DEL CONDUCTOR (Borrón y cuenta nueva)
     function pagarDeuda(cel) {
-        db.ref('conductores/' + cel).update({ deuda: 0, estado: 'activo' });
+        const hoy = obtenerFechaPanama();
+        db.ref('conductores/' + cel).update({ 
+            deuda: 0, 
+            estado: 'activo',
+            ultimoDiaCobro: hoy // Le registra que YA pagó hoy, para que su panel no lo bloquee.
+        });
     }
 
     function eliminarConductor(cel) {
@@ -688,25 +681,29 @@
         }
     }
 
+    // Botón manual de emergencia (Por si falla el reloj automático del chofer)
     function corteDiario() {
-        if (!confirm('¿Ejecutar corte diario y bloquear todas las unidades?')) return;
-        const hoy = new Date().toISOString().split('T')[0];
+        if (!confirm('¿Forzar bloqueo masivo a B/. 2.00? (Nota: Su celular lo hace automático a la medianoche)')) return;
+        
         db.ref('conductores').once('value', snap => {
             let updates = {};
             snap.forEach(c => {
-                let deudaActual = parseFloat((c.val() || {}).deuda || 0);
-                updates[c.key + '/estado'] = 'bloqueado';
-                updates[c.key + '/deuda'] = deudaActual + 1.00;
+                if (c.val().estado !== 'pendiente') {
+                    // Ya NO suma 1.00 sobre la deuda vieja, simplemente los estanca a B/. 2.00
+                    updates[c.key + '/estado'] = 'bloqueado';
+                    updates[c.key + '/deuda'] = 2.00;
+                    updates[c.key + '/enServicio'] = false; // Los desconecta del radar
+                }
             });
             db.ref('conductores').update(updates).then(() => {
-                db.ref('sistema').update({ ultimoCorte: hoy });
-                alert('Corte diario ejecutado.');
+                alert('Todos los conductores activos han sido bloqueados con cuota de B/. 2.00');
             });
         });
     }
 
+    // Reseteo total para casos de pánico
     function cierreSemanal() {
-        if (!confirm('¿Reseteo semanal de viajes y deudas?')) return;
+        if (!confirm('¿Reseteo TOTAL? Se borrarán todos los viajes viejos y se perdonarán las deudas a B/. 0.00')) return;
         db.ref('viajes').remove();
         db.ref('conductores').once('value', snap => {
             let updates = {};
@@ -715,7 +712,7 @@
                 updates[c.key + '/estado'] = 'activo';
             });
             db.ref('conductores').update(updates).then(() => {
-                alert('Reseteo semanal completado.');
+                alert('Sistema limpio. Todos empiezan de cero.');
             });
         });
     }
@@ -794,5 +791,5 @@
 
     window.onload = checkSesion;
 </script>
-</div></body>
+</body>
 </html>

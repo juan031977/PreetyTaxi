@@ -93,6 +93,36 @@
         .modal-promo-desc { font-size: 13px; color: #aaa; margin-top: 8px; }
         .modal-promo-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
         .modal-promo-actions .full { grid-column: span 2; }
+
+        .flota-box {
+            margin: 16px 0 8px 0;
+            padding: 14px 16px;
+            border-radius: 14px;
+            border: 1px solid #2a3a45;
+            background: #0d1418;
+            text-align: center;
+            transition: background 0.25s, border-color 0.25s;
+        }
+        .flota-box.hay {
+            border-color: rgba(40,167,69,0.55);
+            background: rgba(40,167,69,0.12);
+        }
+        .flota-box.no-hay {
+            border-color: rgba(220,53,69,0.45);
+            background: rgba(220,53,69,0.10);
+        }
+        .flota-box .flota-num {
+            font-size: 22px;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+        .flota-box.hay .flota-num { color: #28a745; }
+        .flota-box.no-hay .flota-num { color: #ff6b7a; }
+        .flota-box .flota-sub {
+            font-size: 12px;
+            color: #9aadb8;
+            margin-top: 4px;
+        }
     </style>
 </head>
 <body>
@@ -189,6 +219,10 @@
                 <option value="efectivo">💵 Efectivo</option>
                 <option value="yappy">📱 Yappy</option>
             </select>
+        </div>
+        <div id="flota-disponible" class="flota-box no-hay">
+            <div class="flota-num" id="flota-texto">🔄 Buscando conductores...</div>
+            <div class="flota-sub" id="flota-sub">Estado de la flota en tiempo real</div>
         </div>
         <button class="btn-pedir" id="btn-solicitar" onclick="pedirTaxi()">SOLICITAR TAXI</button>
         <div id="estado-viaje-container"></div>
@@ -338,6 +372,8 @@
                 }
             }).catch(() => {});
         })();
+
+        escucharConductoresDisponibles();
 
         const viajeRecuperado = localStorage.getItem('viajeActivoID');
         if (viajeRecuperado) {
@@ -591,6 +627,49 @@
                 if (precioBruto > 2.00) precioFinal = Math.ceil(precioBruto * 4) / 4;
                 document.getElementById('display-precio').innerText = "B/. " + precioFinal.toFixed(2);
             }
+        });
+    }
+
+
+    // Conductores disponibles en tiempo real (enServicio + activo)
+    function escucharConductoresDisponibles() {
+        const box = document.getElementById('flota-disponible');
+        const txt = document.getElementById('flota-texto');
+        const sub = document.getElementById('flota-sub');
+        if (!box || !txt) return;
+
+        db.ref('conductores').on('value', function(snap) {
+            let n = 0;
+            const ahora = Date.now();
+            const MAX_MS = 3 * 60 * 1000; // 3 min sin señal = no contar
+            if (snap.exists()) {
+                snap.forEach(function(child) {
+                    const d = child.val() || {};
+                    if (d.estado !== 'activo') return;
+                    if (d.enServicio !== true) return;
+                    // Solo cuenta si hubo actividad reciente (evita conductores "fantasma")
+                    const ult = typeof d.ultimaActividad === 'number' ? d.ultimaActividad : 0;
+                    if (!ult || (ahora - ult) > MAX_MS) return;
+                    n++;
+                });
+            }
+            box.classList.remove('hay', 'no-hay');
+            if (n > 0) {
+                box.classList.add('hay');
+                txt.textContent = n === 1
+                    ? '🟢 1 conductor disponible'
+                    : '🟢 ' + n + ' conductores disponibles';
+                sub.textContent = 'Hay taxis en línea listos para tomar tu viaje';
+            } else {
+                box.classList.add('no-hay');
+                txt.textContent = '🔴 No hay conductores disponibles';
+                sub.textContent = 'Nadie está en línea ahora. Puedes pedir y esperaremos a que se conecte alguien.';
+            }
+        }, function(err) {
+            console.error('Error flota:', err);
+            box.classList.add('no-hay');
+            txt.textContent = '⚠️ No se pudo cargar la flota';
+            sub.textContent = 'Revisa tu conexión e intenta de nuevo';
         });
     }
 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Trabajo - Click&GoTaxi</title>
+    <title>Panel de Trabajo - Click$GoTaxi</title>
     <link rel="manifest" href="./manifest.json"> 
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -63,11 +63,7 @@
         <div style="text-align: right;">
             <div style="font-size: 12px; color: #aaa;">GANANCIA HOY</div>
             <span id="ganancia" style="font-size: 20px; font-weight: bold; color: #2EC4E6;">B/. 0.00</span>
-            
-            <div style="font-size: 12px; color: #aaa; margin-top: 8px;">CUOTA DIARIA</div>
-            <span id="deuda-valor" style="font-size: 16px; font-weight: bold; color: #ff4d4d;">B/. 0.00</span>
-            
-            <div style="font-size: 9px; color: #777; margin-top: 2px;">Se reinicia a media noche</div>
+            <div style="font-size: 10px; color: #777; margin-top: 2px;">Se reinicia a media noche</div>
         </div>
     </div>
 
@@ -152,12 +148,9 @@
             });
         }
 
-        // Reloj calibrado para hora de Panamá (UTC-5)
         function obtenerFechaHoy() {
-            const date = new Date();
-            const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
-            const panamaDate = new Date(utc - (3600000 * 5)); 
-            return panamaDate.toISOString().slice(0, 10);
+            const tzoffset = (new Date()).getTimezoneOffset() * 60000;
+            return (new Date(Date.now() - tzoffset)).toISOString().slice(0, 10);
         }
 
         function obtenerNombreDia(fechaStr) {
@@ -167,7 +160,6 @@
             return dias[fecha.getDay()] + ' (' + fechaStr.substring(5) + ')';
         }
 
-        // LÓGICA MENDES: Cuota 2.00 Fija, Cero Acumulación, Bloqueo a Medianoche
         function verificarReseteoDiario(telefono) {
             const fechaHoy = obtenerFechaHoy();
             const refConductor = db.ref('conductores/' + telefono);
@@ -176,11 +168,7 @@
                 const conductorInfo = snapshot.val() || {};
                 const ultimaFecha = conductorInfo.ultimoDiaRegistrado || fechaHoy;
                 const generadoHoy = parseFloat(conductorInfo.totalGeneradoHoy || 0);
-                const fechaCobro = conductorInfo.ultimoDiaCobro;
 
-                let updates = {};
-
-                // 1. Reseteo de ganancias del día anterior
                 if (ultimaFecha !== fechaHoy) {
                     if (generadoHoy > 0) {
                         db.ref('reportes_diarios/' + telefono + '/' + ultimaFecha).transaction(dia => {
@@ -191,23 +179,9 @@
                             return dia;
                         });
                     }
-                    updates.totalGeneradoHoy = 0;
-                    updates.ultimoDiaRegistrado = fechaHoy;
+                    refConductor.update({ totalGeneradoHoy: 0, ultimoDiaRegistrado: fechaHoy });
                 } else if (!conductorInfo.ultimoDiaRegistrado) {
-                    updates.ultimoDiaRegistrado = fechaHoy;
-                }
-
-                // 2. Lógica de Cuota Diaria (B/. 2.00 Fija NO Acumulable)
-                // Se cobra B/. 2.00 si estamos en un día nuevo donde no ha pagado
-                if (fechaCobro !== fechaHoy && conductorInfo.estado !== 'pendiente') {
-                    updates.deuda = 2.00;
-                    updates.estado = 'bloqueado';
-                    updates.ultimoDiaCobro = fechaHoy;
-                    updates.enServicio = false; // Desconectarlo obligatoriamente
-                }
-
-                if (Object.keys(updates).length > 0) {
-                    refConductor.update(updates);
+                    refConductor.update({ ultimoDiaRegistrado: fechaHoy });
                 }
             });
         }
@@ -256,7 +230,12 @@
         } else { 
             document.getElementById('nombreConductor').textContent = datos.nombre; 
             verificarReseteoDiario(datos.telefono); 
-            cargarHistorial6Dias(datos.telefono);   
+            cargarHistorial6Dias(datos.telefono);
+            // Limpia "fantasma": al abrir el panel empieza desconectado
+            db.ref('conductores/' + datos.telefono).update({
+                enServicio: false,
+                ultimaActividad: firebase.database.ServerValue.TIMESTAMP
+            });
             escucharEstadoConductor(datos.telefono); 
             pedirPermisoNotificaciones(datos.telefono); 
             escucharAvisoGlobal();
@@ -291,20 +270,17 @@
             } catch (e) {}
         }
 
+        // Sincroniza el estado desde Firebase para mantenerlo seguro
         function escucharEstadoConductor(telefono) {
             db.ref('conductores/' + telefono).on('value', snap => {
                 const conductorData = snap.val() || {};
                 adminEstado = conductorData.estado || 'pendiente';
                 
+                // Si la base de datos dice expresamente true, está conectado; sino, desconectado por defecto
                 conductorConectado = (conductorData.enServicio === true);
 
                 if(conductorData) {
                     document.getElementById('ganancia').innerText = "B/. " + parseFloat(conductorData.totalGeneradoHoy || 0).toFixed(2);
-                    
-                    const elDeuda = document.getElementById('deuda-valor');
-                    if(elDeuda) {
-                        elDeuda.innerText = "B/. " + parseFloat(conductorData.deuda || 0).toFixed(2);
-                    }
                 }
                 actualizarInterfaz();
             });
@@ -315,9 +291,10 @@
             
             if (adminEstado === 'bloqueado' || adminEstado === 'pendiente') {
                 conductorConectado = false;
-                db.ref('conductores/' + datos.telefono + '/enServicio').set(false);
-                document.getElementById('txtEstado').innerHTML = `<span style="color: #dc3545; font-weight: bold;">⛔ CUENTA BLOQUEADA</span>`;
-                btnConexion.innerHTML = `❌ CUOTA PENDIENTE (B/. 2.00)`;
+                db.ref('conductores/' + datos.telefono).update({ enServicio: false, ultimaActividad: firebase.database.ServerValue.TIMESTAMP });
+                detenerHeartbeat();
+                document.getElementById('txtEstado').innerHTML = `<span style="color: #dc3545; font-weight: bold;">⛔ CUENTA RESTRINGIDA</span>`;
+                btnConexion.innerHTML = `❌ CUENTA INACTIVA / PENDIENTE`;
             } else {
                 document.getElementById('txtEstado').innerHTML = `<span style="color: #28a745; font-weight: bold;">✅ CUENTA ACTIVA</span>`;
                 if (conductorConectado) {
@@ -330,21 +307,81 @@
             gestionarEscuchasDeViajes(); 
         }
 
-        function toggleConexion() {
-            if (adminEstado === 'bloqueado' || adminEstado === 'pendiente') {
-                return alert("⛔ Tu cuenta está bloqueada.\nDebes cancelar tu cuota diaria de B/. 2.00 para conectarte y tomar carreras.");
+        let heartbeatInterval = null;
+
+        function detenerHeartbeat() {
+            if (heartbeatInterval) {
+                clearInterval(heartbeatInterval);
+                heartbeatInterval = null;
             }
-            const nuevoEstado = !conductorConectado;
-            db.ref('conductores/' + datos.telefono).update({ enServicio: nuevoEstado });
         }
 
+        function iniciarHeartbeat() {
+            detenerHeartbeat();
+            if (!datos || !datos.telefono) return;
+            const ref = db.ref('conductores/' + datos.telefono);
+            const ping = () => {
+                if (!conductorConectado) return;
+                ref.update({
+                    enServicio: true,
+                    ultimaActividad: firebase.database.ServerValue.TIMESTAMP
+                });
+            };
+            ping();
+            heartbeatInterval = setInterval(ping, 30000);
+        }
+
+        function toggleConexion() {
+            if (adminEstado === 'bloqueado' || adminEstado === 'pendiente') {
+                return alert("⛔ Tu cuenta se encuentra en revisión o pendiente de activación por el administrador.");
+            }
+            const nuevoEstado = !conductorConectado;
+            const payload = {
+                enServicio: nuevoEstado,
+                ultimaActividad: firebase.database.ServerValue.TIMESTAMP
+            };
+            db.ref('conductores/' + datos.telefono).update(payload).then(() => {
+                if (nuevoEstado) iniciarHeartbeat();
+                else detenerHeartbeat();
+            });
+        }
+
+        // Al abrir el panel: desconectar por defecto (evita fantasmas en la flota)
+        function forzarDesconexionInicial() {
+            if (!datos || !datos.telefono) return;
+            detenerHeartbeat();
+            db.ref('conductores/' + datos.telefono).update({
+                enServicio: false,
+                ultimaActividad: firebase.database.ServerValue.TIMESTAMP
+            });
+        }
+
+        // Si cierra la app / pestaña → fuera de servicio
+        window.addEventListener('pagehide', function() {
+            if (datos && datos.telefono) {
+                detenerHeartbeat();
+                db.ref('conductores/' + datos.telefono).update({ enServicio: false });
+            }
+        });
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'hidden') return;
+            // al volver visible, si estaba "conectado" renueva actividad
+            if (conductorConectado && datos && datos.telefono) {
+                db.ref('conductores/' + datos.telefono).update({
+                    enServicio: true,
+                    ultimaActividad: firebase.database.ServerValue.TIMESTAMP
+                });
+            }
+        });
+
         function gestionarEscuchasDeViajes() {
+            // 1. Apagamos cualquier escucha previa de viajes nuevos para evitar duplicados o fugas
             if (listenerNuevoViaje) {
                 db.ref('viajes').orderByChild('estado').equalTo('pendiente').off('child_added', listenerNuevoViaje);
                 listenerNuevoViaje = null;
             }
 
-            // Escuchar siempre viajes en curso propios
+            // 2. Escuchar siempre los viajes propios activos (por si se desconectó accidentalmente a mitad de un viaje)
             if(datos && datos.telefono) {
                 db.ref('viajes').orderByChild('conductorCel').equalTo(datos.telefono).on('value', (snap) => {
                     let hayViajeValido = false;
@@ -364,12 +401,10 @@
                         estoyEnViajeActivo = false;
                         if(intervaloReloj) clearInterval(intervaloReloj);
                         
-                        if (adminEstado === 'bloqueado' || adminEstado === 'pendiente') {
-                            document.getElementById('contenedor').innerHTML = '<div style="text-align:center; padding:35px; color:#dc3545;">⛔ <b>Estás bloqueado por cuota.</b><br><span style="color:#aaa; font-size:14px;">Pero mira los viajes que te estás perdiendo 👇</span></div><div id="lista-pendientes"></div>';
-                        } else if (!conductorConectado) {
+                        if (!conductorConectado) {
                             document.getElementById('contenedor').innerHTML = '<div style="text-align:center; padding:35px; color:#666;">💤 Estás fuera de servicio.<br>No recibirás alertas ni viajes nuevos.</div>';
                         } else {
-                            document.getElementById('contenedor').innerHTML = '<div style="text-align:center; padding:35px; color:#2EC4E6;">🟢 Estás en línea. Buscando viajes cercanos...</div><div id="lista-pendientes"></div>';
+                            document.getElementById('contenedor').innerHTML = '<div style="text-align:center; padding:35px; color:#2EC4E6;">🟢 Estás en línea. Buscando viajes cercanos...</div>';
                         }
                     } else {
                         if(intervaloReloj) clearInterval(intervaloReloj);
@@ -394,20 +429,18 @@
                 });
             }
 
-            // Escuchar viajes nuevos SI está conectado O bloqueado (para que los vea y se antoje)
-            const debeEscucharPendientes = (conductorConectado && adminEstado === 'activo') || (adminEstado === 'bloqueado');
-
-            if (debeEscucharPendientes) {
+            // 3. SOLO SI ESTÁ CONECTADO, activamos la escucha de nuevos viajes pendientes
+            if (conductorConectado && adminEstado !== 'bloqueado' && adminEstado !== 'pendiente') {
                 listenerNuevoViaje = (snap) => {
-                    // Validar que si está activo pero apagó su radar, no los vea
-                    if (!conductorConectado && adminEstado === 'activo') return; 
+                    // Doble validación de seguridad estricta
+                    if (!conductorConectado) return; 
                     
                     if (!estoyEnViajeActivo) {
                         const viaje = snap.val();
                         reproducirSonido();
                         mostrarPedido(snap.key, viaje);
 
-                        if (Notification.permission === 'granted' && conductorConectado) {
+                        if (Notification.permission === 'granted') {
                             navigator.serviceWorker.ready.then(reg => {
                                 reg.showNotification("🚕 ¡Nuevo viaje disponible!", {
                                     body: `De ${viaje.origen} a ${viaje.destino} - B/. ${viaje.precio}`,
@@ -433,37 +466,31 @@
 
         function mostrarPedido(id, p) {
             if(document.getElementById('pedido_' + id)) return;
-            // Doble filtro si está activo pero apagó la conexión
-            if(!conductorConectado && adminEstado === 'activo') return;
+            // Si por alguna razón extraña se abrió la tarjeta pero está desconectado, la borramos de inmediato
+            if(!conductorConectado) return;
 
             const estaBloqueado = (adminEstado === 'bloqueado' || adminEstado === 'pendiente');
             const fotoP = p.foto_pasajero || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png';
-            
-            // Si está bloqueado, se lo pintamos rojo para la presión psicológica
-            const html = `<div class="card" id="pedido_${id}" style="${estaBloqueado ? 'opacity: 0.85; border-color: #dc3545;' : ''}">
+            const html = `<div class="card" id="pedido_${id}">
                 <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
-                    <img src="${fotoP}" alt="Cliente" style="width:56px;height:56px;border-radius:50%;object-fit:cover;border:2px solid ${estaBloqueado ? '#dc3545' : '#2EC4E6'};background:#111;" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'">
+                    <img src="${fotoP}" alt="Cliente" style="width:56px;height:56px;border-radius:50%;object-fit:cover;border:2px solid #2EC4E6;background:#111;" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'">
                     <div class="info-row" style="margin:0;">👤 <strong>Cliente:</strong> ${p.pasajero_nombre || 'Cliente'}</div>
                 </div>
                 <div class="info-row">📍 <strong>Origen:</strong> ${p.origen}</div>
                 <div class="info-row">🏁 <strong>Destino:</strong> ${p.destino}</div>
                 <div class="precio">Total: B/. ${p.precio || "0.00"}</div>
                 ${p.metodo_pago ? `<div class="info-row" style="color:#ffc107;">💰 <strong>Pago:</strong> ${p.metodo_pago.toUpperCase()}</div>` : ''}
-                ${estaBloqueado ? `<button style="background:#dc3545; color:white; font-weight:bold; cursor:not-allowed;" disabled>⛔ BLOQUEADO - PAGA B/. 2.00</button>` : `<button style="background: #28a745; color: white;" onclick="aceptar('${id}')">✅ ACEPTAR VIAJE</button>`}
+                ${estaBloqueado ? `<button style="background:#dc3545; color:white;" disabled>⛔ CUENTA INACTIVA</button>` : `<button style="background: #28a745; color: white;" onclick="aceptar('${id}')">✅ ACEPTAR VIAJE</button>`}
             </div>`;
-            
-            const contenedorDestino = document.getElementById('lista-pendientes') || document.getElementById('contenedor');
-            contenedorDestino.insertAdjacentHTML('beforeend', html);
+            document.getElementById('contenedor').insertAdjacentHTML('beforeend', html);
         }
 
         window.aceptar = (id) => {
-            if (adminEstado === 'bloqueado' || adminEstado === 'pendiente') {
-                return alert("❌ Estás bloqueado. Paga la cuota diaria de B/. 2.00 para tomar carreras.");
-            }
             if (!conductorConectado) {
-                alert("❌ Estás fuera de servicio. Conéctate para aceptar viajes.");
+                alert("❌ Estás fuera de servicio. No puedes aceptar viajes.");
                 return;
             }
+            if (adminEstado === 'bloqueado' || adminEstado === 'pendiente') return alert("❌ No puedes aceptar viajes hasta que tu cuenta sea activada.");
             
             db.ref('viajes/' + id).update({
                 estado: 'conductor_asignado',
@@ -489,7 +516,7 @@
             document.getElementById('contenedor').innerHTML = `
                 <div class="card">
                     <div style="background:${esLlegada ? '#28a745' : '#1a1a1a'}; border: 1px solid #28a745; padding:10px; border-radius:5px; text-align:center; margin-bottom:15px; font-weight:bold; color:${esLlegada ? '#fff' : '#28a745'};">
-                        ${esLlegada ? '🟢 PASAJERO NOTIFICADO' : '✅ VIAJE EN CURSO'}
+                        ${esLlegada ? '🟢 PASAJERO NOTIFICADO (ESTADO VERDE)' : '✅ VIAJE EN CURSO'}
                     </div>
                     <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
                         <img src="${v.foto_pasajero || 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png'}" alt="Cliente" style="width:56px;height:56px;border-radius:50%;object-fit:cover;border:2px solid #2EC4E6;background:#111;" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'">
@@ -499,7 +526,7 @@
                     <div class="info-row">🏁 <strong>Destino:</strong> ${v.destino}</div>
                     <div class="precio">Total: B/. ${v.precio || "0.00"}</div>
                     ${relojHtml}
-                    <button style="background:${esLlegada ? '#6c757d' : '#007bff'}; color:white;" onclick="actualizar('${id}', 'conductor_llego')">${esLlegada ? '✓ PASAJERO YA NOTIFICADO' : '📍 LLEGUÉ AL PUNTO'}</button>
+                    <button style="background:${esLlegada ? '#6c757d' : '#007bff'}; color:white;" onclick="actualizar('${id}', 'conductor_llego')">${esLlegada ? '✓ PASAJERO YA NOTIFICADO' : '📍 LLEGUÉ AL PUNTO (NOTIFICAR VERDE)'}</button>
                     <button class="btn-whatsapp" onclick="window.open('https://wa.me/${celPasajero}', '_blank')">💬 WHATSAPP</button>
                     <button class="btn-iniciar" onclick="actualizar('${id}', 'viaje_iniciado')">▶️ INICIAR VIAJE</button>
                     <button class="btn-finalizar" onclick="finalizarViajeSeguro('${id}')">🏁 FINALIZAR VIAJE</button>
@@ -518,7 +545,7 @@
         };
 
         window.finalizarViajeSeguro = (id) => {
-            if(!confirm("¿Estás seguro que deseas finalizar este viaje?")) return;
+            if(!confirm("¿Estás seguro que deseas finalizar este viaje y registrar la ganancia completa?")) return;
             
             const viajeRef = db.ref('viajes/' + id);
             viajeRef.once('value', snap => {

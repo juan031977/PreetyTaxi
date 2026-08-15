@@ -284,14 +284,15 @@
     let calificacionSeleccionada = 0;
     let viajeCompletadoData = null; 
 
-    const PRECIOS_PH = { 'PH La Riviera Colonial': 1.75, 'Brisas del Pacífico': 1.75, 'PH Brisas Point': 1.75, 'PH Brisas Heights': 1.75, 'PH Golf Gardens': 2.50, 'Club De Golf': 2.50, 'PH Alpes': 2.50, 'PH Everest': 2.50, 'PH Bejin': 2.50, 'PH Olimpus': 2.50, 'PH Mont Blanc': 2.50, 'PH Sierra Nevada': 2.50, 'PH Aventura': 3.00, 'PH Vallarta': 3.00, 'PH Noura': 3.00, 'PH Cavana': 3.00, 'Parque Rash': 3.00, 'PH Lagun': 1.50, 'PH Royal Village': 2.00, 'Oxford School': 3.00, 'Green City': 6.00, 'Golf Garden': 2.50, 'PH Ventura': 3.00 };
+    const PRECIOS_PH = { 'PH La Riviera Colonial': 1.75, 'Brisas del Pacífico': 1.75, 'PH Brisas Point': 1.75, 'PH Brisas Heights': 1.75, 'PH Golf Gardens': 2.50, 'Club De Golf': 2.50, 'PH Alpes': 2.50, 'PH Everest': 2.50, 'PH Bejin': 2.50, 'PH Olimpus': 2.50, 'PH Mont Blanc': 2.50, 'PH Sierra Nevada': 2.50, 'PH Aventura': 3.00, 'PH Vallarta': 3.00, 'PH Noura': 3.00, 'PH Cavana': 3.00, 'Parque Rash': 3.00, 'PH Lagun': 1.50, 'PH Royal Village': 2.00, 'Oxford School': 3.00, 'Green City': 6.00, 'Golf Garden': 2.50, 'PH Ventura': 3.00, 'PH L La Montañesa': 2.50, 'Hacienda Golf': 1.50 };
     const PRECIOS_VILLAS = { 'Lomas del Golf (Garita)': 1.50, 'Lomas del Golf (Adentro)': 1.75, 'Villas del Golf (Garita)': 1.50, 'Villas del Golf (Adentro)': 1.75, 'Monticello 1 (Garita)': 1.50, 'Monticello 1 (Adentro)': 1.75, 'Monticello 2 (Garita)': 1.50, 'Monticello 2 (Adentro)': 1.75, 'Villa Lido (Garita)': 1.50, 'Villa Lido (Adentro)': 1.75, 'Villa Alta (Garita)': 1.50, 'Villa Alta (Adentro)': 1.75, 'Villa Tivoli (Garita)': 1.50, 'Villa Tivoli (Adentro)': 1.75, 'Villa Navona (Garita)': 1.50, 'Villa Navona (Adentro)': 1.75, 'Villa Tiber (Garita)': 1.50, 'Villa Tiber (Adentro)': 1.75 };
     const PRECIOS_ESCUELAS = { 'El IJA': 2.50, 'La Internacional': 2.50, 'Panamerican School': 2.50, 'Saint George': 1.75, 'SAP': 1.50, 'Smart Academy': 1.50, 'Preparatory High School': 1.50, 'AIP': 1.50, 'Oxford School': 3.00, 'Metropolitan School of Panama': 6.00 };
     
     // Lista base (se muestra en Rutas Externas)
     const PRECIOS_OTROS_BASE = { 
         'Cerro Viento Rural': 1.75, 
-        'Las Trancas': 1.50
+        'Las Trancas': 1.50,
+        'Club de golf': 2.50
     };
 
     // Lista completa solo para Rutas Internas
@@ -301,7 +302,8 @@
         'San Antonio': 2.50,
         'Los Pueblos': 2.50,
         'Metromall': 2.50,
-        'Cerro Viento': 2.50
+        'Cerro Viento': 2.50,
+        'Club de golf': 2.50
     };
 
     const PRECIOS_MALL = { 'Super 99 Brisas del Golf': 1.50, 'Machetazo': 1.50, 'Riba Smith': 1.50, 'Super Xtra': 1.50, 'El Rey Brisas del Golf': 1.50, 'Brisas Capital': 1.50, 'Kennedy Golf Plaza': 1.50, 'Signature': 1.50, 'Premier Plaza': 1.50, 'Plaza Point': 1.50, 'Plaza Caja de Ahorro': 1.50, 'Brisas Mall': 1.50, 'Plaza Mcdonalds': 1.50, 'Paseo Drive': 2.50, 'Northside Galleries': 2.00, 'Yappy Park': 3.50 };

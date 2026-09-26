@@ -20,9 +20,10 @@
             width: 90px; height: 90px; border-radius: 50%; object-fit: cover;
             border: 3px solid #2EC4E6; background: #152028; display: block; margin: 0 auto 8px;
         }
-        .foto-wrap label { display: block; font-size: 12px; color: #9aadb8; margin-bottom: 6px; }
+        .foto-wrap label { display: block; font-size: 12px; color: #FFC107; margin-bottom: 6px; font-weight: bold; }
         .foto-wrap input[type="file"] { font-size: 13px; color: #ccc; border: none; background: transparent; padding: 0; }
         .hint { font-size: 11px; color: #6a7a85; margin-top: 4px; }
+        .aviso { background: rgba(255,193,7,0.12); border: 1px solid rgba(255,193,7,0.35); color: #FFC107; padding: 10px 12px; border-radius: 10px; font-size: 12px; text-align: left; margin-bottom: 12px; line-height: 1.4; }
     </style>
 </head>
 <body>
@@ -31,11 +32,15 @@
 
         <h2>Crear Cuenta Pasajero 👤</h2>
 
+        <div class="aviso">
+            🛡️ Tu cuenta quedará en <b>revisión</b>. El administrador debe aprobarla antes de que puedas pedir taxi. La <b>foto es obligatoria</b> por seguridad del conductor.
+        </div>
+
         <div class="foto-wrap">
             <img id="previewFoto" src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" alt="Foto">
-            <label>Foto de perfil (opcional)</label>
-            <input type="file" id="fotoFile" accept="image/*" onchange="previsualizar()">
-            <div class="hint">Así te verá el conductor al aceptar el viaje</div>
+            <label>📷 Foto de perfil (OBLIGATORIA)</label>
+            <input type="file" id="fotoFile" accept="image/*" capture="user" onchange="previsualizar()">
+            <div class="hint">Así te verá el conductor. Sin foto no se puede registrar.</div>
         </div>
 
         <input type="text" id="nom" placeholder="Nombre Completo">
@@ -55,8 +60,6 @@
         const db = firebase.database();
         const storage = firebase.storage();
 
-
-        // Comprime y redimensiona la foto antes de subir (más liviana)
         function comprimirImagen(file, maxLado, calidad) {
             maxLado = maxLado || 800;
             calidad = calidad || 0.7;
@@ -94,8 +97,7 @@
         function previsualizar() {
             const file = document.getElementById('fotoFile').files[0];
             if (!file) return;
-            const url = URL.createObjectURL(file);
-            document.getElementById('previewFoto').src = url;
+            document.getElementById('previewFoto').src = URL.createObjectURL(file);
         }
 
         function registrar() {
@@ -110,6 +112,12 @@
                 return alert("Completa todos los datos, incluyendo tu correo.");
             }
             if (t.length < 8) return alert("Número de celular inválido");
+            if (!file) {
+                return alert("📷 La foto de perfil es OBLIGATORIA.\nAsí el conductor te reconoce y hay más seguridad.");
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                return alert("La foto debe pesar menos de 5 MB");
+            }
 
             btn.disabled = true;
             btn.innerText = "Registrando...";
@@ -126,37 +134,28 @@
                     celular: t,
                     password: p,
                     email: e,
-                    foto_pasajero: null
+                    foto_pasajero: null,
+                    estado: 'pendiente',
+                    fecha_registro: new Date().toISOString()
                 };
-
-                const terminar = (fotoUrl) => {
-                    base.foto_pasajero = fotoUrl || null;
-                    return db.ref('pasajeros/' + t).set(base).then(() => {
-                        localStorage.setItem('userCel', t);
-                        localStorage.setItem('userName', n);
-                        localStorage.setItem('telefono_pasajero', t);
-                        localStorage.setItem('nombre_pasajero', n);
-                        if (fotoUrl) localStorage.setItem('foto_pasajero', fotoUrl);
-                        alert("¡Éxito! Bienvenido a ClickGoTaxi.");
-                        window.location.href = "pedir_taxi.html";
-                    });
-                };
-
-                if (!file) {
-                    return terminar(null);
-                }
-                if (file.size > 5 * 1024 * 1024) {
-                    btn.disabled = false;
-                    btn.innerText = "REGISTRARME";
-                    return alert("La foto debe pesar menos de 5 MB");
-                }
 
                 btn.innerText = "Optimizando foto...";
                 const ref = storage.ref('pasajeros/' + t + '/perfil.jpg');
                 return comprimirImagen(file, 800, 0.72).then(blob => {
                     btn.innerText = "Subiendo foto...";
                     return ref.put(blob, { contentType: 'image/jpeg' });
-                }).then(s => s.ref.getDownloadURL()).then(url => terminar(url));
+                }).then(s => s.ref.getDownloadURL()).then(url => {
+                    base.foto_pasajero = url;
+                    return db.ref('pasajeros/' + t).set(base);
+                }).then(() => {
+                    localStorage.removeItem('userCel');
+                    localStorage.removeItem('userName');
+                    localStorage.removeItem('telefono_pasajero');
+                    localStorage.removeItem('nombre_pasajero');
+                    localStorage.removeItem('foto_pasajero');
+                    alert("✅ Registro enviado.\n\nTu cuenta está EN REVISIÓN.\nCuando el administrador la apruebe podrás iniciar sesión y pedir taxis.");
+                    window.location.href = "login_pasajero.html";
+                });
             }).catch(err => {
                 btn.disabled = false;
                 btn.innerText = "REGISTRARME";

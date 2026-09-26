@@ -710,7 +710,25 @@
         } 
         if (!telefono || telefono.length < 8) return alert("Por favor ingresa tu número de WhatsApp"); 
         if (precio === "B/. 0.00") return alert("Por favor espera a que se calcule la tarifa completa de origen a destino."); 
-        
+
+        // Seguridad: solo pasajeros aprobados pueden pedir taxi
+        db.ref('pasajeros/' + telefono).once('value').then(snapP => {
+            const pas = snapP.val();
+            if (!pas) {
+                return alert("⛔ Debes crear una cuenta de pasajero primero.\nVe a Registro y espera la aprobación del administrador.");
+            }
+            const est = (pas.estado || 'activo').toLowerCase();
+            if (est === 'pendiente') {
+                return alert("⏳ Tu cuenta está EN REVISIÓN.\nEl administrador debe aprobarla antes de pedir taxis.");
+            }
+            if (est === 'bloqueado') {
+                return alert("⛔ Tu cuenta está bloqueada.\nContacta a soporte de Click & Go Taxi.");
+            }
+            ejecutarPedidoTaxi(origenFinal, destinoFinal, precio, nombrePasajeroActual, telefono);
+        }).catch(() => alert("Error al verificar tu cuenta. Intenta de nuevo."));
+    }
+
+    function ejecutarPedidoTaxi(origenFinal, destinoFinal, precio, nombrePasajeroActual, telefono) {
         localStorage.setItem('telefono_pasajero', telefono); 
         localStorage.setItem('nombre_pasajero', nombrePasajeroActual); 
         const btnSolicitar = document.getElementById('btn-solicitar'); 

@@ -8,186 +8,54 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        :root {
-            --cyan: #2EC4E6;
-            --cyan-dark: #1A9CB8;
-            --yellow: #FFC107;
-            --green: #28a745;
-            --red: #dc3545;
-            --dark: #0b0b0b;
-            --card: #121a1f;
-            --border: #2a3a45;
-            --text: #ffffff;
-            --muted: #9aadb8;
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-            background: var(--dark);
-            color: var(--text);
-            min-height: 100vh;
-            padding: 12px;
-            padding-bottom: 40px;
-        }
-        .top {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 16px;
-            margin-bottom: 14px;
-            text-align: center;
-        }
+        :root { --cyan: #2EC4E6; --cyan-dark: #1A9CB8; --yellow: #FFC107; --green: #28a745; --red: #dc3545; --dark: #0b0b0b; --card: #121a1f; --border: #2a3a45; --muted: #9aadb8; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background: var(--dark); color: #fff; min-height: 100vh; padding: 12px; padding-bottom: 40px; }
+        .top { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 14px; text-align: center; }
         .top h1 { font-size: 20px; color: var(--cyan); margin-bottom: 6px; }
-        .top p { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
-        .btn {
-            display: inline-block;
-            padding: 10px 12px;
-            border: none;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 700;
-            cursor: pointer;
-            margin: 3px 2px;
-            text-align: center;
-            white-space: nowrap;
-        }
-        .btn:active { transform: scale(0.98); opacity: 0.9; }
+        .btn { display: inline-block; padding: 10px 12px; border: none; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; margin: 3px 2px; }
         .btn-active { background: var(--green); color: #fff; }
         .btn-block { background: var(--red); color: #fff; }
         .btn-danger { background: #a71d2a; color: #fff; }
-        .btn-link {
-            background: transparent;
-            border: 1px solid var(--border);
-            color: var(--muted);
-            width: 100%;
-            padding: 12px;
-            border-radius: 10px;
-            font-size: 13px;
-            font-weight: 700;
-            margin-top: 8px;
-            cursor: pointer;
-        }
-        .buscador {
-            width: 100%;
-            padding: 14px 16px;
-            border-radius: 12px;
-            border: 2px solid var(--cyan);
-            background: #152028;
-            color: #fff;
-            font-size: 16px;
-            outline: none;
-            margin-top: 6px;
-            margin-bottom: 12px;
-        }
-        .filtros {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-bottom: 12px;
-            justify-content: center;
-        }
-        .filtro-btn {
-            padding: 10px 16px;
-            border-radius: 20px;
-            border: 2px solid transparent;
-            font-size: 13px;
-            font-weight: 700;
-            cursor: pointer;
-            opacity: 0.75;
-        }
+        .btn-wa { background: #25D366; color: #fff; }
+        .btn-link { background: transparent; border: 1px solid var(--border); color: var(--muted); width: 100%; padding: 12px; border-radius: 10px; font-size: 13px; font-weight: 700; margin-top: 8px; cursor: pointer; }
+        .buscador { width: 100%; padding: 14px 16px; border-radius: 12px; border: 2px solid var(--cyan); background: #152028; color: #fff; font-size: 16px; outline: none; margin: 6px 0 12px; }
+        .filtros { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; justify-content: center; }
+        .filtro-btn { padding: 10px 16px; border-radius: 20px; border: 2px solid transparent; font-size: 13px; font-weight: 700; cursor: pointer; opacity: 0.75; }
         .filtro-btn[data-filtro="todos"] { background: #fff; color: #0b0b0b; }
         .filtro-btn[data-filtro="pendiente"] { background: #FFC107; color: #0b0b0b; }
         .filtro-btn[data-filtro="activo"] { background: #28a745; color: #fff; }
         .filtro-btn[data-filtro="bloqueado"] { background: #dc3545; color: #fff; }
         .filtro-btn.activo { opacity: 1; box-shadow: 0 0 0 3px rgba(255,255,255,0.3); }
         #contador { font-size: 13px; color: var(--muted); margin-bottom: 10px; text-align: center; }
-        .table-wrap {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            overflow: hidden;
-        }
-        .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        table { width: 100%; border-collapse: collapse; min-width: 700px; }
-        thead { background: #0d1418; position: sticky; top: 0; z-index: 10; }
-        th {
-            padding: 14px 12px;
-            text-align: left;
-            font-size: 12px;
-            font-weight: 800;
-            color: var(--cyan);
-            text-transform: uppercase;
-            letter-spacing: 0.4px;
-            border-bottom: 2px solid var(--border);
-            white-space: nowrap;
-        }
-        td {
-            padding: 14px 12px;
-            font-size: 13px;
-            border-bottom: 1px solid var(--border);
-            vertical-align: middle;
-        }
-        tbody tr:hover { background: rgba(46, 196, 230, 0.06); }
-        .nombre-cell { font-weight: 700; color: #fff; }
-        .tel-cell { color: var(--cyan); font-weight: 600; }
-        .email-cell { color: var(--muted); font-size: 12px; }
-        .badge {
-            font-size: 11px;
-            font-weight: 800;
-            padding: 5px 10px;
-            border-radius: 20px;
-            white-space: nowrap;
-            display: inline-block;
-        }
+        .lista { display: flex; flex-direction: column; gap: 12px; }
+        .card-p { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 14px; text-align: left; }
+        .card-p.pendiente { border-color: rgba(255,193,7,0.5); }
+        .card-p .nombre { font-weight: 800; font-size: 16px; margin-bottom: 4px; }
+        .card-p .meta { font-size: 13px; color: var(--muted); margin-bottom: 2px; }
+        .badge { font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 20px; display: inline-block; margin-top: 6px; }
         .badge-activo { background: rgba(40,167,69,0.2); color: #28a745; }
         .badge-bloqueado { background: rgba(220,53,69,0.2); color: #dc3545; }
         .badge-pendiente { background: rgba(255,193,7,0.2); color: #ffc107; }
-        .acciones-cell { white-space: nowrap; }
-        .empty { text-align: center; color: var(--muted); padding: 40px 10px; font-size: 14px; }
-        .foto-pas {
-            width: 44px; height: 44px; border-radius: 50%;
-            object-fit: cover; border: 2px solid var(--cyan); background: #111;
-        }
-        #pantallaLogin {
-            position: fixed; inset: 0; z-index: 10000;
-            background: #0b0b0b;
-            display: flex; align-items: center; justify-content: center;
-            padding: 20px;
-        }
+        .fotos-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; }
+        .fotos-grid a { display: block; text-decoration: none; }
+        .fotos-grid img { width: 100%; height: 90px; object-fit: cover; border-radius: 10px; border: 2px solid #2a3a45; background: #111; }
+        .fotos-grid span { display: block; font-size: 10px; color: var(--muted); text-align: center; margin-top: 4px; }
+        .acciones { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+        .empty { text-align: center; color: var(--muted); padding: 40px 10px; }
+        .aviso-seguridad { background: rgba(37,211,102,0.12); border: 1px solid rgba(37,211,102,0.4); color: #25D366; padding: 12px; border-radius: 10px; font-size: 12px; margin-bottom: 12px; text-align: left; line-height: 1.4; }
+        #pantallaLogin { position: fixed; inset: 0; z-index: 10000; background: #0b0b0b; display: flex; align-items: center; justify-content: center; padding: 20px; }
         #pantallaLogin.oculto { display: none; }
-        .login-box {
-            width: 100%; max-width: 360px;
-            background: #121a1f;
-            border: 1px solid #2a3a45;
-            border-radius: 18px;
-            padding: 24px 20px;
-            text-align: center;
-        }
-        .login-box h2 { color: #2EC4E6; margin-bottom: 6px; font-size: 22px; }
+        .login-box { width: 100%; max-width: 360px; background: #121a1f; border: 1px solid #2a3a45; border-radius: 18px; padding: 24px 20px; text-align: center; }
+        .login-box h2 { color: #2EC4E6; margin-bottom: 6px; }
         .login-box p { color: #9aadb8; font-size: 13px; margin-bottom: 18px; }
-        .login-box input {
-            width: 100%; padding: 14px; margin-bottom: 12px;
-            border-radius: 12px; border: 1px solid #2a3a45;
-            background: #152028; color: #fff; font-size: 16px;
-        }
-        .login-box .btn-login {
-            width: 100%; padding: 16px; border: none; border-radius: 12px;
-            background: #FFC107; color: #0b0b0b; font-weight: 800; font-size: 16px;
-            cursor: pointer; margin-top: 4px;
-        }
+        .login-box input { width: 100%; padding: 14px; margin-bottom: 12px; border-radius: 12px; border: 1px solid #2a3a45; background: #152028; color: #fff; font-size: 16px; }
+        .login-box .btn-login { width: 100%; padding: 16px; border: none; border-radius: 12px; background: #FFC107; color: #0b0b0b; font-weight: 800; font-size: 16px; cursor: pointer; }
         #appAdmin { display: none; }
         #appAdmin.visible { display: block; }
-        .aviso-seguridad {
-            background: rgba(255,193,7,0.12);
-            border: 1px solid rgba(255,193,7,0.4);
-            color: #FFC107;
-            padding: 12px;
-            border-radius: 10px;
-            font-size: 12px;
-            margin-bottom: 12px;
-            text-align: left;
-            line-height: 1.4;
-        }
+        .modal-foto { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 99999; align-items: center; justify-content: center; padding: 16px; }
+        .modal-foto.open { display: flex; }
+        .modal-foto img { max-width: 100%; max-height: 90vh; border-radius: 12px; }
     </style>
 </head>
 <body>
@@ -195,7 +63,7 @@
 <div id="pantallaLogin">
     <div class="login-box">
         <h2>👤 Admin Pasajeros</h2>
-        <p>Aprobación de cuentas de pasajeros</p>
+        <p>Aprobación con verificación de cédula</p>
         <input type="text" id="adminUser" placeholder="Usuario" autocomplete="username">
         <input type="password" id="adminPass" placeholder="Contraseña" autocomplete="current-password">
         <button class="btn-login" onclick="loginAdmin()">ENTRAR</button>
@@ -207,9 +75,8 @@
     <div class="top">
         <h1>👤 Admin Pasajeros</h1>
         <div id="adminNombreTop" style="font-size:13px;color:#9aadb8;margin-bottom:8px;"></div>
-        <p>Revisa y aprueba pasajeros antes de que puedan pedir taxi</p>
         <div class="aviso-seguridad">
-            🛡️ <strong>Seguridad para conductores:</strong> los pasajeros nuevos quedan en <b>PENDIENTE</b> hasta que los apruebes. Revisa foto, nombre y teléfono antes de activar.
+            💬 Al <b>APROBAR</b> se abre WhatsApp con el mensaje listo. Solo tocas <b>Enviar</b>.
         </div>
         <input type="text" id="buscador" class="buscador" onkeyup="aplicarFiltros()" placeholder="🔍 Buscar por teléfono, correo o nombre...">
         <div class="filtros">
@@ -222,26 +89,11 @@
         <button type="button" class="btn-link" onclick="window.open('admin_panel.html','_blank')">🚕 Ir a Admin Conductores</button>
         <button type="button" class="btn-link" onclick="logoutAdmin()">🚪 Cerrar sesión</button>
     </div>
+    <div class="lista" id="lista-pasajeros"></div>
+</div>
 
-    <div class="table-wrap">
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Foto</th>
-                        <th>Nombre</th>
-                        <th>Teléfono</th>
-                        <th>Correo</th>
-                        <th>Estado</th>
-                        <th>Registro</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody id="lista-pasajeros"></tbody>
-            </table>
-        </div>
-    </div>
+<div class="modal-foto" id="modalFoto" onclick="this.classList.remove('open')">
+    <img id="modalFotoImg" src="" alt="Foto ampliada">
 </div>
 
 <script>
@@ -255,6 +107,40 @@
     let filtroActual = 'todos';
     let totalPasajeros = 0;
 
+    /** Normaliza a formato internacional Panamá (507...) para wa.me */
+    function telWhatsApp(cel) {
+        let n = String(cel || '').replace(/\D/g, '');
+        if (!n) return '';
+        // Si ya empieza con 507 y tiene 11 dígitos, ok
+        if (n.startsWith('507') && n.length >= 11) return n;
+        // Si es 8 dígitos locales Panamá
+        if (n.length === 8) return '507' + n;
+        // Si es 10-11 y no tiene 507, intentar
+        if (n.length >= 8 && !n.startsWith('507')) return '507' + n.slice(-8);
+        return n;
+    }
+
+    function mensajeAprobado(nombre) {
+        const nom = (nombre || 'pasajero').trim();
+        return 'Hola ' + nom + ', tu cuenta en *Click & Go Taxi* fue *APROBADA*. ✅\n\nYa puedes iniciar sesión y pedir taxis.\n\n¡Bienvenido!';
+    }
+
+    function mensajeRechazado(nombre) {
+        const nom = (nombre || 'pasajero').trim();
+        return 'Hola ' + nom + ', tu registro en Click & Go Taxi no pudo ser aprobado. Por favor vuelve a registrarte con fotos claras de tu cara, cédula y selfie con la cédula.';
+    }
+
+    /** Abre WhatsApp con texto listo; tú solo tocas Enviar */
+    function abrirWhatsApp(cel, texto) {
+        const tel = telWhatsApp(cel);
+        if (!tel) {
+            alert('No hay número de teléfono para WhatsApp.');
+            return;
+        }
+        const url = 'https://wa.me/' + tel + '?text=' + encodeURIComponent(texto);
+        window.open(url, '_blank');
+    }
+
     function setFiltro(filtro) {
         filtroActual = filtro;
         document.querySelectorAll('.filtro-btn').forEach(btn => {
@@ -266,108 +152,125 @@
     function aplicarFiltros() {
         const q = (document.getElementById('buscador').value || '').toLowerCase().trim();
         let visibles = 0;
-        document.querySelectorAll('.pasajero-row').forEach(row => {
-            const texto = (row.getAttribute('data-search') || '').toLowerCase();
-            const estado = (row.getAttribute('data-estado') || '').toLowerCase();
-            const okTexto = !q || texto.includes(q);
-            const okEstado = filtroActual === 'todos' || estado === filtroActual;
-            if (okTexto && okEstado) {
-                row.style.display = '';
-                visibles++;
-            } else {
-                row.style.display = 'none';
-            }
+        document.querySelectorAll('.pasajero-card').forEach(card => {
+            const texto = (card.getAttribute('data-search') || '').toLowerCase();
+            const estado = (card.getAttribute('data-estado') || '').toLowerCase();
+            const ok = (!q || texto.includes(q)) && (filtroActual === 'todos' || estado === filtroActual);
+            card.style.display = ok ? '' : 'none';
+            if (ok) visibles++;
         });
         document.getElementById('contador').textContent =
             visibles + ' pasajeros' + (filtroActual !== 'todos' ? ' · ' + filtroActual : '') + ' · ' + totalPasajeros + ' total';
     }
 
+    function verFoto(url) {
+        if (!url) return;
+        document.getElementById('modalFotoImg').src = url;
+        document.getElementById('modalFoto').classList.add('open');
+    }
+
+    function imgOrEmpty(url, label) {
+        if (!url) return `<div><div style="height:90px;background:#111;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#666;font-size:20px;">❌</div><span>${label}</span></div>`;
+        const safe = String(url).replace(/'/g, "\\'");
+        return `<a href="javascript:void(0)" onclick="verFoto('${safe}')"><img src="${url}" alt="${label}" onerror="this.style.opacity=0.3"><span>${label}</span></a>`;
+    }
+
     function cargarPasajeros() {
         db.ref('pasajeros').on('value', snap => {
-            const tbody = document.getElementById('lista-pasajeros');
-            tbody.innerHTML = '';
+            const cont = document.getElementById('lista-pasajeros');
+            cont.innerHTML = '';
             totalPasajeros = 0;
             if (!snap.exists()) {
-                tbody.innerHTML = '<tr><td colspan="8" class="empty">No hay pasajeros registrados</td></tr>';
+                cont.innerHTML = '<div class="empty">No hay pasajeros registrados</div>';
                 document.getElementById('contador').textContent = '0 pasajeros';
                 return;
             }
-            let index = 1;
             snap.forEach(child => {
                 const p = child.val() || {};
                 const cel = child.key;
                 const estado = (p.estado || 'activo').toLowerCase();
                 const claseBadge = estado === 'pendiente' ? 'badge-pendiente' : (estado === 'activo' ? 'badge-activo' : 'badge-bloqueado');
-                const foto = p.foto_pasajero
-                    ? `<img class="foto-pas" src="${p.foto_pasajero}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png'">`
-                    : '<span style="color:#666;">❌</span>';
-                let btnEstado = '';
+                let btns = '';
                 if (estado === 'pendiente') {
-                    btnEstado = `<button class="btn btn-active" onclick="cambiarEstado('${cel}','activo')">✅ APROBAR</button>
-                                 <button class="btn btn-block" onclick="cambiarEstado('${cel}','bloqueado')">⛔ RECHAZAR</button>`;
+                    btns = `<button class="btn btn-active" onclick="cambiarEstado('${cel}','activo')">✅ APROBAR + WhatsApp</button>
+                            <button class="btn btn-block" onclick="cambiarEstado('${cel}','bloqueado')">⛔ RECHAZAR + WhatsApp</button>`;
                 } else if (estado === 'activo') {
-                    btnEstado = `<button class="btn btn-block" onclick="cambiarEstado('${cel}','bloqueado')">⛔ BLOQUEAR</button>`;
+                    btns = `<button class="btn btn-block" onclick="cambiarEstado('${cel}','bloqueado')">⛔ BLOQUEAR</button>
+                            <button class="btn btn-wa" onclick="soloWhatsAppAprobado('${cel}')">💬 WhatsApp</button>`;
                 } else {
-                    btnEstado = `<button class="btn btn-active" onclick="cambiarEstado('${cel}','activo')">✅ ACTIVAR</button>`;
+                    btns = `<button class="btn btn-active" onclick="cambiarEstado('${cel}','activo')">✅ ACTIVAR + WhatsApp</button>
+                            <button class="btn btn-wa" onclick="soloWhatsAppAprobado('${cel}')">💬 WhatsApp</button>`;
                 }
                 const fecha = p.fecha_registro ? String(p.fecha_registro).substring(0, 10) : '—';
                 const searchText = ((p.nombre || '') + ' ' + cel + ' ' + (p.email || '')).toLowerCase();
                 totalPasajeros++;
-                tbody.innerHTML += `
-                <tr class="pasajero-row" data-search="${searchText}" data-estado="${estado}">
-                    <td style="color:var(--muted);font-size:12px;">${index}</td>
-                    <td>${foto}</td>
-                    <td class="nombre-cell">${p.nombre || 'Sin nombre'}</td>
-                    <td class="tel-cell">${cel}</td>
-                    <td class="email-cell">${p.email || '—'}</td>
-                    <td><span class="badge ${claseBadge}">${estado.toUpperCase()}</span></td>
-                    <td style="font-size:12px;color:var(--muted);">${fecha}</td>
-                    <td class="acciones-cell">
-                        ${btnEstado}
+                cont.innerHTML += `
+                <div class="card-p pasajero-card ${estado === 'pendiente' ? 'pendiente' : ''}" data-search="${searchText}" data-estado="${estado}">
+                    <div class="nombre">${p.nombre || 'Sin nombre'}</div>
+                    <div class="meta">📱 ${cel}</div>
+                    <div class="meta">✉️ ${p.email || '—'}</div>
+                    <div class="meta">📅 ${fecha}</div>
+                    <span class="badge ${claseBadge}">${estado.toUpperCase()}</span>
+                    <div class="fotos-grid">
+                        ${imgOrEmpty(p.foto_pasajero, 'Cara')}
+                        ${imgOrEmpty(p.foto_cedula, 'Cédula')}
+                        ${imgOrEmpty(p.foto_selfie_cedula, 'Selfie+Céd')}
+                    </div>
+                    <div class="acciones">
+                        ${btns}
                         <button class="btn btn-danger" onclick="eliminarPasajero('${cel}')">🗑️</button>
-                    </td>
-                </tr>`;
-                index++;
+                    </div>
+                </div>`;
             });
             aplicarFiltros();
         });
     }
 
     function cambiarEstado(cel, nuevoEstado) {
-        db.ref('pasajeros/' + cel).update({ estado: nuevoEstado }).then(() => {
-            if (nuevoEstado === 'activo') alert('✅ Pasajero aprobado. Ya puede pedir taxis.');
-            if (nuevoEstado === 'bloqueado') alert('⛔ Pasajero bloqueado / rechazado.');
+        db.ref('pasajeros/' + cel).once('value').then(snap => {
+            const p = snap.val() || {};
+            const nombre = p.nombre || '';
+            return db.ref('pasajeros/' + cel).update({ estado: nuevoEstado }).then(() => {
+                if (nuevoEstado === 'activo') {
+                    abrirWhatsApp(cel, mensajeAprobado(nombre));
+                    // aviso breve; WhatsApp ya se abrió
+                    setTimeout(() => {
+                        alert('✅ Cuenta aprobada.\n\nSe abrió WhatsApp con el mensaje listo.\nSolo toca Enviar.');
+                    }, 400);
+                } else if (nuevoEstado === 'bloqueado') {
+                    if (confirm('¿Abrir WhatsApp para avisarle del rechazo?')) {
+                        abrirWhatsApp(cel, mensajeRechazado(nombre));
+                    }
+                    alert('⛔ Pasajero rechazado / bloqueado.');
+                }
+            });
+        });
+    }
+
+    function soloWhatsAppAprobado(cel) {
+        db.ref('pasajeros/' + cel).once('value').then(snap => {
+            const p = snap.val() || {};
+            abrirWhatsApp(cel, mensajeAprobado(p.nombre));
         });
     }
 
     function eliminarPasajero(cel) {
-        if (confirm('¿Eliminar pasajero ' + cel + '?')) {
-            db.ref('pasajeros/' + cel).remove();
-        }
+        if (confirm('¿Eliminar pasajero ' + cel + '?')) db.ref('pasajeros/' + cel).remove();
     }
 
     function loginAdmin() {
         const user = (document.getElementById('adminUser').value || '').trim().toLowerCase();
         const pass = document.getElementById('adminPass').value || '';
         const err = document.getElementById('loginError');
-        if (!user || !pass) {
-            err.style.display = 'block';
-            err.textContent = 'Completa usuario y contraseña';
-            return;
-        }
+        if (!user || !pass) { err.style.display = 'block'; err.textContent = 'Completa usuario y contraseña'; return; }
         db.ref('admins/' + user).once('value').then(snap => {
             const data = snap.val();
-            if (!data) {
-                err.style.display = 'block';
-                err.textContent = 'Usuario o contraseña incorrectos';
-                return;
-            }
-            let esValido = false;
-            if (String(data.password) === String(pass)) esValido = true;
-            else if (data.password && typeof data.password === 'object' && data.password[pass] !== undefined) esValido = true;
-            else if (data[pass] !== undefined) esValido = true;
-
-            if (esValido) {
+            if (!data) { err.style.display = 'block'; err.textContent = 'Usuario o contraseña incorrectos'; return; }
+            let ok = false;
+            if (String(data.password) === String(pass)) ok = true;
+            else if (data.password && typeof data.password === 'object' && data.password[pass] !== undefined) ok = true;
+            else if (data[pass] !== undefined) ok = true;
+            if (ok) {
                 sessionStorage.setItem('admin_ok', '1');
                 sessionStorage.setItem('admin_user', user);
                 sessionStorage.setItem('admin_nombre', data.nombre || user);
@@ -376,10 +279,7 @@
                 err.style.display = 'block';
                 err.textContent = 'Usuario o contraseña incorrectos';
             }
-        }).catch(() => {
-            err.style.display = 'block';
-            err.textContent = 'Error de conexión con la base de datos';
-        });
+        }).catch(() => { err.style.display = 'block'; err.textContent = 'Error de conexión'; });
     }
 
     function logoutAdmin() {
@@ -392,23 +292,16 @@
     function mostrarAdmin() {
         document.getElementById('pantallaLogin').classList.add('oculto');
         document.getElementById('appAdmin').classList.add('visible');
-        const nom = sessionStorage.getItem('admin_nombre') || 'Admin';
-        document.getElementById('adminNombreTop').textContent = 'Hola, ' + nom;
+        document.getElementById('adminNombreTop').textContent = 'Hola, ' + (sessionStorage.getItem('admin_nombre') || 'Admin');
         cargarPasajeros();
     }
 
-    function checkSesion() {
+    window.onload = function() {
         if (sessionStorage.getItem('admin_ok') === '1') mostrarAdmin();
-    }
-
+    };
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter' && document.getElementById('pantallaLogin') &&
-            !document.getElementById('pantallaLogin').classList.contains('oculto')) {
-            loginAdmin();
-        }
+        if (e.key === 'Enter' && !document.getElementById('pantallaLogin').classList.contains('oculto')) loginAdmin();
     });
-
-    window.onload = checkSesion;
 </script>
 </body>
 </html>

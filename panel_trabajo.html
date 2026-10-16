@@ -25,6 +25,31 @@
         input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 6px; border: 1px solid #2a3a45; background: #152028; color: white; font-size: 16px; }
         label { font-size: 12px; color: #aaa; text-transform: uppercase; font-weight: bold; }
         .btn-conexion { font-size: 18px; letter-spacing: 0.5px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .btn-panico {
+            background: linear-gradient(180deg, #ff3b3b, #b00000);
+            color: #fff;
+            border: 2px solid #ff6b6b;
+            font-size: 16px;
+            letter-spacing: 0.5px;
+            margin: 10px 0 15px 0;
+            box-shadow: 0 4px 14px rgba(220, 53, 69, 0.45);
+            animation: pulseAviso 2.5s infinite;
+        }
+        .btn-panico:active { transform: scale(0.98); opacity: 0.9; }
+        #bannerPanico {
+            display: none;
+            background: #8b0000;
+            color: #fff;
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: bold;
+            border: 3px solid #ff3b3b;
+            z-index: 50;
+        }
+        #bannerPanico.visible { display: block; animation: alertaFlash 0.8s infinite; }
+        @keyframes panicoPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,59,59,0.6); } 50% { box-shadow: 0 0 0 12px rgba(255,59,59,0); } }
         .btn-whatsapp { background: #25D366; color: white; }
         .btn-iniciar { background: #28a745; color: white; }
         .btn-finalizar { background: #dc3545; color: white; }
@@ -72,6 +97,13 @@
     </div>
 
     <button id="btnConexion" class="btn-conexion" onclick="toggleConexion()">🔄 Sincronizando...</button>
+
+    <button type="button" id="btnPanico" class="btn-panico" onclick="activarPanico()">🆘 BOTÓN DE PÁNICO — Alertar a la flota</button>
+    <div id="bannerPanico">
+        <div style="font-size:18px; margin-bottom:6px;">🚨 ALERTA DE PÁNICO</div>
+        <div id="textoPanico" style="font-size:14px; line-height:1.4;"></div>
+        <button type="button" onclick="cerrarBannerPanico()" style="margin-top:12px; background:#fff; color:#8b0000; width:auto; padding:10px 18px;">Entendido</button>
+    </div>
 
     <div class="card" id="tarjetaHistorial" style="display: none; padding: 15px; border-left: 4px solid #2EC4E6;">
         <h4 style="margin-bottom: 10px; color: #2EC4E6;">📅 Historial de Ganancias</h4>
@@ -132,6 +164,96 @@
                 document.body.classList.remove('modo-alerta');
             }
         });
+
+        // ===== BOTÓN DE PÁNICO (seguridad flota) =====
+        let miAlertaPanicoId = null; // para no alertarnos de nuestra propia alerta
+
+        function activarPanico() {
+            if (!datos || !datos.telefono) {
+                return alert('Inicia sesión como conductor primero.');
+            }
+            if (!confirm('¿Activar BOTÓN DE PÁNICO?\n\nSe avisará a TODOS los conductores de la flota.\nÚsalo solo en peligro real.')) {
+                return;
+            }
+            const payload = {
+                activo: true,
+                conductorNombre: datos.nombre || 'Conductor',
+                conductorCel: datos.telefono,
+                mensaje: 'Un compañero necesita ayuda URGENTE',
+                timestamp: Date.now(),
+                lat: null,
+                lng: null
+            };
+            const guardar = () => {
+                miAlertaPanicoId = payload.timestamp;
+                db.ref('sistema/alerta_panico').set(payload).then(() => {
+                    alert('🆘 Alerta enviada a la flota.\nMantén la calma. Si puedes, llama a la policía (911 / 104).');
+                    // Auto-limpiar alerta a los 10 minutos para no dejarla colgada
+                    setTimeout(() => {
+                        db.ref('sistema/alerta_panico').once('value').then(s => {
+                            const a = s.val();
+                            if (a && a.timestamp === payload.timestamp) {
+                                db.ref('sistema/alerta_panico').update({ activo: false });
+                            }
+                        });
+                    }, 10 * 60 * 1000);
+                }).catch(e => alert('No se pudo enviar la alerta: ' + (e.message || e)));
+            };
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    pos => {
+                        payload.lat = pos.coords.latitude;
+                        payload.lng = pos.coords.longitude;
+                        guardar();
+                    },
+                    () => guardar(),
+                    { enableHighAccuracy: true, timeout: 5000 }
+                );
+            } else {
+                guardar();
+            }
+        }
+
+        function escucharAlertaPanico() {
+            db.ref('sistema/alerta_panico').on('value', snap => {
+                const a = snap.val();
+                const banner = document.getElementById('bannerPanico');
+                const texto = document.getElementById('textoPanico');
+                if (!banner || !texto) return;
+                if (!a || !a.activo) {
+                    banner.classList.remove('visible');
+                    return;
+                }
+                // No mostrarme mi propia alerta
+                if (datos && String(a.conductorCel) === String(datos.telefono)) {
+                    banner.classList.remove('visible');
+                    return;
+                }
+                let msg = '⚠️ ' + (a.conductorNombre || 'Un conductor') + ' (' + (a.conductorCel || '') + ') reportó PELIGRO.';
+                if (a.mensaje) msg += '<br>' + a.mensaje;
+                if (a.lat && a.lng) {
+                    msg += '<br><a href="https://www.google.com/maps?q=' + a.lat + ',' + a.lng + '" target="_blank" style="color:#ffc107;">📍 Ver ubicación en mapa</a>';
+                }
+                msg += '<br><small>Si puedes, contacta o acude con precaución.</small>';
+                texto.innerHTML = msg;
+                banner.classList.add('visible');
+                // Sonido + flash de pantalla
+                try { reproducirSonido(); } catch (e) {}
+                if (Notification.permission === 'granted') {
+                    try {
+                        new Notification('🚨 Pánico flota Click & Go', {
+                            body: (a.conductorNombre || 'Conductor') + ' necesita ayuda',
+                            requireInteraction: true
+                        });
+                    } catch (e) {}
+                }
+            });
+        }
+
+        function cerrarBannerPanico() {
+            const banner = document.getElementById('bannerPanico');
+            if (banner) banner.classList.remove('visible');
+        }
 
         function escucharAvisoGlobal() {
             db.ref('sistema/aviso_global').on('value', snap => {
@@ -239,6 +361,7 @@
             escucharEstadoConductor(datos.telefono); 
             pedirPermisoNotificaciones(datos.telefono); 
             escucharAvisoGlobal();
+            escucharAlertaPanico();
         }
 
         function pedirPermisoNotificaciones(telefono) {
